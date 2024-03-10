@@ -1,12 +1,14 @@
 use std::{env, process};
+use std::any::TypeId;
 use std::collections::HashMap;
 
 use cosmic::{Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor, theme, widget};
 use cosmic::app::{Core, Message as CosmicMessage};
-use cosmic::iced::{Alignment, window};
-use cosmic::widget::segmented_button;
+use cosmic::iced::{Alignment, Length, Subscription, window};
+use cosmic::widget::{row, segmented_button};
 
 use crate::{content, fl, menu};
+use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
 use crate::key_bind::{key_binds, KeyBind};
 
@@ -24,9 +26,10 @@ pub struct App {
 #[derive(Debug, Clone)]
 pub enum Message {
     About,
-    ContentMessage(Option<segmented_button::Entity>, crate::content::Message),
+    ContentMessage(Option<segmented_button::Entity>, content::Message),
     ToggleContextPage(ContextPage),
     AppTheme(crate::config::AppTheme),
+    SystemThemeModeChange(cosmic_theme::ThemeMode),
     LaunchUrl(String),
     WindowClose,
     WindowNew,
@@ -114,6 +117,7 @@ impl App {
         ])
             .align_items(Alignment::Center)
             .spacing(space_xxs)
+            .width(Length::Fill)
             .into()
     }
 
@@ -122,28 +126,27 @@ impl App {
     }
 
     fn settings(&self) -> Element<Message> {
-        widget::settings::view_column(vec![
-            widget::settings::view_section(crate::fl!("appearance"))
-                .add({
-                    let app_theme_selected = match self.config.app_theme {
-                        crate::config::AppTheme::Dark => 1,
-                        crate::config::AppTheme::Light => 2,
-                        crate::config::AppTheme::System => 0,
-                    };
-                    widget::settings::item::builder(crate::fl!("theme")).control(widget::dropdown(
-                        &self.app_themes,
-                        Some(app_theme_selected),
-                        move |index| {
-                            Message::AppTheme(match index {
-                                1 => crate::config::AppTheme::Dark,
-                                2 => crate::config::AppTheme::Light,
-                                _ => crate::config::AppTheme::System,
-                            })
-                        },
-                    ))
-                })
-                .into(),
-        ]).into()
+        let app_theme_selected = match self.config.app_theme {
+            AppTheme::Dark => 1,
+            AppTheme::Light => 2,
+            AppTheme::System => 0,
+        };
+        widget::settings::view_column(vec![widget::settings::view_section(fl!("appearance"))
+            .add(
+                widget::settings::item::builder(fl!("theme")).control(widget::dropdown(
+                    &self.app_themes,
+                    Some(app_theme_selected),
+                    move |index| {
+                        Message::AppTheme(match index {
+                            1 => AppTheme::Dark,
+                            2 => AppTheme::Light,
+                            _ => AppTheme::System,
+                        })
+                    },
+                )),
+            )
+            .into()])
+            .into()
     }
 }
 
@@ -163,8 +166,8 @@ impl Application for App {
 
     fn init(mut core: Core, flags: Self::Flags) -> (Self, Command<CosmicMessage<Self::Message>>) {
         core.nav_bar_toggle_condensed();
-        let mut nav_model = segmented_button::ModelBuilder::default();
-        let app_themes = vec![crate::fl!("match-desktop"), crate::fl!("dark"), crate::fl!("light")];
+        let nav_model = segmented_button::ModelBuilder::default();
+        let app_themes = vec![fl!("match-desktop"), fl!("dark"), fl!("light")];
 
         // TODO: Fetch local lists and append them to the model.
 
@@ -184,23 +187,73 @@ impl Application for App {
         (app, Command::batch(commands))
     }
 
+    fn context_drawer(&self) -> Option<Element<Message>> {
+        if !self.core.window.show_context {
+            return None;
+        }
+
+        Some(match self.context_page {
+            ContextPage::About => self.about(),
+            ContextPage::Settings => self.settings(),
+            ContextPage::Properties => self.properties()
+        })
+    }
+
+    fn header_start(&self) -> Vec<Element<Self::Message>> {
+        vec![menu::menu_bar(&self.key_binds)]
+    }
+
     fn nav_model(&self) -> Option<&segmented_button::SingleSelectModel> {
         Some(&self.nav_model)
     }
 
     fn on_nav_select(&mut self, entity: segmented_button::Entity) -> Command<CosmicMessage<Self::Message>> {
-        let location_opt = self.nav_model.data::<crate::content::List>(entity);
+        let location_opt = self.nav_model.data::<content::List>(entity);
 
         if let Some(list) = location_opt {
-            let message = Message::ContentMessage(None, crate::content::Message::List(list.clone()));
+            let message = Message::ContentMessage(None, content::Message::List(list.clone()));
             return self.update(message);
         }
 
         Command::none()
     }
 
-    fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![menu::menu_bar(&self.key_binds)]
+    fn subscription(&self) -> Subscription<Self::Message> {
+        struct ConfigSubscription;
+        struct ThemeSubscription;
+
+        Subscription::batch([
+            cosmic_config::config_subscription(
+                TypeId::of::<ConfigSubscription>(),
+                Self::APP_ID.into(),
+                CONFIG_VERSION,
+            )
+                .map(|update| {
+                    if !update.errors.is_empty() {
+                        log::info!(
+                        "errors loading config {:?}: {:?}",
+                        update.keys,
+                        update.errors
+                    );
+                    }
+                    Message::SystemThemeModeChange(update.config)
+                }),
+            cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
+                TypeId::of::<ThemeSubscription>(),
+                cosmic_theme::THEME_MODE_ID.into(),
+                cosmic_theme::ThemeMode::version(),
+            )
+                .map(|update| {
+                    if !update.errors.is_empty() {
+                        log::info!(
+                        "errors loading theme mode {:?}: {:?}",
+                        update.keys,
+                        update.errors
+                    );
+                    }
+                    Message::SystemThemeModeChange(update.config)
+                }),
+        ])
     }
 
     fn update(&mut self, message: Self::Message) -> Command<CosmicMessage<Self::Message>> {
@@ -274,24 +327,20 @@ impl Application for App {
                 config_set!(app_theme, app_theme);
                 return self.update_config();
             }
+            Message::SystemThemeModeChange(_) => {
+                return self.update_config();
+            }
         }
         Command::none()
     }
 
-    fn context_drawer(&self) -> Option<Element<Message>> {
-        if !self.core.window.show_context {
-            return None;
-        }
-
-        Some(match self.context_page {
-            ContextPage::About => self.about(),
-            ContextPage::Settings => self.settings(),
-            ContextPage::Properties => self.properties()
-        })
-    }
-
     fn view(&self) -> Element<Self::Message> {
         let mut content_column = widget::column::with_capacity(1);
+        let cosmic_theme::Spacing {
+            space_xs,
+            space_xxs,
+            ..
+        } = self.core().system_theme().cosmic().spacing;
 
         let entity = self.content_model.active();
         match self.content_model.data::<Content>(entity) {
@@ -302,7 +351,11 @@ impl Application for App {
                 content_column = content_column.push(content_view);
             }
             None => {
-                //TODO
+                let column = widget::column::with_capacity(1)
+                    .padding([0, space_xs, 0, 0])
+                    .spacing(space_xxs)
+                    .width(Length::Fill);
+                content_column = content_column.push(widget::scrollable(column));
             }
         }
 
