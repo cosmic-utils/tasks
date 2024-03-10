@@ -1,11 +1,14 @@
 use std::{env, process};
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::error::Error;
+use core_done::models::list::List;
+use core_done::service::Service;
 
 use cosmic::{Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor, theme, widget};
-use cosmic::app::{Core, Message as CosmicMessage};
+use cosmic::app::{Core, Message as CosmicMessage, message};
 use cosmic::iced::{Alignment, Length, Subscription, window};
-use cosmic::widget::{row, segmented_button};
+use cosmic::widget::{segmented_button};
 
 use crate::{content, fl, menu};
 use crate::config::{AppTheme, CONFIG_VERSION};
@@ -28,9 +31,10 @@ pub enum Message {
     About,
     ContentMessage(Option<segmented_button::Entity>, content::Message),
     ToggleContextPage(ContextPage),
-    AppTheme(crate::config::AppTheme),
+    AppTheme(AppTheme),
     SystemThemeModeChange(cosmic_theme::ThemeMode),
     LaunchUrl(String),
+    PopulateLists(Vec<List>),
     WindowClose,
     WindowNew,
 }
@@ -167,9 +171,6 @@ impl Application for App {
     fn init(mut core: Core, flags: Self::Flags) -> (Self, Command<CosmicMessage<Self::Message>>) {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default();
-        let app_themes = vec![fl!("match-desktop"), fl!("dark"), fl!("light")];
-
-        // TODO: Fetch local lists and append them to the model.
 
         let app = App {
             core,
@@ -177,12 +178,17 @@ impl Application for App {
             content_model: segmented_button::ModelBuilder::default().build(),
             config_handler: flags.config_handler,
             config: flags.config,
-            app_themes,
+            app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
             context_page: ContextPage::Settings,
             key_binds: key_binds(),
         };
 
-        let commands = Vec::new();
+        let commands = vec![
+            Command::perform(fetch_lists(), |result| match result {
+                Ok(data) => message::app(Message::PopulateLists(data)),
+                Err(_) => message::none(),
+            })
+        ];
 
         (app, Command::batch(commands))
     }
@@ -330,6 +336,14 @@ impl Application for App {
             Message::SystemThemeModeChange(_) => {
                 return self.update_config();
             }
+            Message::PopulateLists(lists) => {
+                for list in lists {
+                    self.nav_model.insert()
+                        .text(list.name.clone())
+                        .icon(widget::icon::icon(widget::icon::from_name(list.clone().icon.unwrap()).size(16).handle()))
+                        .data(list);
+                }
+            }
         }
         Command::none()
     }
@@ -363,4 +377,9 @@ impl Application for App {
 
         content
     }
+}
+
+async fn fetch_lists() -> Result<Vec<List>, Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.read_lists().await.unwrap_or(vec![]))
 }
