@@ -3,6 +3,7 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::error::Error;
 use core_done::models::list::List;
+use core_done::models::task::Task;
 use core_done::service::Service;
 
 use cosmic::{Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor, theme, widget};
@@ -12,24 +13,26 @@ use cosmic::widget::{segmented_button};
 
 use crate::{content, fl, menu};
 use crate::config::{AppTheme, CONFIG_VERSION};
-use crate::content::{Content, ListView};
+use crate::content::{Content};
 use crate::key_bind::{key_binds, KeyBind};
 
 pub struct App {
     core: Core,
     nav_model: segmented_button::SingleSelectModel,
-    content_model: segmented_button::Model<segmented_button::SingleSelect>,
+    content: Content,
     config_handler: Option<cosmic_config::Config>,
     config: crate::config::Config,
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
+    selected_task: Option<Task>,
+    selected_list: Option<List>
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     About,
-    ContentMessage(Option<segmented_button::Entity>, content::Message),
+    ContentMessage(content::Message),
     ToggleContextPage(ContextPage),
     AppTheme(AppTheme),
     SystemThemeModeChange(cosmic_theme::ThemeMode),
@@ -37,11 +40,18 @@ pub enum Message {
     PopulateLists(Vec<List>),
     WindowClose,
     WindowNew,
+    GetTasks(String),
+    DisplayTask(Task),
+    UpdateTask(Task),
+    FavoriteTask(bool),
+    DeleteTask(String),
+    CreateTask(Task),
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ContextPage {
     About,
+    TaskDetails,
     Settings,
     Properties,
 }
@@ -51,7 +61,8 @@ impl ContextPage {
         match self {
             Self::About => String::new(),
             Self::Settings => fl!("settings"),
-            Self::Properties => fl!("properties")
+            Self::Properties => fl!("properties"),
+            Self::TaskDetails => "Details".into()
         }
     }
 }
@@ -74,11 +85,11 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn message(self, entity_opt: Option<segmented_button::Entity>) -> Message {
+    pub fn message(self) -> Message {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
-            Action::ItemDown => Message::ContentMessage(entity_opt, content::Message::ItemDown),
-            Action::ItemUp => Message::ContentMessage(entity_opt, content::Message::ItemUp),
+            Action::ItemDown => Message::ContentMessage(content::Message::ItemDown),
+            Action::ItemUp => Message::ContentMessage(content::Message::ItemUp),
             Action::Properties => Message::ToggleContextPage(ContextPage::Properties),
             Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
             Action::WindowClose => Message::WindowClose,
@@ -101,11 +112,11 @@ impl App {
         widget::column::with_children(vec![
             widget::svg(widget::svg::Handle::from_memory(
                 &include_bytes!(
-                    "../res/icons/hicolor/128x128/apps/com.system76.CosmicFiles.svg"
+                    "../res/icons/hicolor/128x128/apps/com.system76.CosmicTodo.svg"
                 )[..],
             ))
                 .into(),
-            widget::text::title3(fl!("cosmic-files")).into(),
+            widget::text::title3(fl!("cosmic-todo")).into(),
             widget::button::link(repository)
                 .on_press(Message::LaunchUrl(repository.to_string()))
                 .padding(0)
@@ -127,6 +138,29 @@ impl App {
 
     pub fn properties(&self) -> Element<Message> {
         widget::settings::view_column(vec![]).into()
+    }
+
+    pub fn task_details(&self) -> Element<Message> {
+        if let Some(task) = self.selected_task.as_ref().clone() {
+            return widget::settings::view_column(vec![widget::settings::view_section("Details")
+                .add(
+                    widget::settings::item::builder("Title").control(widget::text(
+                        &task.title,
+                    )),
+                )
+                .add(
+                    widget::settings::item::builder("Favorite").control(widget::checkbox(
+                        "",
+                        task.favorite,
+                        |value| Message::FavoriteTask(value),
+                    )),
+                )
+                .into()])
+                .into()
+        }
+        widget::settings::view_column(vec![widget::settings::view_section("Details")
+            .into()])
+            .into()
     }
 
     fn settings(&self) -> Element<Message> {
@@ -175,12 +209,14 @@ impl Application for App {
         let app = App {
             core,
             nav_model: nav_model.build(),
-            content_model: segmented_button::ModelBuilder::default().build(),
+            content: Content::new(),
             config_handler: flags.config_handler,
             config: flags.config,
             app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
             context_page: ContextPage::Settings,
             key_binds: key_binds(),
+            selected_task: None,
+            selected_list: None
         };
 
         let commands = vec![
@@ -201,7 +237,8 @@ impl Application for App {
         Some(match self.context_page {
             ContextPage::About => self.about(),
             ContextPage::Settings => self.settings(),
-            ContextPage::Properties => self.properties()
+            ContextPage::Properties => self.properties(),
+            ContextPage::TaskDetails => self.task_details(),
         })
     }
 
@@ -217,7 +254,8 @@ impl Application for App {
         let location_opt = self.nav_model.data::<List>(entity);
 
         if let Some(list) = location_opt {
-            let message = Message::ContentMessage(None, content::Message::List(ListView { list: list.clone() }));
+            self.selected_list = Some(list.clone());
+            let message = Message::ContentMessage(content::Message::List(list.clone()));
             return self.update(message);
         }
 
@@ -261,15 +299,10 @@ impl Application for App {
                 }),
         ];
 
-        for entity in self.content_model.iter() {
-            if let Some(list) = self.content_model.data::<ListView>(entity) {
-                subscriptions.push(
-                    list.subscription()
-                        .with(entity)
-                        .map(|(entity, tab_msg)| Message::ContentMessage(Some(entity), tab_msg)),
-                );
-            }
-        }
+        subscriptions.push(
+            self.content.subscription()
+                .map(|message| Message::ContentMessage(message))
+        );
 
         Subscription::batch(subscriptions)
     }
@@ -302,24 +335,40 @@ impl Application for App {
             };
         }
 
+        let mut commands = vec![];
+
         match message {
             Message::About => {}
-            Message::ContentMessage(entity_opt, content_message) => {
-                let entity = entity_opt.unwrap_or_else(|| self.content_model.active());
-
-                let tab_commands = match self.content_model.data_mut::<Content>(entity) {
-                    Some(content) => content.update(content_message),
-                    _ => Vec::new(),
-                };
+            Message::ContentMessage(message) => {
+                let content_commands = self.content.update(message);
+                for content_command in content_commands {
+                    match content_command {
+                        content::Command::GetTasks(list_id) => {
+                            commands.push(self.update(Message::GetTasks(list_id)));
+                        }
+                        content::Command::DisplayTask(task) => {
+                            commands.push(self.update(Message::DisplayTask(task)));
+                        }
+                        content::Command::UpdateTask(task) => {
+                            commands.push(self.update(Message::UpdateTask(task)));
+                        }
+                        content::Command::Delete(id) => {
+                            commands.push(self.update(Message::DeleteTask(id)));
+                        }
+                        content::Command::CreateTask(task) => {
+                            commands.push(self.update(Message::CreateTask(task)));
+                        }
+                    }
+                }
             }
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
                     self.core.window.show_context = !self.core.window.show_context;
                 } else {
-                    self.context_page = context_page;
+                    self.context_page = context_page.clone();
                     self.core.window.show_context = true;
                 }
-                self.set_context_title(context_page.title());
+                self.set_context_title(context_page.clone().title());
             }
             Message::WindowClose => {
                 return window::close(window::Id::MAIN);
@@ -356,34 +405,70 @@ impl Application for App {
                         .data(list);
                 }
             }
+            Message::GetTasks(list_id) => {
+                let commands = vec![
+                    Command::perform(fetch_tasks(list_id), |result| match result {
+                        Ok(data) => message::app(Message::ContentMessage(content::Message::SetItems(data))),
+                        Err(_) => message::none(),
+                    })
+                ];
+                return Command::batch(commands);
+            }
+            Message::DisplayTask(task) => {
+                self.selected_task = Some(task.clone());
+                commands.push(self.update(Message::ToggleContextPage(ContextPage::TaskDetails)));
+            }
+            Message::FavoriteTask(favorite) => {
+                if let Some(ref mut selected_task) = &mut self.selected_task {
+                    selected_task.favorite = favorite;
+                    let command = Command::perform(update_task(selected_task.clone()), |result| match result {
+                        Ok(_) => message::none(),
+                        Err(_) => message::none(),
+                    });
+                    commands.push(command);
+                }
+            }
+            Message::UpdateTask(task) => {
+                if let Some(ref mut selected_task) = &mut self.selected_task {
+                    *selected_task = task;
+                    let command = Command::perform(update_task(selected_task.clone()), |result| match result {
+                        Ok(_) => message::none(),
+                        Err(_) => message::none(),
+                    });
+                    commands.push(command);
+                }
+            }
+            Message::DeleteTask(id) => {
+                if let Some(list) = &self.selected_list {
+                    let command = Command::perform(delete_task(list.id.clone(), id.clone()), |result| match result {
+                        Ok(_) => message::none(),
+                        Err(_) => message::none(),
+                    });
+                    commands.push(command);
+                }
+            }
+            Message::CreateTask(task) => {
+                let command = Command::perform(create_task(task), |result| match result {
+                    Ok(_) => message::none(),
+                    Err(_) => message::none(),
+                });
+                commands.push(command);
+            }
         }
+
+        if !commands.is_empty() {
+            return Command::batch(commands);
+        }
+
         Command::none()
     }
 
     fn view(&self) -> Element<Self::Message> {
         let mut content_column = widget::column::with_capacity(1);
-        let cosmic_theme::Spacing {
-            space_xs,
-            space_xxs,
-            ..
-        } = self.core().system_theme().cosmic().spacing;
-
-        let entity = self.content_model.active();
-        match self.content_model.data::<Content>(entity) {
-            Some(content) => {
-                let content_view = content
-                    .view()
-                    .map(move |message| Message::ContentMessage(Some(entity), message));
-                content_column = content_column.push(content_view);
-            }
-            None => {
-                let column = widget::column::with_capacity(1)
-                    .padding([0, space_xs, 0, 0])
-                    .spacing(space_xxs)
-                    .width(Length::Fill);
-                content_column = content_column.push(widget::scrollable(column));
-            }
-        }
+        let content_view = self.content
+            .view()
+            .map(move |message| Message::ContentMessage(message));
+        content_column = content_column.push(content_view);
 
         let content: Element<_> = content_column.into();
 
@@ -391,7 +476,27 @@ impl Application for App {
     }
 }
 
+async fn create_task(task: Task) -> Result<(), Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.create_task(task).await?)
+}
+
 async fn fetch_lists() -> Result<Vec<List>, Box<dyn Error>> {
     let mut service = Service::Computer.get_service();
     Ok(service.read_lists().await.unwrap_or(vec![]))
+}
+
+async fn fetch_tasks(list_id: String) -> Result<Vec<Task>, Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.read_tasks_from_list(list_id).await.unwrap_or(vec![]))
+}
+
+async fn update_task(task: Task) -> Result<Task, Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.update_task(task).await?)
+}
+
+async fn delete_task(list_id: String, task_id: String) -> Result<(), Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.delete_task(list_id, task_id).await?)
 }

@@ -1,11 +1,11 @@
 #TODO: more build-out, desktop actions, translations?
 [Desktop Entry]
 Name=COSMIC To-do
-Exec=cosmic-files %F
+Exec=cosmic-todo %F
 Terminal=false
 Type=Application
 StartupNotify=true
-Icon=com.system76.CosmicFiles
+Icon=com.system76.CosmicTodo
 Categories=COSMIC;Utility;FileManager;
 Keywords=Folder;Manager;
 MimeType=inode/directory;

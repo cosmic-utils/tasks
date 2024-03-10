@@ -1,8 +1,6 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{path::PathBuf};
-
 use cosmic::{
     app::{Application, Settings},
     cosmic_config::{self, CosmicConfigEntry},
@@ -19,14 +17,6 @@ mod localize;
 mod menu;
 mod key_bind;
 
-pub fn home_dir() -> PathBuf {
-    dirs::home_dir().unwrap_or_else(|| {
-        log::warn!("failed to locate home directory");
-        PathBuf::from("/")
-    })
-}
-
-/// Runs application with these settings
 #[rustfmt::skip]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     // #[cfg(all(unix, not(target_os = "redox")))]

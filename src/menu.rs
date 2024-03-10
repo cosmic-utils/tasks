@@ -35,7 +35,6 @@ macro_rules! menu_button {
 }
 
 pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message> {
-    //TODO: port to libcosmic
     let menu_root = |label| {
         widget::button(widget::text(label))
             .padding([4, 12])
@@ -59,7 +58,7 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
                 widget::horizontal_space(Length::Fill),
                 widget::text(key)
             )
-                .on_press(action.message(None)),
+                .on_press(action.message()),
         )
     };
 

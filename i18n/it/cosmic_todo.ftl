@@ -1,4 +1,4 @@
-cosmic-files = COSMIC To-do
+cosmic-todo = COSMIC To-do
 empty-folder = Cartella vuota
 empty-folder-hidden = Cartella vuota (contiene elementi nascosti)
 filesystem = Filesystem
