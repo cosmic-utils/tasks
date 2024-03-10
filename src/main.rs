@@ -1,6 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use cosmic::iced::Size;
 use cosmic::{
     app::{Application, Settings},
     cosmic_config::{self, CosmicConfigEntry},
@@ -11,11 +12,11 @@ use app::{App, Flags};
 use config::{Config, CONFIG_VERSION};
 
 mod app;
-mod content;
 mod config;
+mod content;
+mod key_bind;
 mod localize;
 mod menu;
-mod key_bind;
 
 #[rustfmt::skip]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,11 +51,17 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut settings = Settings::default();
     settings = settings.theme(config.app_theme.theme());
     settings = settings.size_limits(Limits::NONE.min_width(360.0).min_height(180.0));
+    settings = settings.size(Size::new(700.0, 800.0));
+    settings = settings.debug(false);
 
     let flags = Flags {
         config_handler,
         config,
     };
+
+    // "Adwaita", "Breeze Light", "Cosmic", "HighContrast", "Pop", "Breeze", "Breeze Dark", "Breeze", "GNOME", "Hicolor"
+    // cosmic::icon_theme::set_default("Cosmic");
+
     cosmic::app::run::<App>(settings, flags)?;
 
     Ok(())
