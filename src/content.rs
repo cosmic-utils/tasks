@@ -1,16 +1,25 @@
+use core_done::models::list::List;
 use cosmic::{Element, widget};
-use cosmic::iced::Length;
+use cosmic::iced::{Length, Subscription};
 
 #[derive(Debug, Clone)]
-pub enum Message {
-    List(List),
-    ItemDown,
-    ItemUp,
+pub struct ListView {
+    pub(crate) list: List,
+}
+
+impl ListView {
+    pub fn subscription(&self) -> Subscription<Message> {
+        Subscription::none()
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct List {
-    pub title: String,
+pub enum Message {
+    Rename(String),
+    Delete,
+    List(ListView),
+    ItemDown,
+    ItemUp,
 }
 
 pub struct Content {
@@ -23,11 +32,13 @@ impl Content {
     pub fn update(&mut self, message: Message) -> Vec<Command> {
         let commands = Vec::new();
         match message {
-            Message::List(list) => {
-                self.list = Some(list);
+            Message::List(list_view) => {
+                self.list = Some(list_view.list);
             }
             Message::ItemDown => {}
             Message::ItemUp => {}
+            Message::Rename(_) => {}
+            Message::Delete => {}
         }
         commands
     }

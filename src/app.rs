@@ -12,7 +12,7 @@ use cosmic::widget::{segmented_button};
 
 use crate::{content, fl, menu};
 use crate::config::{AppTheme, CONFIG_VERSION};
-use crate::content::Content;
+use crate::content::{Content, ListView};
 use crate::key_bind::{key_binds, KeyBind};
 
 pub struct App {
@@ -214,10 +214,10 @@ impl Application for App {
     }
 
     fn on_nav_select(&mut self, entity: segmented_button::Entity) -> Command<CosmicMessage<Self::Message>> {
-        let location_opt = self.nav_model.data::<content::List>(entity);
+        let location_opt = self.nav_model.data::<List>(entity);
 
         if let Some(list) = location_opt {
-            let message = Message::ContentMessage(None, content::Message::List(list.clone()));
+            let message = Message::ContentMessage(None, content::Message::List(ListView { list: list.clone() }));
             return self.update(message);
         }
 
@@ -228,7 +228,7 @@ impl Application for App {
         struct ConfigSubscription;
         struct ThemeSubscription;
 
-        Subscription::batch([
+        let mut subscriptions = vec![
             cosmic_config::config_subscription(
                 TypeId::of::<ConfigSubscription>(),
                 Self::APP_ID.into(),
@@ -237,10 +237,10 @@ impl Application for App {
                 .map(|update| {
                     if !update.errors.is_empty() {
                         log::info!(
-                        "errors loading config {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
+                    "errors loading config {:?}: {:?}",
+                    update.keys,
+                    update.errors
+                );
                     }
                     Message::SystemThemeModeChange(update.config)
                 }),
@@ -252,14 +252,26 @@ impl Application for App {
                 .map(|update| {
                     if !update.errors.is_empty() {
                         log::info!(
-                        "errors loading theme mode {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
+                    "errors loading theme mode {:?}: {:?}",
+                    update.keys,
+                    update.errors
+                );
                     }
                     Message::SystemThemeModeChange(update.config)
                 }),
-        ])
+        ];
+
+        for entity in self.content_model.iter() {
+            if let Some(list) = self.content_model.data::<ListView>(entity) {
+                subscriptions.push(
+                    list.subscription()
+                        .with(entity)
+                        .map(|(entity, tab_msg)| Message::ContentMessage(Some(entity), tab_msg)),
+                );
+            }
+        }
+
+        Subscription::batch(subscriptions)
     }
 
     fn update(&mut self, message: Self::Message) -> Command<CosmicMessage<Self::Message>> {
