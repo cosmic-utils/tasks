@@ -1,10 +1,10 @@
+use cosmic::iced::{Alignment, Color, Length, Subscription};
+use cosmic::iced_widget::row;
+use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::list::List;
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
-use cosmic::iced::{Alignment, Color, Length, Subscription};
-use cosmic::iced_widget::row;
-use cosmic::{cosmic_theme, theme, widget, Element};
 
 pub struct Content {
     list: Option<List>,

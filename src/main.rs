@@ -15,23 +15,13 @@ use config::{Config, CONFIG_VERSION};
 mod app;
 mod config;
 mod content;
+mod details;
 mod key_bind;
 mod localize;
 mod menu;
-mod details;
 
 #[rustfmt::skip]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // #[cfg(all(unix, not(target_os = "redox")))]
-    // match fork::daemon(true, true) {
-    //     Ok(fork::Fork::Child) => (),
-    //     Ok(fork::Fork::Parent(_child_pid)) => process::exit(0),
-    //     Err(err) => {
-    //         eprintln!("failed to daemonize: {:?}", err);
-    //         process::exit(1);
-    //     }
-    // }
-
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
     localize::localize();
@@ -54,7 +44,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut settings = Settings::default();
     settings = settings.theme(config.app_theme.theme());
-    settings = settings.size_limits(Limits::NONE.min_width(360.0).min_height(180.0));
+    settings = settings.size_limits(Limits::NONE.min_width(400.0).min_height(180.0));
     settings = settings.size(Size::new(700.0, 800.0));
     settings = settings.debug(false);
 
@@ -62,9 +52,6 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         config_handler,
         config,
     };
-
-    // "Adwaita", "Breeze Light", "Cosmic", "HighContrast", "Pop", "Breeze", "Breeze Dark", "Breeze", "GNOME", "Hicolor"
-    cosmic::icon_theme::set_default("Adwaita");
 
     cosmic::app::run::<App>(settings, flags)?;
 

@@ -16,9 +16,9 @@ use cosmic::{
 
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
+use crate::details::Details;
 use crate::key_bind::{key_binds, KeyBind};
 use crate::{content, details, fl, menu};
-use crate::details::Details;
 
 pub struct App {
     core: Core,
@@ -44,6 +44,7 @@ pub enum Message {
     WindowNew,
     AppTheme(AppTheme),
     SystemThemeModeChange(cosmic_theme::ThemeMode),
+    AddList,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -172,7 +173,7 @@ impl Application for App {
     fn init(mut core: Core, flags: Self::Flags) -> (Self, Command<CosmicMessage<Self::Message>>) {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default();
-        
+
         let app = App {
             core,
             nav_model: nav_model.build(),
@@ -207,7 +208,16 @@ impl Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![menu::menu_bar(&self.key_binds)]
+        vec![menu::menu_bar(&self.key_binds), ]
+    }
+
+    fn header_end(&self) -> Vec<Element<Self::Message>> {
+        let add_list_button = widget::button::icon(
+            widget::icon::from_name("list-add-symbolic")
+                .size(16)
+                .handle(),
+        ).on_press(Message::AddList);
+        vec![add_list_button.into()]
     }
 
     fn nav_model(&self) -> Option<&segmented_button::SingleSelectModel> {
@@ -321,7 +331,8 @@ impl Application for App {
                             }));
                         }
                         content::Command::DisplayTask(task) => {
-                            let entity = self.details.priority_model.entity_at(task.priority as u16);
+                            let entity =
+                                self.details.priority_model.entity_at(task.priority as u16);
                             if let Some(entity) = entity {
                                 self.details.priority_model.activate(entity);
                             }
@@ -368,10 +379,13 @@ impl Application for App {
                 for details_command in details_commands {
                     match details_command {
                         details::Command::Update(task) => {
-                            commands.push(Command::perform(update_task(task), |result| match result {
-                                Ok(_) => message::none(),
-                                Err(_) => message::none(),
-                            }));
+                            commands.push(Command::perform(
+                                update_task(task),
+                                |result| match result {
+                                    Ok(_) => message::none(),
+                                    Err(_) => message::none(),
+                                },
+                            ));
                         }
                         details::Command::Rename(id, title) => {
                             commands.push(self.update(Message::ContentMessage(
@@ -437,6 +451,9 @@ impl Application for App {
                         ))
                         .data(list);
                 }
+            }
+            Message::AddList => {
+                todo!("Implement add dialog");
             }
         }
 

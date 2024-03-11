@@ -75,6 +75,9 @@ open-with = Open with
 move-to-trash = Move to trash
 restore-from-trash = Restore from trash
 
+# Header
+add-list = Add list
+
 # Menu
 
 ## File

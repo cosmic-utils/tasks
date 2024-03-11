@@ -1,10 +1,11 @@
-use std::ops::{Index, IndexMut};
-use done_core::models::priority::Priority;
-use done_core::models::task::Task;
-use cosmic::{Element, widget};
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::{widget, Element};
+use done_core::models::priority::Priority;
 use done_core::models::status::Status;
+use done_core::models::task::Task;
+use std::ops::{IndexMut};
+use cosmic::iced::Length;
 
 pub struct Details {
     pub task: Option<Task>,
@@ -36,21 +37,21 @@ impl Details {
             .insert(|entity| {
                 entity
                     .icon(widget::icon(
-                        widget::icon::from_name("cosmic-applet-battery-level-10-symbolic").handle(),
+                        widget::icon::from_name("mail-mark-junk-symbolic").handle(),
                     ))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
                     .icon(widget::icon(
-                        widget::icon::from_name("cosmic-applet-battery-level-50-symbolic").handle(),
+                        widget::icon::from_name("mail-mark-junk-symbolic").handle(),
                     ))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
                     .icon(widget::icon(
-                        widget::icon::from_name("cosmic-applet-battery-level-100-symbolic")
+                        widget::icon::from_name("mail-mark-junk-symbolic")
                             .handle(),
                     ))
                     .data(Priority::High)
@@ -105,19 +106,28 @@ impl Details {
 
     pub fn view(&self) -> Element<Message> {
         if let Some(task) = self.task.as_ref().clone() {
-            let sub_tasks: Vec<Element<Message>> = task.sub_tasks.iter().enumerate().map(|(i, sub_task)| {
-                widget::settings::item::builder(sub_task.title.clone())
-                    .control(widget::checkbox("", sub_task.status == Status::Completed, move|value| {
-                        Message::CompleteSubTask(i, value)
-                    })).into()
-            }).collect();
+            let sub_tasks: Vec<Element<Message>> = task
+                .sub_tasks
+                .iter()
+                .enumerate()
+                .map(|(i, sub_task)| {
+                    widget::settings::item::builder(sub_task.title.clone())
+                        .control(widget::checkbox(
+                            "",
+                            sub_task.status == Status::Completed,
+                            move |value| Message::CompleteSubTask(i, value),
+                        ))
+                        .into()
+                })
+                .collect();
             return widget::settings::view_column(vec![
                 widget::settings::view_section("Details")
                     .add(
-                        widget::container(widget::text_input("Title", &task.title).on_input(|value| {
-                            Message::Rename(value)
-                        }))
-                            .padding([0, 10, 0, 10]),
+                        widget::container(
+                            widget::text_input("Title", &task.title)
+                                .on_input(|value| Message::Rename(value)),
+                        )
+                        .padding([0, 10, 0, 10]),
                     )
                     .add(
                         widget::settings::item::builder("Favorite").control(widget::checkbox(
@@ -129,15 +139,16 @@ impl Details {
                     .add(
                         widget::settings::item::builder("Priority").control(
                             widget::segmented_control::horizontal(&self.priority_model)
+                                .width(Length::Shrink)
                                 .on_activate(Message::PriorityActivate),
                         ),
                     )
                     .into(),
-                widget::settings::view_section("Subtasks")
+                widget::settings::view_section("Sub tasks")
                     .add(widget::column::with_children(sub_tasks).spacing(15))
-                    .into()
+                    .into(),
             ])
-                .into();
+            .into();
         }
         widget::settings::view_column(vec![widget::settings::view_section("Details").into()]).into()
     }
