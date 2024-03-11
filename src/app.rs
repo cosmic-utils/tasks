@@ -1,5 +1,4 @@
 use core_done::models::list::List;
-use core_done::models::priority::Priority;
 use core_done::models::task::Task;
 use core_done::service::Service;
 use std::any::TypeId;
@@ -10,7 +9,6 @@ use std::{env, process};
 use cosmic::app::{message, Core, Message as CosmicMessage};
 use cosmic::iced::{window, Alignment, Length, Subscription};
 use cosmic::widget::segmented_button;
-use cosmic::widget::segmented_button::Entity;
 use cosmic::{
     cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Command,
     Element,
@@ -19,34 +17,33 @@ use cosmic::{
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
 use crate::key_bind::{key_binds, KeyBind};
-use crate::{content, fl, menu};
+use crate::{content, details, fl, menu};
+use crate::details::Details;
 
 pub struct App {
     core: Core,
     nav_model: segmented_button::SingleSelectModel,
-    priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     content: Content,
+    details: Details,
     config_handler: Option<cosmic_config::Config>,
     config: crate::config::Config,
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
-    selected_task: Option<Task>,
     selected_list: Option<List>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ContentMessage(content::Message),
+    DetailsMessage(details::Message),
     ToggleContextPage(ContextPage),
-    AppTheme(AppTheme),
-    SystemThemeModeChange(cosmic_theme::ThemeMode),
     LaunchUrl(String),
     PopulateLists(Vec<List>),
     WindowClose,
     WindowNew,
-    FavoriteTask(bool),
-    PriorityActivate(Entity),
+    AppTheme(AppTheme),
+    SystemThemeModeChange(cosmic_theme::ThemeMode),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -133,34 +130,6 @@ impl App {
         .into()
     }
 
-    pub fn task_details(&self) -> Element<Message> {
-        if let Some(task) = self.selected_task.as_ref().clone() {
-            return widget::settings::view_column(vec![widget::settings::view_section("Details")
-                .add(
-                    widget::container(widget::text_input("Title", &task.title).on_input(|value| {
-                        Message::ContentMessage(content::Message::Rename(task.id.clone(), value))
-                    }))
-                    .padding([0, 10, 0, 10]),
-                )
-                .add(
-                    widget::settings::item::builder("Favorite").control(widget::checkbox(
-                        "",
-                        task.favorite,
-                        |value| Message::FavoriteTask(value),
-                    )),
-                )
-                .add(
-                    widget::settings::item::builder("Priority").control(
-                        widget::segmented_control::horizontal(&self.priority_model)
-                            .on_activate(Message::PriorityActivate),
-                    ),
-                )
-                .into()])
-            .into();
-        }
-        widget::settings::view_column(vec![widget::settings::view_section("Details").into()]).into()
-    }
-
     fn settings(&self) -> Element<Message> {
         let app_theme_selected = match self.config.app_theme {
             AppTheme::Dark => 1,
@@ -203,41 +172,17 @@ impl Application for App {
     fn init(mut core: Core, flags: Self::Flags) -> (Self, Command<CosmicMessage<Self::Message>>) {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default();
-        let priority_model = segmented_button::ModelBuilder::default()
-            .insert(|entity| {
-                entity
-                    .icon(widget::icon(
-                        widget::icon::from_name("cosmic-applet-battery-level-10-symbolic").handle(),
-                    ))
-                    .data(Priority::Low)
-            })
-            .insert(|entity| {
-                entity
-                    .icon(widget::icon(
-                        widget::icon::from_name("cosmic-applet-battery-level-50-symbolic").handle(),
-                    ))
-                    .data(Priority::Normal)
-            })
-            .insert(|entity| {
-                entity
-                    .icon(widget::icon(
-                        widget::icon::from_name("cosmic-applet-battery-level-100-symbolic")
-                            .handle(),
-                    ))
-                    .data(Priority::High)
-            })
-            .build();
+        
         let app = App {
             core,
             nav_model: nav_model.build(),
-            priority_model,
             content: Content::new(),
+            details: Details::new(),
             config_handler: flags.config_handler,
             config: flags.config,
             app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
             context_page: ContextPage::Settings,
             key_binds: key_binds(),
-            selected_task: None,
             selected_list: None,
         };
 
@@ -257,7 +202,7 @@ impl Application for App {
         Some(match self.context_page {
             ContextPage::About => self.about(),
             ContextPage::Settings => self.settings(),
-            ContextPage::TaskDetails => self.task_details(),
+            ContextPage::TaskDetails => self.details.view().map(Message::DetailsMessage),
         })
     }
 
@@ -376,18 +321,18 @@ impl Application for App {
                             }));
                         }
                         content::Command::DisplayTask(task) => {
-                            let entity = self.priority_model.entity_at(task.priority as u16);
+                            let entity = self.details.priority_model.entity_at(task.priority as u16);
                             if let Some(entity) = entity {
-                                self.priority_model.activate(entity);
+                                self.details.priority_model.activate(entity);
                             }
 
-                            self.selected_task = Some(task.clone());
+                            self.details.task = Some(task.clone());
                             commands.push(
                                 self.update(Message::ToggleContextPage(ContextPage::TaskDetails)),
                             );
                         }
                         content::Command::UpdateTask(task) => {
-                            self.selected_task = Some(task.clone());
+                            self.details.task = Some(task.clone());
                             let command =
                                 Command::perform(update_task(task), |result| match result {
                                     Ok(_) => message::none(),
@@ -414,6 +359,32 @@ impl Application for App {
                                     Err(_) => message::none(),
                                 });
                             commands.push(command);
+                        }
+                    }
+                }
+            }
+            Message::DetailsMessage(message) => {
+                let details_commands = self.details.update(message);
+                for details_command in details_commands {
+                    match details_command {
+                        details::Command::Update(task) => {
+                            commands.push(Command::perform(update_task(task), |result| match result {
+                                Ok(_) => message::none(),
+                                Err(_) => message::none(),
+                            }));
+                        }
+                        details::Command::Rename(id, title) => {
+                            commands.push(self.update(Message::ContentMessage(
+                                content::Message::Rename(id.clone(), title.clone()),
+                            )));
+                        }
+                        details::Command::Delete(_) => {}
+                        details::Command::Complete(_, _) => {}
+                        details::Command::Favorite(_, _) => {}
+                        details::Command::PriorityActivate(id, priority) => {
+                            commands.push(self.update(Message::ContentMessage(
+                                content::Message::SetPriority(id.clone(), priority.clone()),
+                            )));
                         }
                     }
                 }
@@ -465,31 +436,6 @@ impl Application for App {
                                 .handle(),
                         ))
                         .data(list);
-                }
-            }
-            Message::FavoriteTask(favorite) => {
-                if let Some(ref mut selected_task) = &mut self.selected_task {
-                    selected_task.favorite = favorite;
-                    let command =
-                        Command::perform(
-                            update_task(selected_task.clone()),
-                            |result| match result {
-                                Ok(_) => message::none(),
-                                Err(_) => message::none(),
-                            },
-                        );
-                    commands.push(command);
-                }
-            }
-            Message::PriorityActivate(entity) => {
-                self.priority_model.activate(entity);
-                let priority = self.priority_model.data::<Priority>(entity);
-                if let Some(task) = &self.selected_task {
-                    if let Some(priority) = priority {
-                        commands.push(self.update(Message::ContentMessage(
-                            content::Message::SetPriority(task.id.clone(), priority.clone()),
-                        )));
-                    }
                 }
             }
         }

@@ -17,6 +17,7 @@ mod content;
 mod key_bind;
 mod localize;
 mod menu;
+mod details;
 
 #[rustfmt::skip]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {

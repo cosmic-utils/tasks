@@ -114,13 +114,6 @@ impl Content {
             }
             Message::ItemDown => {}
             Message::ItemUp => {}
-            Message::Rename(id, name) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == id);
-                if let Some(task) = task {
-                    task.title = name;
-                    commands.push(Command::UpdateTask(task.clone()));
-                }
-            }
             Message::Delete(id) => {
                 commands.push(Command::Delete(id.clone()));
                 self.tasks.retain(|t| t.id != id);
@@ -153,6 +146,13 @@ impl Content {
                 let task = self.tasks.iter_mut().find(|t| t.id == id);
                 if let Some(task) = task {
                     task.priority = priority;
+                    commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
+            Message::Rename(id, title) => {
+                let task = self.tasks.iter_mut().find(|t| t.id == id);
+                if let Some(task) = task {
+                    task.title = title;
                     commands.push(Command::UpdateTask(task.clone()));
                 }
             }
