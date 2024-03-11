@@ -1,5 +1,5 @@
-use core_done::models::priority::Priority;
-use core_done::models::task::Task;
+use done_core::models::priority::Priority;
+use done_core::models::task::Task;
 use cosmic::{Element, widget};
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;

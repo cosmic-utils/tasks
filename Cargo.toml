@@ -21,7 +21,7 @@ open = "5.0.2"
 dirs = "5.0.1"
 chrono = "0.4.35"
 tokio = "1"
-core_done = { git = "https://github.com/edfloreshz/done" }
+done_core = { git = "https://github.com/edfloreshz/done" }
 tracing = "0.1.40"
 
 [dependencies.libcosmic]

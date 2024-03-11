@@ -1,6 +1,6 @@
-use core_done::models::list::List;
-use core_done::models::task::Task;
-use core_done::service::Service;
+use done_core::models::list::List;
+use done_core::models::task::Task;
+use done_core::service::Service;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::error::Error;

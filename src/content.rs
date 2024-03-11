@@ -1,7 +1,7 @@
-use core_done::models::list::List;
-use core_done::models::priority::Priority;
-use core_done::models::status::Status;
-use core_done::models::task::Task;
+use done_core::models::list::List;
+use done_core::models::priority::Priority;
+use done_core::models::status::Status;
+use done_core::models::task::Task;
 use cosmic::iced::{Alignment, Color, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{cosmic_theme, theme, widget, Element};

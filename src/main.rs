@@ -7,6 +7,7 @@ use cosmic::{
     cosmic_config::{self, CosmicConfigEntry},
     iced::Limits,
 };
+use done_core::service::Services;
 
 use app::{App, Flags};
 use config::{Config, CONFIG_VERSION};
@@ -35,6 +36,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     localize::localize();
 
+    Services::init(App::APP_ID);
+
     let (config_handler, config) = match cosmic_config::Config::new(App::APP_ID, CONFIG_VERSION) {
         Ok(config_handler) => {
             let config = Config::get_entry(&config_handler).unwrap_or_else(|(errs, config)| {
@@ -61,7 +64,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // "Adwaita", "Breeze Light", "Cosmic", "HighContrast", "Pop", "Breeze", "Breeze Dark", "Breeze", "GNOME", "Hicolor"
-    // cosmic::icon_theme::set_default("Cosmic");
+    cosmic::icon_theme::set_default("Adwaita");
 
     cosmic::app::run::<App>(settings, flags)?;
 
