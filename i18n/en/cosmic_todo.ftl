@@ -10,6 +10,7 @@ create-new-file = Create new file
 create-new-folder = Create new folder
 file-name = File name
 folder-name = Folder name
+list-name = List name
 file-already-exists = A file with that name already exists.
 folder-already-exists = A folder with that name already exists.
 name-hidden = Names starting with "." will be hidden.
@@ -91,8 +92,9 @@ close-tab = Close tab
 quit = Quit
 
 ## Edit
-new-list = New list
-delete-list = Delete list
+new-list = Create list
+rename-list = Rename list
+delete-list = Delete list 
 edit = Edit
 cut = Cut
 copy = Copy

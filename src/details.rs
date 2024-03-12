@@ -1,12 +1,13 @@
+use std::ops::IndexMut;
+
+use cosmic::{cosmic_theme, Element, theme, widget};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
-use std::ops::IndexMut;
 
 pub struct Details {
     pub task: Option<Task>,
@@ -90,7 +91,7 @@ impl Details {
                 let priority = self.priority_model.data::<Priority>(entity);
                 if let Some(task) = &self.task {
                     if let Some(priority) = priority {
-                        commands.push(Command::PriorityActivate(task.id.clone(), priority.clone()));
+                        commands.push(Command::PriorityActivate(task.id.clone(), *priority));
                     }
                 }
             }
@@ -124,7 +125,7 @@ impl Details {
     pub fn view(&self) -> Element<Message> {
         let cosmic_theme::Spacing { space_xs, .. } = theme::active().cosmic().spacing;
 
-        if let Some(task) = self.task.as_ref().clone() {
+        if let Some(task) = self.task.as_ref() {
             let mut sub_tasks: Vec<Element<Message>> = task
                 .sub_tasks
                 .iter()
@@ -147,15 +148,15 @@ impl Details {
                     .add(
                         widget::container(
                             widget::text_input("Title", &task.title)
-                                .on_input(|value| Message::Rename(value)),
+                                .on_input(Message::Rename),
                         )
-                        .padding([0, 10, 0, 10]),
+                            .padding([0, 10, 0, 10]),
                     )
                     .add(
                         widget::settings::item::builder("Favorite").control(widget::checkbox(
                             "",
                             task.favorite,
-                            |value| Message::Favorite(value),
+                            Message::Favorite,
                         )),
                     )
                     .add(
@@ -170,7 +171,7 @@ impl Details {
                     .add(widget::column::with_children(sub_tasks).spacing(space_xs))
                     .into(),
             ])
-            .into();
+                .into();
         }
         widget::settings::view_column(vec![widget::settings::view_section("Details").into()]).into()
     }
@@ -182,7 +183,7 @@ impl Details {
 
         row(vec![
             widget::text_input("Add new sub task", &self.subtask_input)
-                .on_input(|input| Message::SubTaskInput(input))
+                .on_input(Message::SubTaskInput)
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
@@ -191,12 +192,12 @@ impl Details {
                     .size(16)
                     .handle(),
             )
-            .on_press(Message::AddTask)
-            .into(),
+                .on_press(Message::AddTask)
+                .into(),
         ])
-        .padding([0, space_s])
-        .spacing(space_xs)
-        .align_items(Alignment::Center)
-        .into()
+            .padding([0, space_s])
+            .spacing(space_xs)
+            .align_items(Alignment::Center)
+            .into()
     }
 }

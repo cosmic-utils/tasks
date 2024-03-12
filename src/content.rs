@@ -111,7 +111,7 @@ impl Content {
         let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
         row(vec![
             widget::text_input("Add new task", &self.input)
-                .on_input(|input| Message::Input(input))
+                .on_input(Message::Input)
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
