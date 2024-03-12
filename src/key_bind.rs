@@ -65,12 +65,13 @@ pub fn key_binds() -> HashMap<KeyBind, Action> {
     bind!([], Key::Named(Named::ArrowUp), ItemUp);
     bind!([Shift], Key::Named(Named::ArrowDown), ItemDown);
     bind!([Shift], Key::Named(Named::ArrowUp), ItemUp);
-    bind!([Shift], Key::Character("N".into()), NewList);
-    bind!([Shift], Key::Character("D".into()), DeleteList);
-    bind!([Shift], Key::Character("R".into()), RenameList);
+    bind!([Ctrl], Key::Character("n".into()), NewList);
+    bind!([], Key::Named(Named::Delete), DeleteList);
+    bind!([], Key::Named(Named::Enter), RenameList);
     bind!([Ctrl], Key::Character("w".into()), WindowClose);
-    bind!([Ctrl], Key::Character("n".into()), WindowNew);
+    bind!([Ctrl, Shift], Key::Character("n".into()), WindowNew);
     bind!([Ctrl], Key::Character(",".into()), Settings);
+    bind!([Ctrl], Key::Character("i".into()), About);
 
     key_binds
 }

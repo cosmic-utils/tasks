@@ -26,8 +26,10 @@ macro_rules! menu_button {
                 vec![$(Element::from($x)),+]
             )
             .align_items(Alignment::Center)
+            .height(Length::Fill)
+            .width(Length::Fill)
         )
-        .height(Length::Fixed(32.0))
+        .height(Length::Fixed(36.0))
         .padding([4, 16])
         .width(Length::Fill)
         .style(theme::Button::MenuItem)
@@ -75,9 +77,7 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             menu_root(fl!("edit")),
             vec![
                 menu_item(fl!("new-list"), Action::NewList),
-                MenuTree::new(horizontal_rule(1)),
                 menu_item(fl!("rename-list"), Action::RenameList),
-                MenuTree::new(horizontal_rule(1)),
                 menu_item(fl!("delete-list"), Action::DeleteList),
             ],
         ),
