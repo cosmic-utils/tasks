@@ -1,10 +1,10 @@
 use std::ops::IndexMut;
 
-use cosmic::{cosmic_theme, Element, theme, widget};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
@@ -141,10 +141,9 @@ impl Details {
                 widget::settings::view_section("Details")
                     .add(
                         widget::container(
-                            widget::text_input("Title", &task.title)
-                                .on_input(Message::Rename),
+                            widget::text_input("Title", &task.title).on_input(Message::Rename),
                         )
-                            .padding([0, 10, 0, 10]),
+                        .padding([0, 10, 0, 10]),
                     )
                     .add(
                         widget::settings::item::builder("Favorite").control(widget::checkbox(
@@ -165,7 +164,7 @@ impl Details {
                     .add(widget::column::with_children(sub_tasks).spacing(space_xs))
                     .into(),
             ])
-                .into();
+            .into();
         }
         widget::settings::view_column(vec![widget::settings::view_section("Details").into()]).into()
     }
@@ -186,12 +185,12 @@ impl Details {
                     .size(16)
                     .handle(),
             )
-                .on_press(Message::AddTask)
-                .into(),
+            .on_press(Message::AddTask)
+            .into(),
         ])
-            .padding([0, space_s])
-            .spacing(space_xs)
-            .align_items(Alignment::Center)
-            .into()
+        .padding([0, space_s])
+        .spacing(space_xs)
+        .align_items(Alignment::Center)
+        .into()
     }
 }

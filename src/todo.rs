@@ -1,7 +1,7 @@
 use done_core::models::list::List;
-use std::error::Error;
-use done_core::service::Service;
 use done_core::models::task::Task;
+use done_core::service::Service;
+use std::error::Error;
 
 pub async fn update_list(list: List) -> Result<(), Box<dyn Error>> {
     let mut service = Service::Computer.get_service();
