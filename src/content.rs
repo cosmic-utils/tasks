@@ -1,6 +1,7 @@
 use cosmic::iced::{Alignment, Color, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{cosmic_theme, theme, widget, Element};
+use cosmic::iced::alignment::{Horizontal, Vertical};
 use done_core::models::list::List;
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
@@ -161,8 +162,49 @@ impl Content {
     }
 
     pub fn view(&self) -> Element<Message> {
+        if self.list.is_none() {
+            return widget::container(
+                widget::column::with_children(
+                    vec![
+                        widget::icon::from_name("applications-office-symbolic") // replace "icon-name" with the name of your icon
+                            .size(56)
+                            .into(),
+                        widget::text::title1("No list selected")
+                            .into(),
+                        widget::text::title4("Try selecting a list from the sidebar.")
+                            .into()
+                    ])
+                    .spacing(10)
+                    .align_items(Alignment::Center)
+
+            )
+                .align_y(Vertical::Center)
+                .align_x(Horizontal::Center)
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .into();
+        }
+
         if self.tasks.is_empty() {
-            return widget::container(widget::text("No items"))
+            return widget::container(
+                widget::column::with_children(
+                    vec![
+                        widget::icon::from_name("dialog-question-symbolic") // replace "icon-name" with the name of your icon
+                            .size(48)
+                            .into(),
+                        widget::text("No tasks")
+                            .size(48)
+                            .into(),
+                        widget::text("Try adding a task with the text field below.")
+                            .size(48)
+                            .into()
+                    ])
+                    .spacing(10)
+                    .align_items(Alignment::Center)
+
+            )
+                .align_y(Vertical::Center)
+                .align_x(Horizontal::Center)
                 .height(Length::Fill)
                 .width(Length::Fill)
                 .into();

@@ -58,7 +58,7 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
                 widget::horizontal_space(Length::Fill),
                 widget::text(key)
             )
-            .on_press(action.message()),
+            .on_press(action.message(None)),
         )
     };
 
@@ -68,8 +68,7 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             vec![
                 menu_item(fl!("new-window"), Action::WindowNew),
                 MenuTree::new(horizontal_rule(1)),
-                //TOOD: add to sidebar, then divider
-                MenuTree::new(horizontal_rule(1)),
+                menu_item(fl!("new-list"), Action::NewList),
                 MenuTree::new(horizontal_rule(1)),
                 menu_item(fl!("quit"), Action::WindowClose),
             ],

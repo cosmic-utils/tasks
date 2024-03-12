@@ -7,12 +7,14 @@ use std::error::Error;
 use std::{env, process};
 
 use cosmic::app::{message, Core, Message as CosmicMessage};
-use cosmic::iced::{window, Alignment, Length, Subscription};
+use cosmic::iced::{window, Alignment, Length, Subscription, event, Event, keyboard::Event as KeyEvent};
 use cosmic::widget::segmented_button;
 use cosmic::{
     cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Command,
     Element,
 };
+use cosmic::iced::keyboard::{Key, Modifiers};
+use cosmic::widget::segmented_button::Entity;
 
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
@@ -31,6 +33,7 @@ pub struct App {
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
     selected_list: Option<List>,
+    modifiers: Modifiers
 }
 
 #[derive(Debug, Clone)]
@@ -42,9 +45,11 @@ pub enum Message {
     PopulateLists(Vec<List>),
     WindowClose,
     WindowNew,
+    Key(Modifiers, Key),
+    Modifiers(Modifiers),
     AppTheme(AppTheme),
     SystemThemeModeChange(cosmic_theme::ThemeMode),
-    AddList,
+    NewList,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -78,10 +83,11 @@ pub enum Action {
     Settings,
     WindowClose,
     WindowNew,
+    NewList
 }
 
 impl Action {
-    pub fn message(self) -> Message {
+    pub fn message(self, _entity_opt: Option<Entity>) -> Message {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
             Action::ItemDown => Message::ContentMessage(content::Message::ItemDown),
@@ -89,6 +95,7 @@ impl Action {
             Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
             Action::WindowClose => Message::WindowClose,
             Action::WindowNew => Message::WindowNew,
+            Action::NewList => Message::NewList,
         }
     }
 }
@@ -184,6 +191,7 @@ impl Application for App {
             app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
             context_page: ContextPage::Settings,
             key_binds: key_binds(),
+            modifiers: Modifiers::empty(),
             selected_list: None,
         };
 
@@ -216,7 +224,7 @@ impl Application for App {
             widget::icon::from_name("list-add-symbolic")
                 .size(16)
                 .handle(),
-        ).on_press(Message::AddList);
+        ).on_press(Message::NewList);
         vec![add_list_button.into()]
     }
 
@@ -244,6 +252,16 @@ impl Application for App {
         struct ThemeSubscription;
 
         let mut subscriptions = vec![
+            event::listen_with(|event, status| match event {
+                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => match status {
+                    event::Status::Ignored => Some(Message::Key(modifiers, key)),
+                    event::Status::Captured => None,
+                },
+                Event::Keyboard(KeyEvent::ModifiersChanged(modifiers)) => {
+                    Some(Message::Modifiers(modifiers))
+                }
+                _ => None,
+            }),
             cosmic_config::config_subscription(
                 TypeId::of::<ConfigSubscription>(),
                 Self::APP_ID.into(),
@@ -452,7 +470,17 @@ impl Application for App {
                         .data(list);
                 }
             }
-            Message::AddList => {
+            Message::Key(modifiers, key) => {
+                for (key_bind, action) in self.key_binds.iter() {
+                    if key_bind.matches(modifiers, &key) {
+                        return self.update(action.message(None));
+                    }
+                }
+            }
+            Message::Modifiers(modifiers) => {
+                self.modifiers = modifiers;
+            }
+            Message::NewList => {
                 todo!("Implement add dialog");
             }
         }

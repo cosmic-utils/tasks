@@ -84,6 +84,7 @@ add-list = Add list
 file = File
 new-tab = New tab
 new-window = New window
+new-list = New list
 rename = Rename
 close-tab = Close tab
 quit = Quit
