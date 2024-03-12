@@ -1,7 +1,8 @@
-use cosmic::iced::Length;
+use cosmic::iced::{Alignment, Length};
+use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::{widget, Element};
+use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
@@ -10,6 +11,7 @@ use std::ops::IndexMut;
 pub struct Details {
     pub task: Option<Task>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
+    pub subtask_input: String,
 }
 
 #[derive(Debug, Clone)]
@@ -20,6 +22,8 @@ pub enum Message {
     CompleteSubTask(usize, bool),
     Favorite(bool),
     PriorityActivate(Entity),
+    SubTaskInput(String),
+    AddTask,
 }
 
 pub enum Command {
@@ -60,6 +64,7 @@ impl Details {
         Self {
             task: None,
             priority_model,
+            subtask_input: String::new(),
         }
     }
 
@@ -99,13 +104,27 @@ impl Details {
                     commands.push(Command::Update(task.clone()));
                 }
             }
+            Message::SubTaskInput(text) => {
+                self.subtask_input = text;
+            }
+            Message::AddTask => {
+                if let Some(ref mut task) = &mut self.task {
+                    if !self.subtask_input.is_empty() {
+                        task.sub_tasks.push(Task::new(self.subtask_input.clone(), task.id.clone()));
+                        commands.push(Command::Update(task.clone()));
+                        self.subtask_input.clear();
+                    }
+                }
+            }
         }
         commands
     }
 
     pub fn view(&self) -> Element<Message> {
+        let cosmic_theme::Spacing { space_xs, .. } = theme::active().cosmic().spacing;
+
         if let Some(task) = self.task.as_ref().clone() {
-            let sub_tasks: Vec<Element<Message>> = task
+            let mut sub_tasks: Vec<Element<Message>> = task
                 .sub_tasks
                 .iter()
                 .enumerate()
@@ -119,6 +138,9 @@ impl Details {
                         .into()
                 })
                 .collect();
+
+            sub_tasks.push(self.sub_task_input());
+
             return widget::settings::view_column(vec![
                 widget::settings::view_section("Details")
                     .add(
@@ -144,11 +166,34 @@ impl Details {
                     )
                     .into(),
                 widget::settings::view_section("Sub tasks")
-                    .add(widget::column::with_children(sub_tasks).spacing(15))
+                    .add(widget::column::with_children(sub_tasks).spacing(space_xs))
                     .into(),
             ])
             .into();
         }
         widget::settings::view_column(vec![widget::settings::view_section("Details").into()]).into()
+    }
+
+    fn sub_task_input(&self) -> Element<Message> {
+        let cosmic_theme::Spacing { space_xs, space_s, .. } = theme::active().cosmic().spacing;
+
+        row(vec![
+            widget::text_input("Add new sub task", &self.subtask_input)
+                .on_input(|input| Message::SubTaskInput(input))
+                .on_submit(Message::AddTask)
+                .width(Length::Fill)
+                .into(),
+            widget::button::icon(
+                widget::icon::from_name("mail-send-symbolic")
+                    .size(16)
+                    .handle(),
+            )
+                .on_press(Message::AddTask)
+                .into(),
+        ])
+            .padding([0, space_s])
+            .spacing(space_xs)
+            .align_items(Alignment::Center)
+            .into()
     }
 }

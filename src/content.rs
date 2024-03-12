@@ -91,20 +91,20 @@ impl Content {
     pub fn empty(&self) -> Element<Message> {
         widget::container(
             widget::column::with_children(vec![
-                widget::icon::from_name("task-past-due-symbolic") // replace "icon-name" with the name of your icon
+                widget::icon::from_name("task-past-due-symbolic")
                     .size(56)
                     .into(),
                 widget::text::title1("No tasks").into(),
-                widget::text::title4("Try adding a task with the text field below.").into(),
+                widget::text("Try adding a task with the text field below.").into(),
             ])
-                .spacing(10)
-                .align_items(Alignment::Center),
+            .spacing(10)
+            .align_items(Alignment::Center),
         )
-            .align_y(Vertical::Center)
-            .align_x(Horizontal::Center)
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .into()
+        .align_y(Vertical::Center)
+        .align_x(Horizontal::Center)
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .into()
     }
 
     pub fn new_task_view(&self) -> Element<Message> {
@@ -120,12 +120,12 @@ impl Content {
                     .size(16)
                     .handle(),
             )
-                .on_press(Message::AddTask)
-                .into(),
+            .on_press(Message::AddTask)
+            .into(),
         ])
-            .spacing(space_xxs)
-            .align_items(Alignment::Center)
-            .into()
+        .spacing(space_xxs)
+        .align_items(Alignment::Center)
+        .into()
     }
 
     pub fn update(&mut self, message: Message) -> Vec<Command> {
@@ -159,10 +159,12 @@ impl Content {
             Message::Input(input) => self.input = input,
             Message::AddTask => {
                 if let Some(list) = &self.list {
-                    let task = Task::new(self.input.clone(), list.id.clone());
-                    commands.push(Command::CreateTask(task.clone()));
-                    self.tasks.push(task);
-                    self.input.clear();
+                    if !self.input.is_empty() {
+                        let task = Task::new(self.input.clone(), list.id.clone());
+                        commands.push(Command::CreateTask(task.clone()));
+                        self.tasks.push(task);
+                        self.input.clear();
+                    }
                 }
             }
             Message::SetPriority(id, priority) => {
@@ -191,7 +193,7 @@ impl Content {
                         .size(56)
                         .into(),
                     widget::text::title1("No list selected").into(),
-                    widget::text::title4("Try selecting a list from the sidebar.").into(),
+                    widget::text("Try selecting a list from the sidebar.").into(),
                 ])
                 .spacing(10)
                 .align_items(Alignment::Center),
@@ -209,10 +211,10 @@ impl Content {
             self.list_view(),
             self.new_task_view(),
         ]))
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .padding([0, space_xxs, 0, space_xxs])
-            .into()
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .padding([0, space_xxs, 0, space_xxs])
+        .into()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
