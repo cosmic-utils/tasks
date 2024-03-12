@@ -1,11 +1,11 @@
+use cosmic::iced::Length;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::{widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
-use std::ops::{IndexMut};
-use cosmic::iced::Length;
+use std::ops::IndexMut;
 
 pub struct Details {
     pub task: Option<Task>,
@@ -37,22 +37,21 @@ impl Details {
             .insert(|entity| {
                 entity
                     .icon(widget::icon(
-                        widget::icon::from_name("mail-mark-junk-symbolic").handle(),
+                        widget::icon::from_name("security-medium-symbolic").handle(),
                     ))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
                     .icon(widget::icon(
-                        widget::icon::from_name("mail-mark-junk-symbolic").handle(),
+                        widget::icon::from_name("security-high-symbolic").handle(),
                     ))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
                     .icon(widget::icon(
-                        widget::icon::from_name("mail-mark-junk-symbolic")
-                            .handle(),
+                        widget::icon::from_name("security-low-symbolic").handle(),
                     ))
                     .data(Priority::High)
             })

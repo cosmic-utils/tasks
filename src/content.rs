@@ -1,7 +1,7 @@
+use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Color, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{cosmic_theme, theme, widget, Element};
-use cosmic::iced::alignment::{Horizontal, Vertical};
 use done_core::models::list::List;
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
@@ -48,6 +48,10 @@ impl Content {
     pub fn list_view(&self) -> Element<Message> {
         let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
 
+        if self.tasks.is_empty() {
+            return self.empty();
+        }
+
         let items = self
             .tasks
             .iter()
@@ -77,33 +81,51 @@ impl Content {
                     .into()
             })
             .collect();
-        widget::container(widget::column::with_children(vec![
-            widget::column::with_children(items)
-                .spacing(space_xxs)
-                .height(Length::Fill)
-                .into(),
-            row(vec![
-                widget::text_input("Add new task", &self.input)
-                    .on_input(|input| Message::Input(input))
-                    .on_submit(Message::AddTask)
-                    .width(Length::Fill)
+
+        widget::column::with_children(items)
+            .spacing(space_xxs)
+            .height(Length::Fill)
+            .into()
+    }
+
+    pub fn empty(&self) -> Element<Message> {
+        widget::container(
+            widget::column::with_children(vec![
+                widget::icon::from_name("task-past-due-symbolic") // replace "icon-name" with the name of your icon
+                    .size(56)
                     .into(),
-                widget::button::icon(
-                    widget::icon::from_name("list-add-symbolic")
-                        .size(16)
-                        .handle(),
-                )
+                widget::text::title1("No tasks").into(),
+                widget::text::title4("Try adding a task with the text field below.").into(),
+            ])
+                .spacing(10)
+                .align_items(Alignment::Center),
+        )
+            .align_y(Vertical::Center)
+            .align_x(Horizontal::Center)
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .into()
+    }
+
+    pub fn new_task_view(&self) -> Element<Message> {
+        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        row(vec![
+            widget::text_input("Add new task", &self.input)
+                .on_input(|input| Message::Input(input))
+                .on_submit(Message::AddTask)
+                .width(Length::Fill)
+                .into(),
+            widget::button::icon(
+                widget::icon::from_name("mail-send-symbolic")
+                    .size(16)
+                    .handle(),
+            )
                 .on_press(Message::AddTask)
                 .into(),
-            ])
+        ])
             .spacing(space_xxs)
             .align_items(Alignment::Center)
-            .into(),
-        ]))
-        .height(Length::Fill)
-        .width(Length::Fill)
-        .padding([0, space_xxs, 0, space_xxs])
-        .into()
+            .into()
     }
 
     pub fn update(&mut self, message: Message) -> Vec<Command> {
@@ -164,55 +186,32 @@ impl Content {
     pub fn view(&self) -> Element<Message> {
         if self.list.is_none() {
             return widget::container(
-                widget::column::with_children(
-                    vec![
-                        widget::icon::from_name("applications-office-symbolic") // replace "icon-name" with the name of your icon
-                            .size(56)
-                            .into(),
-                        widget::text::title1("No list selected")
-                            .into(),
-                        widget::text::title4("Try selecting a list from the sidebar.")
-                            .into()
-                    ])
-                    .spacing(10)
-                    .align_items(Alignment::Center)
-
+                widget::column::with_children(vec![
+                    widget::icon::from_name("applications-office-symbolic") // replace "icon-name" with the name of your icon
+                        .size(56)
+                        .into(),
+                    widget::text::title1("No list selected").into(),
+                    widget::text::title4("Try selecting a list from the sidebar.").into(),
+                ])
+                .spacing(10)
+                .align_items(Alignment::Center),
             )
-                .align_y(Vertical::Center)
-                .align_x(Horizontal::Center)
-                .height(Length::Fill)
-                .width(Length::Fill)
-                .into();
-        }
-
-        if self.tasks.is_empty() {
-            return widget::container(
-                widget::column::with_children(
-                    vec![
-                        widget::icon::from_name("dialog-question-symbolic") // replace "icon-name" with the name of your icon
-                            .size(48)
-                            .into(),
-                        widget::text("No tasks")
-                            .size(48)
-                            .into(),
-                        widget::text("Try adding a task with the text field below.")
-                            .size(48)
-                            .into()
-                    ])
-                    .spacing(10)
-                    .align_items(Alignment::Center)
-
-            )
-                .align_y(Vertical::Center)
-                .align_x(Horizontal::Center)
-                .height(Length::Fill)
-                .width(Length::Fill)
-                .into();
-        }
-
-        widget::container(widget::column::with_children(vec![self.list_view()]))
+            .align_y(Vertical::Center)
+            .align_x(Horizontal::Center)
             .height(Length::Fill)
             .width(Length::Fill)
+            .into();
+        }
+
+        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+
+        widget::container(widget::column::with_children(vec![
+            self.list_view(),
+            self.new_task_view(),
+        ]))
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .padding([0, space_xxs, 0, space_xxs])
             .into()
     }
 

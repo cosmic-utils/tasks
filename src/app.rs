@@ -7,14 +7,16 @@ use std::error::Error;
 use std::{env, process};
 
 use cosmic::app::{message, Core, Message as CosmicMessage};
-use cosmic::iced::{window, Alignment, Length, Subscription, event, Event, keyboard::Event as KeyEvent};
+use cosmic::iced::keyboard::{Key, Modifiers};
+use cosmic::iced::{
+    event, keyboard::Event as KeyEvent, window, Alignment, Event, Length, Subscription,
+};
 use cosmic::widget::segmented_button;
+use cosmic::widget::segmented_button::Entity;
 use cosmic::{
     cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Command,
     Element,
 };
-use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::widget::segmented_button::Entity;
 
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
@@ -33,7 +35,7 @@ pub struct App {
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
     selected_list: Option<List>,
-    modifiers: Modifiers
+    modifiers: Modifiers,
 }
 
 #[derive(Debug, Clone)]
@@ -83,7 +85,7 @@ pub enum Action {
     Settings,
     WindowClose,
     WindowNew,
-    NewList
+    NewList,
 }
 
 impl Action {
@@ -216,7 +218,7 @@ impl Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![menu::menu_bar(&self.key_binds), ]
+        vec![menu::menu_bar(&self.key_binds)]
     }
 
     fn header_end(&self) -> Vec<Element<Self::Message>> {
@@ -224,7 +226,8 @@ impl Application for App {
             widget::icon::from_name("list-add-symbolic")
                 .size(16)
                 .handle(),
-        ).on_press(Message::NewList);
+        )
+        .on_press(Message::NewList);
         vec![add_list_button.into()]
     }
 
