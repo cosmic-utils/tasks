@@ -17,9 +17,10 @@ pub struct Content {
 pub enum Message {
     List(Option<List>),
     Rename(String, String),
+    Favorite(String, bool),
+    Complete(String, bool),
     Delete(String),
     Select(Task),
-    Complete(String, bool),
     SetItems(Vec<Task>),
     ItemDown,
     ItemUp,
@@ -180,6 +181,13 @@ impl Content {
                 let task = self.tasks.iter_mut().find(|t| t.id == id);
                 if let Some(task) = task {
                     task.title = title;
+                    commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
+            Message::Favorite(id, favorite) => {
+                let task = self.tasks.iter_mut().find(|t| t.id == id);
+                if let Some(task) = task {
+                    task.favorite = favorite;
                     commands.push(Command::UpdateTask(task.clone()));
                 }
             }

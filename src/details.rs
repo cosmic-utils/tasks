@@ -18,8 +18,6 @@ pub struct Details {
 #[derive(Debug, Clone)]
 pub enum Message {
     Rename(String),
-    Delete(String),
-    Complete(bool),
     CompleteSubTask(usize, bool),
     Favorite(bool),
     PriorityActivate(Entity),
@@ -30,8 +28,6 @@ pub enum Message {
 pub enum Command {
     Update(Task),
     Rename(String, String),
-    Delete(String),
-    Complete(String, bool),
     Favorite(String, bool),
     PriorityActivate(String, Priority),
 }
@@ -78,8 +74,6 @@ impl Details {
                     commands.push(Command::Rename(task.id.clone(), title));
                 }
             }
-            Message::Delete(_) => {}
-            Message::Complete(_) => {}
             Message::Favorite(favorite) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.favorite = favorite;

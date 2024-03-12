@@ -1,7 +1,6 @@
 use std::{env, process};
 use std::any::TypeId;
 use std::collections::{HashMap, VecDeque};
-use std::error::Error;
 
 use cosmic::{
     app, Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor,
@@ -15,10 +14,9 @@ use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
 use done_core::models::list::List;
-use done_core::models::task::Task;
 use done_core::service::Service;
 
-use crate::{content, details, fl, menu};
+use crate::{content, details, fl, menu, todo};
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
 use crate::details::Details;
@@ -34,7 +32,6 @@ pub struct App {
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
-    selected_list: Option<List>,
     modifiers: Modifiers,
     dialog_pages: VecDeque<DialogPage>,
     dialog_text_input: widget::Id,
@@ -61,7 +58,6 @@ pub enum Message {
     OpenDeleteListDialog,
     AddList(List),
     DeleteList,
-    UpdateList(List),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -83,9 +79,9 @@ impl ContextPage {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogPage {
-    NewItem { name: String },
-    RenameItem { from: String, to: String },
-    DeleteItem { name: String },
+    NewItem(String),
+    RenameItem { to: String },
+    DeleteItem,
 }
 
 #[derive(Clone, Debug)]
@@ -229,25 +225,14 @@ impl Application for App {
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
-            selected_list: None,
         };
 
-        let commands = vec![Command::perform(fetch_lists(), |result| match result {
+        let commands = vec![Command::perform(todo::fetch_lists(), |result| match result {
             Ok(data) => message::app(Message::PopulateLists(data)),
             Err(_) => message::none(),
         })];
 
         (app, Command::batch(commands))
-    }
-
-    fn on_escape(&mut self) -> Command<CosmicMessage<Self::Message>> {
-        if self.dialog_pages.pop_front().is_some() {
-            return Command::none();
-        }
-
-        self.core.window.show_context = false;
-
-        Command::none()
     }
 
     fn context_drawer(&self) -> Option<Element<Message>> {
@@ -260,6 +245,82 @@ impl Application for App {
             ContextPage::Settings => self.settings(),
             ContextPage::TaskDetails => self.details.view().map(Message::DetailsMessage),
         })
+    }
+
+    fn dialog(&self) -> Option<Element<Message>> {
+        let dialog_page = match self.dialog_pages.front() {
+            Some(some) => some,
+            None => return None,
+        };
+
+        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+
+        let dialog = match dialog_page {
+            DialogPage::NewItem(name) => {
+                let dialog = widget::dialog(fl!("new-list"));
+
+                dialog
+                    .primary_action(
+                        widget::button::suggested(fl!("save"))
+                            .on_press_maybe(Some(Message::DialogComplete)),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
+                    )
+                    .control(
+                        widget::column::with_children(vec![
+                            widget::text::body(fl!("list-name")).into(),
+                            widget::text_input("", name.as_str())
+                                .id(self.dialog_text_input.clone())
+                                .on_input(move |name| {
+                                    Message::DialogUpdate(DialogPage::NewItem(name))
+                                })
+                                .into(),
+                        ])
+                            .spacing(space_xxs),
+                    )
+            }
+            DialogPage::RenameItem { to: name} => {
+                let dialog = widget::dialog(fl!("rename-list"));
+
+                dialog
+                    .primary_action(
+                        widget::button::suggested(fl!("save"))
+                            .on_press_maybe(Some(Message::DialogComplete)),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
+                    )
+                    .control(
+                        widget::column::with_children(vec![
+                            widget::text::body(fl!("list-name")).into(),
+                            widget::text_input("", name.as_str())
+                                .id(self.dialog_text_input.clone())
+                                .on_input(move |name| {
+                                    Message::DialogUpdate(DialogPage::RenameItem {
+                                        to: name,
+                                    })
+                                })
+                                .into(),
+                        ])
+                            .spacing(space_xxs),
+                    )
+            }
+            DialogPage::DeleteItem => {
+                let dialog = widget::dialog(fl!("delete-list"));
+
+                dialog
+                    .primary_action(
+                        widget::button::suggested(fl!("ok"))
+                            .on_press_maybe(Some(Message::DialogComplete)),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
+                    )
+            }
+        };
+
+        Some(dialog.into())
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
@@ -280,97 +341,26 @@ impl Application for App {
         Some(&self.nav_model)
     }
 
+    fn on_escape(&mut self) -> Command<CosmicMessage<Self::Message>> {
+        if self.dialog_pages.pop_front().is_some() {
+            return Command::none();
+        }
+
+        self.core.window.show_context = false;
+
+        Command::none()
+    }
+
     fn on_nav_select(&mut self, entity: Entity) -> Command<CosmicMessage<Self::Message>> {
         self.nav_model.activate(entity);
         let location_opt = self.nav_model.data::<List>(entity);
 
         if let Some(list) = location_opt {
-            self.selected_list = Some(list.clone());
             let message = Message::ContentMessage(content::Message::List(Some(list.clone())));
             return self.update(message);
         }
 
         Command::none()
-    }
-
-    fn dialog(&self) -> Option<Element<Message>> {
-        let dialog_page = match self.dialog_pages.front() {
-            Some(some) => some,
-            None => return None,
-        };
-
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
-
-        let dialog = match dialog_page {
-            DialogPage::NewItem { name } => {
-                let dialog = widget::dialog(fl!("new-list"));
-
-                dialog
-                    .primary_action(
-                        widget::button::suggested(fl!("save"))
-                            .on_press_maybe(Some(Message::DialogComplete)),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                    )
-                    .control(
-                        widget::column::with_children(vec![
-                            widget::text::body(fl!("list-name")).into(),
-                            widget::text_input("", name.as_str())
-                                .id(self.dialog_text_input.clone())
-                                .on_input(move |name| {
-                                    Message::DialogUpdate(DialogPage::NewItem { name })
-                                })
-                                .into(),
-                        ])
-                            .spacing(space_xxs),
-                    )
-            }
-            DialogPage::RenameItem {
-                from: old_name,
-                to: name,
-            } => {
-                let dialog = widget::dialog(fl!("rename-list"));
-
-                dialog
-                    .primary_action(
-                        widget::button::suggested(fl!("save"))
-                            .on_press_maybe(Some(Message::DialogComplete)),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                    )
-                    .control(
-                        widget::column::with_children(vec![
-                            widget::text::body(fl!("list-name")).into(),
-                            widget::text_input("", name.as_str())
-                                .id(self.dialog_text_input.clone())
-                                .on_input(move |name| {
-                                    Message::DialogUpdate(DialogPage::RenameItem {
-                                        from: old_name.clone(),
-                                        to: name,
-                                    })
-                                })
-                                .into(),
-                        ])
-                            .spacing(space_xxs),
-                    )
-            }
-            DialogPage::DeleteItem { name } => {
-                let dialog = widget::dialog(fl!("delete-list"));
-
-                dialog
-                    .primary_action(
-                        widget::button::suggested(fl!("ok"))
-                            .on_press_maybe(Some(Message::DialogComplete)),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                    )
-            }
-        };
-
-        Some(dialog.into())
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -465,7 +455,7 @@ impl Application for App {
                 for content_command in content_commands {
                     match content_command {
                         content::Command::GetTasks(list_id) => {
-                            commands.push(Command::perform(fetch_tasks(list_id), |result| {
+                            commands.push(Command::perform(todo::fetch_tasks(list_id), |result| {
                                 match result {
                                     Ok(data) => message::app(Message::ContentMessage(
                                         content::Message::SetItems(data),
@@ -489,16 +479,16 @@ impl Application for App {
                         content::Command::UpdateTask(task) => {
                             self.details.task = Some(task.clone());
                             let command =
-                                Command::perform(update_task(task), |result| match result {
+                                Command::perform(todo::update_task(task), |result| match result {
                                     Ok(_) => message::none(),
                                     Err(_) => message::none(),
                                 });
                             commands.push(command);
                         }
                         content::Command::Delete(id) => {
-                            if let Some(list) = &self.selected_list {
+                            if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
                                 let command = Command::perform(
-                                    delete_task(list.id.clone(), id.clone()),
+                                    todo::delete_task(list.id.clone(), id.clone()),
                                     |result| match result {
                                         Ok(_) => message::none(),
                                         Err(_) => message::none(),
@@ -509,7 +499,7 @@ impl Application for App {
                         }
                         content::Command::CreateTask(task) => {
                             let command =
-                                Command::perform(create_task(task), |result| match result {
+                                Command::perform(todo::create_task(task), |result| match result {
                                     Ok(_) => message::none(),
                                     Err(_) => message::none(),
                                 });
@@ -524,7 +514,7 @@ impl Application for App {
                     match details_command {
                         details::Command::Update(task) => {
                             commands.push(Command::perform(
-                                update_task(task),
+                                todo::update_task(task),
                                 |result| match result {
                                     Ok(_) => message::none(),
                                     Err(_) => message::none(),
@@ -536,9 +526,11 @@ impl Application for App {
                                 content::Message::Rename(id.clone(), title.clone()),
                             )));
                         }
-                        details::Command::Delete(_) => {}
-                        details::Command::Complete(_, _) => {}
-                        details::Command::Favorite(_, _) => {}
+                        details::Command::Favorite(id, favorite) => {
+                            commands.push(self.update(Message::ContentMessage(
+                                content::Message::Favorite(id.clone(), favorite),
+                            )));
+                        }
                         details::Command::PriorityActivate(id, priority) => {
                             commands.push(self.update(Message::ContentMessage(
                                 content::Message::SetPriority(id.clone(), priority),
@@ -604,30 +596,7 @@ impl Application for App {
             Message::Modifiers(modifiers) => {
                 self.modifiers = modifiers;
             }
-            Message::OpenNewListDialog => {
-                self.dialog_pages.push_back(DialogPage::NewItem {
-                    name: String::new(),
-                });
-                return widget::text_input::focus(self.dialog_text_input.clone());
-            }
-            Message::OpenRenameListDialog => {
-                if let Some(list) = &self.selected_list {
-                    self.dialog_pages.push_back(DialogPage::RenameItem {
-                        from: list.name.clone(),
-                        to: list.name.clone(),
-                    });
-                    return widget::text_input::focus(self.dialog_text_input.clone());
-                }
-            }
-            Message::OpenDeleteListDialog => {
-                if let Some(list) = &self.selected_list {
-                    self.dialog_pages.push_back(DialogPage::DeleteItem {
-                        name: list.name.clone(),
-                    });
-                }
-            }
             Message::AddList(list) => {
-                self.selected_list = Some(list.clone());
                 self.create_nav_item(list);
                 let Some(entity) = self.nav_model.iter().last() else {
                     return Command::none();
@@ -636,20 +605,9 @@ impl Application for App {
                 commands.push(command);
             }
             Message::DeleteList => {
-                if let Some(list) = &self.selected_list {
-                    let entity = self.nav_model.iter().find(|entity| {
-                        if let Some(data) = self.nav_model.data::<List>(*entity) {
-                            return data.id == list.id;
-                        }
-                        false
-                    });
-
-                    if let Some(entity) = entity {
-                        self.nav_model.remove(entity);
-                    }
-
+                if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
                     let command =
-                        Command::perform(delete_list(list.id.clone()), |result| match result {
+                        Command::perform(todo::delete_list(list.id.clone()), |result| match result {
                             Ok(_) => message::none(),
                             Err(_) => message::none(),
                         });
@@ -658,13 +616,25 @@ impl Application for App {
                         .push(self.update(Message::ContentMessage(content::Message::List(None))));
 
                     commands.push(command);
-
-                    self.selected_list = None;
+                }
+                self.nav_model.remove(self.nav_model.active());
+            }
+            Message::OpenNewListDialog => {
+                self.dialog_pages.push_back(DialogPage::NewItem(String::new()));
+                return widget::text_input::focus(self.dialog_text_input.clone());
+            }
+            Message::OpenRenameListDialog => {
+                if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
+                    self.dialog_pages.push_back(DialogPage::RenameItem {
+                        to: list.name.clone(),
+                    });
+                    return widget::text_input::focus(self.dialog_text_input.clone());
                 }
             }
-            Message::UpdateList(list) => {
-                let entity = self.nav_model.active();
-                self.nav_model.data_set(entity, list);
+            Message::OpenDeleteListDialog => {
+                if let Some(_) = self.nav_model.data::<List>(self.nav_model.active()) {
+                    self.dialog_pages.push_back(DialogPage::DeleteItem);
+                }
             }
             Message::DialogCancel => {
                 self.dialog_pages.pop_front();
@@ -672,40 +642,28 @@ impl Application for App {
             Message::DialogComplete => {
                 if let Some(dialog_page) = self.dialog_pages.pop_front() {
                     match dialog_page {
-                        DialogPage::NewItem { name } => {
+                        DialogPage::NewItem(name) => {
                             let list = List::new(&name, Service::Computer);
                             commands.push(Command::perform(
-                                create_list(list),
+                                todo::create_list(list),
                                 |result| match result {
                                     Ok(list) => message::app(Message::AddList(list)),
                                     Err(_) => message::none(),
                                 },
                             ));
                         }
-                        DialogPage::RenameItem {
-                            from: old_name,
-                            to: name,
-                        } => {
-                            if let Some(list) = &self.selected_list {
-                                let mut list = list.clone();
-                                list.name = name;
-                                // TODO: Update model.
+                        DialogPage::RenameItem { to: name} => {
+                            let entity = self.nav_model.active();
+                            self.nav_model.text_set(entity, name.clone());
+                            if let Some(list) = self.nav_model.active_data_mut::<List>() {
+                                list.name = name.clone();
                                 let command =
-                                    Command::perform(update_list(list.clone()), move |result| {
-                                        match result {
-                                            Ok(_) => {
-                                                message::app(Message::UpdateList(list.clone()))
-                                            }
-                                            Err(_) => message::none(),
-                                        }
-                                    });
+                                    Command::perform(todo::update_list(list.clone()), |_| message::none());
                                 commands.push(command);
                             }
                         }
-                        DialogPage::DeleteItem { .. } => {
-                            if let Some(list) = &self.selected_list {
-                                commands.push(self.update(Message::DeleteList));
-                            }
+                        DialogPage::DeleteItem => {
+                            commands.push(self.update(Message::DeleteList));
                         }
                     }
                 }
@@ -735,47 +693,4 @@ impl Application for App {
 
         content
     }
-}
-
-async fn update_list(list: List) -> Result<(), Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.update_list(list).await?)
-}
-
-async fn delete_list(id: String) -> Result<(), Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.delete_list(id).await?)
-}
-
-async fn create_list(list: List) -> Result<List, Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.create_list(list).await?)
-}
-
-async fn create_task(task: Task) -> Result<(), Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.create_task(task).await?)
-}
-
-async fn fetch_lists() -> Result<Vec<List>, Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.read_lists().await.unwrap_or(vec![]))
-}
-
-async fn fetch_tasks(list_id: String) -> Result<Vec<Task>, Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service
-        .read_tasks_from_list(list_id)
-        .await
-        .unwrap_or(vec![]))
-}
-
-async fn update_task(task: Task) -> Result<Task, Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.update_task(task).await?)
-}
-
-async fn delete_task(list_id: String, task_id: String) -> Result<(), Box<dyn Error>> {
-    let mut service = Service::Computer.get_service();
-    Ok(service.delete_task(list_id, task_id).await?)
 }
