@@ -1,28 +1,26 @@
-use done_core::models::list::List;
-use done_core::models::task::Task;
-use done_core::service::Service;
+use std::{env, process};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::error::Error;
-use std::{env, process};
 
-use cosmic::app::{message, Core, Message as CosmicMessage};
-use cosmic::iced::keyboard::{Key, Modifiers};
+use cosmic::{app, Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor, theme, widget};
+use cosmic::app::{Core, message, Message as CosmicMessage};
 use cosmic::iced::{
-    event, keyboard::Event as KeyEvent, window, Alignment, Event, Length, Subscription,
+    Alignment, event, Event, keyboard::Event as KeyEvent, Length, Subscription, window,
 };
+use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::widget::segmented_button;
-use cosmic::widget::segmented_button::Entity;
-use cosmic::{
-    cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Command,
-    Element,
-};
+use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
+use done_core::models::list::List;
+use done_core::models::task::Task;
+use done_core::service::Service;
 
+use crate::{content, details, fl, menu};
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
 use crate::details::Details;
+use crate::dialog::{Dialog, DialogKind, DialogMessage, DialogResult};
 use crate::key_bind::{key_binds, KeyBind};
-use crate::{content, details, fl, menu};
 
 pub struct App {
     core: Core,
@@ -36,6 +34,8 @@ pub struct App {
     key_binds: HashMap<KeyBind, Action>,
     selected_list: Option<List>,
     modifiers: Modifiers,
+    dialog_opt: Option<Dialog<Message>>,
+    result_opt: Option<DialogResult>,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +51,12 @@ pub enum Message {
     Modifiers(Modifiers),
     AppTheme(AppTheme),
     SystemThemeModeChange(cosmic_theme::ThemeMode),
-    NewList,
+    OpenNewListDialog,
+    DialogMessage(DialogMessage),
+    DialogOpen(DialogKind),
+    ListCreation(DialogResult),
+    AddList(List),
+    DeleteList,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -86,6 +91,7 @@ pub enum Action {
     WindowClose,
     WindowNew,
     NewList,
+    DeleteList,
 }
 
 impl Action {
@@ -97,7 +103,8 @@ impl Action {
             Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
             Action::WindowClose => Message::WindowClose,
             Action::WindowNew => Message::WindowNew,
-            Action::NewList => Message::NewList,
+            Action::NewList => Message::OpenNewListDialog,
+            Action::DeleteList => Message::DeleteList
         }
     }
 }
@@ -134,10 +141,10 @@ impl App {
                 .padding(0)
                 .into(),
         ])
-        .align_items(Alignment::Center)
-        .spacing(space_xxs)
-        .width(Length::Fill)
-        .into()
+            .align_items(Alignment::Center)
+            .spacing(space_xxs)
+            .width(Length::Fill)
+            .into()
     }
 
     fn settings(&self) -> Element<Message> {
@@ -161,7 +168,19 @@ impl App {
                 )),
             )
             .into()])
-        .into()
+            .into()
+    }
+
+    fn create_nav_item(&mut self, list: List) -> EntityMut<SingleSelect> {
+        self.nav_model
+            .insert()
+            .text(list.name.clone())
+            .icon(widget::icon::icon(
+                widget::icon::from_name(list.clone().icon.unwrap())
+                    .size(16)
+                    .handle(),
+            ))
+            .data(list.clone())
     }
 }
 
@@ -195,6 +214,8 @@ impl Application for App {
             key_binds: key_binds(),
             modifiers: Modifiers::empty(),
             selected_list: None,
+            dialog_opt: None,
+            result_opt: None,
         };
 
         let commands = vec![Command::perform(fetch_lists(), |result| match result {
@@ -227,7 +248,7 @@ impl Application for App {
                 .size(16)
                 .handle(),
         )
-        .on_press(Message::NewList);
+            .on_press(Message::OpenNewListDialog);
         vec![add_list_button.into()]
     }
 
@@ -237,13 +258,14 @@ impl Application for App {
 
     fn on_nav_select(
         &mut self,
-        entity: segmented_button::Entity,
+        entity: Entity,
     ) -> Command<CosmicMessage<Self::Message>> {
+        self.nav_model.activate(entity);
         let location_opt = self.nav_model.data::<List>(entity);
 
         if let Some(list) = location_opt {
             self.selected_list = Some(list.clone());
-            let message = Message::ContentMessage(content::Message::List(list.clone()));
+            let message = Message::ContentMessage(content::Message::List(Some(list.clone())));
             return self.update(message);
         }
 
@@ -270,31 +292,31 @@ impl Application for App {
                 Self::APP_ID.into(),
                 CONFIG_VERSION,
             )
-            .map(|update| {
-                if !update.errors.is_empty() {
-                    log::info!(
+                .map(|update| {
+                    if !update.errors.is_empty() {
+                        log::info!(
                         "errors loading config {:?}: {:?}",
                         update.keys,
                         update.errors
                     );
-                }
-                Message::SystemThemeModeChange(update.config)
-            }),
+                    }
+                    Message::SystemThemeModeChange(update.config)
+                }),
             cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
                 TypeId::of::<ThemeSubscription>(),
                 cosmic_theme::THEME_MODE_ID.into(),
                 cosmic_theme::ThemeMode::version(),
             )
-            .map(|update| {
-                if !update.errors.is_empty() {
-                    log::info!(
+                .map(|update| {
+                    if !update.errors.is_empty() {
+                        log::info!(
                         "errors loading theme mode {:?}: {:?}",
                         update.keys,
                         update.errors
                     );
-                }
-                Message::SystemThemeModeChange(update.config)
-            }),
+                    }
+                    Message::SystemThemeModeChange(update.config)
+                }),
         ];
 
         subscriptions.push(
@@ -462,16 +484,14 @@ impl Application for App {
             }
             Message::PopulateLists(lists) => {
                 for list in lists {
-                    self.nav_model
-                        .insert()
-                        .text(list.name.clone())
-                        .icon(widget::icon::icon(
-                            widget::icon::from_name(list.clone().icon.unwrap())
-                                .size(16)
-                                .handle(),
-                        ))
-                        .data(list);
+                    self.create_nav_item(list);
                 }
+                let Some(entity) = self.nav_model.iter().next() else {
+                    return Command::none();
+                };
+                self.nav_model.activate(entity);
+                let command = self.on_nav_select(entity);
+                commands.push(command);
             }
             Message::Key(modifiers, key) => {
                 for (key_bind, action) in self.key_binds.iter() {
@@ -483,8 +503,82 @@ impl Application for App {
             Message::Modifiers(modifiers) => {
                 self.modifiers = modifiers;
             }
-            Message::NewList => {
-                todo!("Implement add dialog");
+            Message::OpenNewListDialog => {
+                if self.dialog_opt.is_none() {
+                    let (dialog, command) = Dialog::new(
+                        DialogKind::Confirm("Add a new list".into(), "Provide a name for your new list.".into()),
+                        Message::DialogMessage,
+                        Message::ListCreation,
+                    );
+                    self.dialog_opt = Some(dialog);
+                    return command;
+                }
+            }
+            Message::DialogMessage(dialog_message) => {
+                if let Some(dialog) = &mut self.dialog_opt {
+                    return dialog.update(dialog_message);
+                }
+            }
+            Message::DialogOpen(dialog_kind) => {
+                if self.dialog_opt.is_none() {
+                    let (dialog, command) =
+                        Dialog::new(dialog_kind, Message::DialogMessage, Message::ListCreation);
+                    self.dialog_opt = Some(dialog);
+                    return command;
+                }
+            }
+            Message::ListCreation(result) => {
+                match &result {
+                    DialogResult::Cancel => {}
+                    DialogResult::Ok(list_name) => {
+                        let list = List::new(&list_name, Service::Computer);
+                        commands.push(Command::perform(create_list(list), |result| match result {
+                            Ok(list) => message::app(Message::AddList(list)),
+                            Err(_) => message::none(),
+                        }));
+                    }
+                }
+                self.dialog_opt = None;
+                self.result_opt = Some(result);
+            }
+            Message::AddList(list) => {
+                self.selected_list = Some(list.clone());
+                self.create_nav_item(list);
+                let Some(entity) = self.nav_model.iter().last() else {
+                    return Command::none();
+                };
+                let command = self.on_nav_select(entity);
+                commands.push(command);
+            }
+            Message::DeleteList => {
+                if let Some(list) = &self.selected_list {
+                    let entity = self.nav_model.iter().find(|entity| {
+                        if let Some(data) = self.nav_model.data::<List>(*entity) {
+                            return data.id == list.id;
+                        }
+                        false
+                    });
+
+                    if let Some(entity) = entity {
+                        self.nav_model.remove(entity);
+                    }
+
+                    let command = Command::perform(
+                        delete_list(list.id.clone()),
+                        |result| match result {
+                            Ok(_) => message::none(),
+                            Err(_) => message::none(),
+                        },
+                    );
+
+                    commands.push(
+                        self.update(Message::ContentMessage(content::Message::List(None))),
+                    );
+
+                    commands.push(command);
+
+                    self.selected_list = None;
+                }
             }
         }
 
@@ -507,6 +601,23 @@ impl Application for App {
 
         content
     }
+
+    fn view_window(&self, window_id: window::Id) -> Element<Message> {
+        match &self.dialog_opt {
+            Some(dialog) => dialog.view(window_id),
+            None => widget::text("No dialog").into(),
+        }
+    }
+}
+
+async fn delete_list(id: String) -> Result<(), Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.delete_list(id).await?)
+}
+
+async fn create_list(list: List) -> Result<List, Box<dyn Error>> {
+    let mut service = Service::Computer.get_service();
+    Ok(service.create_list(list).await?)
 }
 
 async fn create_task(task: Task) -> Result<(), Box<dyn Error>> {

@@ -16,6 +16,7 @@ mod app;
 mod config;
 mod content;
 mod details;
+mod dialog;
 mod key_bind;
 mod localize;
 mod menu;

@@ -110,7 +110,8 @@ impl Details {
             Message::AddTask => {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
-                        task.sub_tasks.push(Task::new(self.subtask_input.clone(), task.id.clone()));
+                        task.sub_tasks
+                            .push(Task::new(self.subtask_input.clone(), task.id.clone()));
                         commands.push(Command::Update(task.clone()));
                         self.subtask_input.clear();
                     }
@@ -175,7 +176,9 @@ impl Details {
     }
 
     fn sub_task_input(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xs, space_s, .. } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing {
+            space_xs, space_s, ..
+        } = theme::active().cosmic().spacing;
 
         row(vec![
             widget::text_input("Add new sub task", &self.subtask_input)
@@ -188,12 +191,12 @@ impl Details {
                     .size(16)
                     .handle(),
             )
-                .on_press(Message::AddTask)
-                .into(),
+            .on_press(Message::AddTask)
+            .into(),
         ])
-            .padding([0, space_s])
-            .spacing(space_xs)
-            .align_items(Alignment::Center)
-            .into()
+        .padding([0, space_s])
+        .spacing(space_xs)
+        .align_items(Alignment::Center)
+        .into()
     }
 }

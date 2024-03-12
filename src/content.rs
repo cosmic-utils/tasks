@@ -1,7 +1,7 @@
-use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::{cosmic_theme, Element, theme, widget};
 use cosmic::iced::{Alignment, Color, Length, Subscription};
+use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced_widget::row;
-use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::list::List;
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
@@ -15,7 +15,7 @@ pub struct Content {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    List(List),
+    List(Option<List>),
     Rename(String, String),
     Delete(String),
     Select(Task),
@@ -60,18 +60,18 @@ impl Content {
                     widget::checkbox("", item.status == Status::Completed, |value| {
                         Message::Complete(item.id.clone(), value)
                     })
-                    .into(),
+                        .into(),
                     widget::text(item.title.clone()).width(Length::Fill).into(),
                     widget::button::icon(
                         widget::icon::from_name("user-trash-full-symbolic")
                             .size(16)
                             .handle(),
                     )
-                    .on_press(Message::Delete(item.id.clone()))
-                    .into(),
+                        .on_press(Message::Delete(item.id.clone()))
+                        .into(),
                 ])
-                .align_items(Alignment::Center)
-                .spacing(space_xxs);
+                    .align_items(Alignment::Center)
+                    .spacing(space_xxs);
                 widget::button(row)
                     .width(Length::Fill)
                     .height(Length::Shrink)
@@ -97,14 +97,14 @@ impl Content {
                 widget::text::title1("No tasks").into(),
                 widget::text("Try adding a task with the text field below.").into(),
             ])
-            .spacing(10)
-            .align_items(Alignment::Center),
+                .spacing(10)
+                .align_items(Alignment::Center),
         )
-        .align_y(Vertical::Center)
-        .align_x(Horizontal::Center)
-        .height(Length::Fill)
-        .width(Length::Fill)
-        .into()
+            .align_y(Vertical::Center)
+            .align_x(Horizontal::Center)
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .into()
     }
 
     pub fn new_task_view(&self) -> Element<Message> {
@@ -120,20 +120,22 @@ impl Content {
                     .size(16)
                     .handle(),
             )
-            .on_press(Message::AddTask)
-            .into(),
+                .on_press(Message::AddTask)
+                .into(),
         ])
-        .spacing(space_xxs)
-        .align_items(Alignment::Center)
-        .into()
+            .spacing(space_xxs)
+            .align_items(Alignment::Center)
+            .into()
     }
 
     pub fn update(&mut self, message: Message) -> Vec<Command> {
         let mut commands = Vec::new();
         match message {
             Message::List(list) => {
-                self.list = Some(list.clone());
-                commands.push(Command::GetTasks(list.id));
+                self.list = list.clone();
+                if let Some(list) = list {
+                    commands.push(Command::GetTasks(list.id));
+                }
             }
             Message::ItemDown => {}
             Message::ItemUp => {}
@@ -195,14 +197,14 @@ impl Content {
                     widget::text::title1("No list selected").into(),
                     widget::text("Try selecting a list from the sidebar.").into(),
                 ])
-                .spacing(10)
-                .align_items(Alignment::Center),
+                    .spacing(10)
+                    .align_items(Alignment::Center),
             )
-            .align_y(Vertical::Center)
-            .align_x(Horizontal::Center)
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .into();
+                .align_y(Vertical::Center)
+                .align_x(Horizontal::Center)
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .into();
         }
 
         let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
@@ -211,10 +213,10 @@ impl Content {
             self.list_view(),
             self.new_task_view(),
         ]))
-        .height(Length::Fill)
-        .width(Length::Fill)
-        .padding([0, space_xxs, 0, space_xxs])
-        .into()
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .padding([0, space_xxs, 0, space_xxs])
+            .into()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

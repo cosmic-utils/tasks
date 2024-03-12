@@ -3,14 +3,14 @@
 use std::collections::HashMap;
 
 use cosmic::{
-    iced::{widget::horizontal_rule, Alignment, Length},
+    Element,
+    iced::{Alignment, Length, widget::horizontal_rule},
     theme,
+    //TODO: export iced::widget::horizontal_rule in cosmic::widget
     widget::{
         self,
         menu::{ItemHeight, ItemWidth, MenuBar, MenuTree},
     },
-    //TODO: export iced::widget::horizontal_rule in cosmic::widget
-    Element,
 };
 
 use crate::{
@@ -58,7 +58,7 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
                 widget::horizontal_space(Length::Fill),
                 widget::text(key)
             )
-            .on_press(action.message(None)),
+                .on_press(action.message(None)),
         )
     };
 
@@ -68,9 +68,15 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             vec![
                 menu_item(fl!("new-window"), Action::WindowNew),
                 MenuTree::new(horizontal_rule(1)),
+                menu_item(fl!("quit"), Action::WindowClose),
+            ],
+        ),
+        MenuTree::with_children(
+            menu_root(fl!("edit")),
+            vec![
                 menu_item(fl!("new-list"), Action::NewList),
                 MenuTree::new(horizontal_rule(1)),
-                menu_item(fl!("quit"), Action::WindowClose),
+                menu_item(fl!("delete-list"), Action::DeleteList),
             ],
         ),
         MenuTree::with_children(
@@ -82,8 +88,8 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             ],
         ),
     ])
-    .item_height(ItemHeight::Dynamic(40))
-    .item_width(ItemWidth::Uniform(240))
-    .spacing(4.0)
-    .into()
+        .item_height(ItemHeight::Dynamic(40))
+        .item_width(ItemWidth::Uniform(240))
+        .spacing(4.0)
+        .into()
 }

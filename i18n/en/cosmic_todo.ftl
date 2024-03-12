@@ -18,7 +18,9 @@ name-no-slashes = Name cannot contain slashes.
 
 # Open/Save Dialog
 cancel = Cancel
+ok = Ok
 open = Open
+confirm = Confirm
 open-file = Open file
 open-folder = Open folder
 open-multiple-files = Open multiple files
@@ -84,12 +86,13 @@ add-list = Add list
 file = File
 new-tab = New tab
 new-window = New window
-new-list = New list
 rename = Rename
 close-tab = Close tab
 quit = Quit
 
 ## Edit
+new-list = New list
+delete-list = Delete list
 edit = Edit
 cut = Cut
 copy = Copy
