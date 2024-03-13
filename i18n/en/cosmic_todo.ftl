@@ -1,68 +1,53 @@
-cosmic-todo = COSMIC Todo
-empty-folder = Empty folder
-empty-folder-hidden = Empty folder (has hidden items)
-filesystem = Filesystem
-home = Home
+cosmic-todo = COSMIC To-do
 trash = Trash
+about = About
 
-# New File/Folder Dialog
-create-new-file = Create new file
-create-new-folder = Create new folder
-file-name = File name
-folder-name = Folder name
-list-name = List name
-file-already-exists = A file with that name already exists.
-folder-already-exists = A folder with that name already exists.
-name-hidden = Names starting with "." will be hidden.
-name-invalid = Name cannot be "{$filename}".
-name-no-slashes = Name cannot contain slashes.
+# Content
+add-new-task = Add new task
 
-# Open/Save Dialog
+# Details
+title = Title
+details = Details
+favorite = Favorite
+priority = Priority
+due-date = Due date
+reminder = Reminder
+notes = Notes
+
+# Empty
+no-tasks = No tasks
+no-tasks-suggestion = Try adding a task with the text field below
+
+sub-tasks = Sub-tasks
+add-sub-task = Add sub-task
+
+# New List Dialog
+create-list = Create a new list
+
+# Rename List Dialog
+rename-list = Rename list
+
+# Rename List Dialog
+delete-list = The selected list is about to be deleted
+delete-list-confirm = Are you sure you want to delete this list?
+
+# Dialogs
 cancel = Cancel
 ok = Ok
-open = Open
 confirm = Confirm
-open-file = Open file
-open-folder = Open folder
-open-multiple-files = Open multiple files
-open-multiple-folders = Open multiple folders
 save = Save
-save-file = Save file
-
-# Rename Dialog
-rename-file = Rename file
-rename-folder = Rename folder
-
-# Replace Dialog
-replace = Replace
-replace-title = {$filename} already exists in this location.
-replace-warning = Do you want to replace it with the one you are saving? Replacing it will overwrite its content.
-
-# List view
-name = Name
-modified = Modified
-size = Size
+list-name = List name
 
 # Context Pages
 
 ## About
 git-description = Git commit {$hash} on {$date}
 
-## Operations
-operations = Operations
-pending = Pending
-failed = Failed
-complete = Complete
-
 ## Properties
 properties = Properties
 
 ## Settings
 settings = Settings
-settings-tab = Tab
-settings-show-hidden = Show hidden files
-icon-size-list = Icon size (list)
-icon-size-grid = Icon size (grid)
 
 ### Appearance
 appearance = Appearance
@@ -71,39 +56,20 @@ match-desktop = Match desktop
 dark = Dark
 light = Light
 
-# Context menu
-new-file = New file
-new-folder = New folder
-open-with = Open with
-move-to-trash = Move to trash
-restore-from-trash = Restore from trash
-
-# Header
-add-list = Add list
-
 # Menu
 
 ## File
 file = File
-new-tab = New tab
 new-window = New window
-rename = Rename
-close-tab = Close tab
+new-list = New list
 quit = Quit
 
 ## Edit
-new-list = Create list
-rename-list = Rename list
-delete-list = Delete list 
 edit = Edit
-cut = Cut
-copy = Copy
-paste = Paste
-select-all = Select all
+rename = Rename
+delete = Delete
 
 ## View
 view = View
-grid-view = Grid view
-list-view = List view
 menu-settings = Settings...
 menu-about = About COSMIC To-do...

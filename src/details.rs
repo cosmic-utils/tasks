@@ -8,6 +8,7 @@ use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
+use crate::fl;
 
 pub struct Details {
     pub task: Option<Task>,
@@ -138,35 +139,35 @@ impl Details {
             sub_tasks.push(self.sub_task_input());
 
             return widget::settings::view_column(vec![
-                widget::settings::view_section("Details")
+                widget::settings::view_section(fl!("details"))
                     .add(
                         widget::container(
-                            widget::text_input("Title", &task.title).on_input(Message::Rename),
+                            widget::text_input(fl!("title"), &task.title).on_input(Message::Rename),
                         )
                         .padding([0, 10, 0, 10]),
                     )
                     .add(
-                        widget::settings::item::builder("Favorite").control(widget::checkbox(
+                        widget::settings::item::builder(fl!("favorite")).control(widget::checkbox(
                             "",
                             task.favorite,
                             Message::Favorite,
                         )),
                     )
                     .add(
-                        widget::settings::item::builder("Priority").control(
+                        widget::settings::item::builder(fl!("priority")).control(
                             widget::segmented_control::horizontal(&self.priority_model)
                                 .width(Length::Shrink)
                                 .on_activate(Message::PriorityActivate),
                         ),
                     )
                     .into(),
-                widget::settings::view_section("Sub tasks")
+                widget::settings::view_section(fl!("sub-tasks"))
                     .add(widget::column::with_children(sub_tasks).spacing(space_xs))
                     .into(),
             ])
             .into();
         }
-        widget::settings::view_column(vec![widget::settings::view_section("Details").into()]).into()
+        widget::settings::view_column(vec![widget::settings::view_section(fl!("details")).into()]).into()
     }
 
     fn sub_task_input(&self) -> Element<Message> {
@@ -175,7 +176,7 @@ impl Details {
         } = theme::active().cosmic().spacing;
 
         row(vec![
-            widget::text_input("Add new sub task", &self.subtask_input)
+            widget::text_input(fl!("add-sub-task"), &self.subtask_input)
                 .on_input(Message::SubTaskInput)
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)

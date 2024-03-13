@@ -70,15 +70,16 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             vec![
                 menu_item(fl!("new-window"), Action::WindowNew),
                 MenuTree::new(horizontal_rule(1)),
+                menu_item(fl!("new-list"), Action::NewList),
+                MenuTree::new(horizontal_rule(1)),
                 menu_item(fl!("quit"), Action::WindowClose),
             ],
         ),
         MenuTree::with_children(
             menu_root(fl!("edit")),
             vec![
-                menu_item(fl!("new-list"), Action::NewList),
-                menu_item(fl!("rename-list"), Action::RenameList),
-                menu_item(fl!("delete-list"), Action::DeleteList),
+                menu_item(fl!("rename"), Action::RenameList),
+                menu_item(fl!("delete"), Action::DeleteList),
             ],
         ),
         MenuTree::with_children(
