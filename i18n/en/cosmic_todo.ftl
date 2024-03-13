@@ -18,7 +18,7 @@ notes = Notes
 no-tasks = No tasks
 no-tasks-suggestion = Try adding a task with the text field below
 no-list-selected = No list selected
-no-list-suggestion = Try selecting a list from the sidebar
+no-list-suggestion = Create a new list to get started
 
 sub-tasks = Sub-tasks
 add-sub-task = Add sub-task
