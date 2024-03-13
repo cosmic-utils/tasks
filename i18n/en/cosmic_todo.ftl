@@ -17,6 +17,8 @@ notes = Notes
 # Empty
 no-tasks = No tasks
 no-tasks-suggestion = Try adding a task with the text field below
+no-list-selected = No list selected
+no-list-suggestion = Try selecting a list from the sidebar
 
 sub-tasks = Sub-tasks
 add-sub-task = Add sub-task
@@ -30,6 +32,11 @@ rename-list = Rename list
 # Rename List Dialog
 delete-list = The selected list is about to be deleted
 delete-list-confirm = Are you sure you want to delete this list?
+
+# Icon Dialog
+icon = Set icon
+icon-select = Select an icon
+icon-select-body = Choose an icon for the list
 
 # Dialogs
 cancel = Cancel

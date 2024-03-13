@@ -204,8 +204,8 @@ impl Content {
                     widget::icon::from_name("applications-office-symbolic") // replace "icon-name" with the name of your icon
                         .size(56)
                         .into(),
-                    widget::text::title1("No list selected").into(),
-                    widget::text("Try selecting a list from the sidebar.").into(),
+                    widget::text::title1(fl!("no-list-selected")).into(),
+                    widget::text(fl!("no-list-suggestion")).into(),
                 ])
                     .spacing(10)
                     .align_items(Alignment::Center),
