@@ -1,13 +1,14 @@
 use std::ops::IndexMut;
 
+use cosmic::{cosmic_theme, Element, theme, widget};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
+
 use crate::fl;
 
 pub struct Details {
@@ -18,7 +19,8 @@ pub struct Details {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Rename(String),
+    SetTitle(String),
+    SetNotes(String),
     CompleteSubTask(usize, bool),
     Favorite(bool),
     PriorityActivate(Entity),
@@ -28,7 +30,8 @@ pub enum Message {
 
 pub enum Command {
     Update(Task),
-    Rename(String, String),
+    SetTitle(String, String),
+    SetNotes(String, String),
     Favorite(String, bool),
     PriorityActivate(String, Priority),
 }
@@ -69,10 +72,16 @@ impl Details {
     pub fn update(&mut self, message: Message) -> Vec<Command> {
         let mut commands = vec![];
         match message {
-            Message::Rename(title) => {
+            Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.title = title.clone();
-                    commands.push(Command::Rename(task.id.clone(), title));
+                    commands.push(Command::SetTitle(task.id.clone(), title));
+                }
+            }
+            Message::SetNotes(notes) => {
+                if let Some(ref mut task) = &mut self.task {
+                    task.notes = notes.clone();
+                    commands.push(Command::SetNotes(task.id.clone(), notes));
                 }
             }
             Message::Favorite(favorite) => {
@@ -118,7 +127,7 @@ impl Details {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xs, .. } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing { space_xxs, space_xs, .. } = theme::active().cosmic().spacing;
 
         if let Some(task) = self.task.as_ref() {
             let mut sub_tasks: Vec<Element<Message>> = task
@@ -141,10 +150,14 @@ impl Details {
             return widget::settings::view_column(vec![
                 widget::settings::view_section(fl!("details"))
                     .add(
-                        widget::container(
-                            widget::text_input(fl!("title"), &task.title).on_input(Message::Rename),
+                        widget::column::with_children(
+                            vec![
+                                widget::text::body(fl!("title")).into(),
+                                widget::text_input(fl!("title"), &task.title).on_input(Message::SetTitle).into(),
+                            ]
                         )
-                        .padding([0, 10, 0, 10]),
+                            .spacing(space_xxs)
+                            .padding([0, 15, 0, 15]),
                     )
                     .add(
                         widget::settings::item::builder(fl!("favorite")).control(widget::checkbox(
@@ -160,12 +173,22 @@ impl Details {
                                 .on_activate(Message::PriorityActivate),
                         ),
                     )
+                    .add(
+                        widget::column::with_children(
+                            vec![
+                                widget::text::body(fl!("notes")).into(),
+                                widget::text_input(fl!("notes"), &task.notes).on_input(Message::SetNotes).into(),
+                            ]
+                        )
+                            .spacing(space_xxs)
+                            .padding([0, 15, 0, 15]),
+                    )
                     .into(),
                 widget::settings::view_section(fl!("sub-tasks"))
                     .add(widget::column::with_children(sub_tasks).spacing(space_xs))
                     .into(),
             ])
-            .into();
+                .into();
         }
         widget::settings::view_column(vec![widget::settings::view_section(fl!("details")).into()]).into()
     }
@@ -186,12 +209,12 @@ impl Details {
                     .size(16)
                     .handle(),
             )
-            .on_press(Message::AddTask)
-            .into(),
+                .on_press(Message::AddTask)
+                .into(),
         ])
-        .padding([0, space_s])
-        .spacing(space_xs)
-        .align_items(Alignment::Center)
-        .into()
+            .padding([0, space_s])
+            .spacing(space_xs)
+            .align_items(Alignment::Center)
+            .into()
     }
 }

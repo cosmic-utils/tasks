@@ -18,7 +18,8 @@ pub struct Content {
 #[derive(Debug, Clone)]
 pub enum Message {
     List(Option<List>),
-    Rename(String, String),
+    SetTitle(String, String),
+    SetNotes(String, String),
     Favorite(String, bool),
     Complete(String, bool),
     Delete(String),
@@ -179,10 +180,17 @@ impl Content {
                     commands.push(Command::UpdateTask(task.clone()));
                 }
             }
-            Message::Rename(id, title) => {
+            Message::SetTitle(id, title) => {
                 let task = self.tasks.iter_mut().find(|t| t.id == id);
                 if let Some(task) = task {
                     task.title = title;
+                    commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
+            Message::SetNotes(id, notes) => {
+                let task = self.tasks.iter_mut().find(|t| t.id == id);
+                if let Some(task) = task {
+                    task.notes = notes;
                     commands.push(Command::UpdateTask(task.clone()));
                 }
             }

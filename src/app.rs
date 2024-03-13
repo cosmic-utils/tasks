@@ -523,10 +523,16 @@ impl Application for App {
                                 }
                             }));
                         }
-                        details::Command::Rename(id, title) => {
-                            commands.push(self.update(Message::Content(content::Message::Rename(
+                        details::Command::SetTitle(id, title) => {
+                            commands.push(self.update(Message::Content(content::Message::SetTitle(
                                 id.clone(),
                                 title.clone(),
+                            ))));
+                        }
+                        details::Command::SetNotes(id, notes) => {
+                            commands.push(self.update(Message::Content(content::Message::SetNotes(
+                                id.clone(),
+                                notes.clone(),
                             ))));
                         }
                         details::Command::Favorite(id, favorite) => {
