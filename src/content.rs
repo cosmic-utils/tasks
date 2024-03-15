@@ -1,7 +1,8 @@
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Color, Length, Subscription};
 use cosmic::iced_widget::row;
-use cosmic::{cosmic_theme, theme, widget, Element};
+use cosmic::widget::scrollable;
+use cosmic::{cosmic_theme, theme, widget, Apply, Element};
 use done_core::models::list::List;
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
@@ -66,13 +67,11 @@ impl Content {
                     })
                     .into(),
                     widget::text(item.title.clone()).width(Length::Fill).into(),
-                    widget::button::icon(
-                        widget::icon::from_name("user-trash-full-symbolic")
-                            .size(16)
-                            .handle(),
-                    )
-                    .on_press(Message::Delete(item.id.clone()))
-                    .into(),
+                    widget::icon::from_name("user-trash-full-symbolic")
+                        .size(16)
+                        .apply(widget::button::icon)
+                        .on_press(Message::Delete(item.id.clone()))
+                        .into(),
                 ])
                 .align_items(Alignment::Center)
                 .spacing(space_xxs);
@@ -88,6 +87,8 @@ impl Content {
 
         widget::column::with_children(items)
             .spacing(space_xxs)
+            .padding([0, space_xxs, 0, space_xxs])
+            .apply(scrollable)
             .height(Length::Fill)
             .into()
     }
@@ -127,6 +128,7 @@ impl Content {
             .on_press(Message::AddTask)
             .into(),
         ])
+        .padding([0, space_xxs, 0, space_xxs])
         .spacing(space_xxs)
         .align_items(Alignment::Center)
         .into()
@@ -233,7 +235,6 @@ impl Content {
         ]))
         .height(Length::Fill)
         .width(Length::Fill)
-        .padding([0, space_xxs, 0, space_xxs])
         .into()
     }
 
