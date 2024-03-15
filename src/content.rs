@@ -81,6 +81,7 @@ impl Content {
             let delete_button = widget::icon::from_name("user-trash-full-symbolic")
                 .size(16)
                 .apply(widget::button::icon)
+                .style(cosmic::theme::Button::Destructive)
                 .on_press(Message::Delete(item.id.clone()));
 
             let row = widget::row::with_capacity(3)
@@ -91,9 +92,9 @@ impl Content {
                 .push(delete_button);
 
             let button = widget::button(row)
+                .padding([0, 18])
                 .width(Length::Fill)
                 .height(Length::Shrink)
-                .style(cosmic::theme::Button::Image)
                 .style(button_style(false, true))
                 .on_press(Message::Select(item.clone()));
 
