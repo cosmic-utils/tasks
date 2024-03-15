@@ -23,8 +23,7 @@ done_core = { git = "https://github.com/edfloreshz/done" }
 tracing = "0.1.40"
 
 [dependencies.libcosmic]
-git = "https://github.com/edfloreshz/libcosmic.git"
-branch = "calendar"
+git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
 features = ["multi-window", "tokio", "winit"]
 
