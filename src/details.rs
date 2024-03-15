@@ -185,6 +185,7 @@ impl Details {
                     .add(
                         widget::settings::item::builder(fl!("priority")).control(
                             widget::segmented_control::horizontal(&self.priority_model)
+                                .button_alignment(Alignment::Center)
                                 .width(Length::Shrink)
                                 .on_activate(Message::PriorityActivate),
                         ),
