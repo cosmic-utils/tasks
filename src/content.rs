@@ -65,7 +65,9 @@ impl Content {
     }
 
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing {
+            space_xxs, space_m, ..
+        } = theme::active().cosmic().spacing;
 
         if self.tasks.is_empty() {
             return self.empty(list);
@@ -92,7 +94,7 @@ impl Content {
                 .push(delete_button);
 
             let button = widget::button(row)
-                .padding([0, 18])
+                .padding([space_xxs, space_m])
                 .width(Length::Fill)
                 .height(Length::Shrink)
                 .style(button_style(false, true))
