@@ -191,7 +191,7 @@ impl Details {
                     )
                     .add(
                         widget::settings::item::builder(fl!("due-date")).control(
-                            widget::button(widget::text(if self.due_date.is_some() {
+                            widget::button::text(if self.due_date.is_some() {
                                 self.due_date
                                     .as_ref()
                                     .unwrap()
@@ -199,7 +199,7 @@ impl Details {
                                     .to_string()
                             } else {
                                 fl!("select-date")
-                            }))
+                            })
                             .on_press(Message::OpenCalendarDialog),
                         ),
                     )
