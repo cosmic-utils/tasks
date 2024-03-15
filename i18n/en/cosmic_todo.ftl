@@ -38,6 +38,9 @@ icon = Set icon
 icon-select = Select an icon
 icon-select-body = Choose an icon for the list
 
+# Date Dialog
+select-date = Select a date
+
 # Dialogs
 cancel = Cancel
 ok = Ok

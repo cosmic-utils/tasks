@@ -1,5 +1,6 @@
 use std::ops::IndexMut;
 
+use chrono::NaiveDate;
 use cosmic::{cosmic_theme, Element, theme, widget};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
@@ -13,6 +14,7 @@ use crate::fl;
 
 pub struct Details {
     pub task: Option<Task>,
+    due_date: Option<NaiveDate>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
 }
@@ -26,6 +28,8 @@ pub enum Message {
     PriorityActivate(Entity),
     SubTaskInput(String),
     AddTask,
+    OpenCalendarDialog,
+    SetDueDate(NaiveDate),
 }
 
 pub enum Command {
@@ -34,6 +38,7 @@ pub enum Command {
     SetNotes(String, String),
     Favorite(String, bool),
     PriorityActivate(String, Priority),
+    OpenCalendarDialog,
 }
 
 impl Details {
@@ -64,6 +69,7 @@ impl Details {
 
         Self {
             task: None,
+            due_date: None,
             priority_model,
             subtask_input: String::new(),
         }
@@ -122,6 +128,12 @@ impl Details {
                     }
                 }
             }
+            Message::OpenCalendarDialog => {
+                commands.push(Command::OpenCalendarDialog);
+            }
+            Message::SetDueDate(date) => {
+                self.due_date = Some(date);
+            }
         }
         commands
     }
@@ -172,6 +184,19 @@ impl Details {
                                 .width(Length::Shrink)
                                 .on_activate(Message::PriorityActivate),
                         ),
+                    )
+                    .add(
+                        widget::settings::item::builder(fl!("due-date"))
+                            .control(
+                                widget::button(widget::text(
+                                    if self.due_date.is_some() {
+                                        self.due_date.as_ref().unwrap().format("%m-%d-%Y").to_string()
+                                    } else {
+                                        fl!("select-date")
+                                    },
+                                ))
+                                    .on_press(Message::OpenCalendarDialog)
+                            ),
                     )
                     .add(
                         widget::column::with_children(

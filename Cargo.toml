@@ -3,8 +3,6 @@ name = "cosmic-todo"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 i18n-embed = { version = "0.14", features = [
     "fluent-system",
@@ -26,8 +24,9 @@ tracing = "0.1.40"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
+branch = "calendar"
 default-features = false
-features = ["multi-window", "tokio", "winit", "wgpu"]
+features = ["multi-window", "tokio", "winit"]
 
 [dependencies.smol_str]
 version = "0.2.1"

@@ -2,6 +2,7 @@ use std::{env, process};
 use std::any::TypeId;
 use std::collections::{HashMap, VecDeque};
 
+use chrono::{Local, NaiveDate};
 use cosmic::{
     app, Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor,
     theme, widget,
@@ -10,6 +11,7 @@ use cosmic::app::{Core, message, Message as CosmicMessage};
 use cosmic::iced::{
     Alignment, event, Event, keyboard::Event as KeyEvent, Length, Subscription, window,
 };
+use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::widget::{scrollable, segmented_button};
 use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
@@ -35,6 +37,7 @@ pub struct App {
     modifiers: Modifiers,
     dialog_pages: VecDeque<DialogPage>,
     dialog_text_input: widget::Id,
+    selected_date: NaiveDate,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +52,7 @@ pub enum Message {
     DialogCancel,
     DialogComplete,
     DialogUpdate(DialogPage),
+    CalendarUpdate(CalendarAction),
     Key(Modifiers, Key),
     Modifiers(Modifiers),
     AppTheme(AppTheme),
@@ -59,6 +63,14 @@ pub enum Message {
     OpenIconDialog,
     AddList(List),
     DeleteList,
+    OpenCalendarDialog,
+}
+
+#[derive(Debug, Clone)]
+pub enum CalendarAction {
+    PrevMonth,
+    NextMonth,
+    DaySelected(u32),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -84,6 +96,7 @@ pub enum DialogPage {
     Icon(String),
     Rename { to: String },
     Delete,
+    Calendar(NaiveDate),
 }
 
 #[derive(Clone, Debug)]
@@ -225,6 +238,7 @@ impl Application for App {
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
+            selected_date: Local::now().date_naive(),
         };
 
         let commands = vec![Command::perform(
@@ -307,12 +321,392 @@ impl Application for App {
                     widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
                 ),
             DialogPage::Icon(icon) => {
-                let icons = vec!["address-book-new-symbolic", "application-exit-symbolic", "application-menu-symbolic", "appointment-new-symbolic", "call-start-symbolic", "call-stop-symbolic", "close-menu-symbolic", "contact-new-symbolic", "date-symbolic", "document-new-symbolic", "document-open-recent-symbolic", "document-open-symbolic", "document-page-setup-symbolic", "document-print-preview-symbolic", "document-print-symbolic", "document-properties-symbolic", "document-revert-symbolic", "document-save-as-symbolic", "document-save-symbolic", "document-send-symbolic", "edit-clear-symbolic-rtl", "edit-clear-symbolic", "edit-copy-symbolic", "edit-cut-symbolic", "edit-delete-symbolic", "edit-find-replace-symbolic", "edit-find-symbolic", "edit-paste-symbolic", "edit-redo-symbolic", "edit-select-all-symbolic", "edit-symbolic", "edit-undo-symbolic", "focus-windows-symbolic", "folder-new-symbolic", "format-indent-less-symbolic", "format-indent-more-symbolic", "format-justify-center-symbolic", "format-justify-fill-symbolic", "format-justify-left-symbolic", "format-justify-right-symbolic", "format-text-bold-symbolic", "format-text-direction-ltr-symbolic", "format-text-direction-symbolic-rtl", "format-text-italic-symbolic", "format-text-strikethrough-symbolic", "format-text-underline-symbolic", "go-bottom-symbolic", "go-down-symbolic", "go-first-symbolic", "go-home-symbolic", "go-jump-symbolic", "go-last-symbolic", "go-next-symbolic", "go-previous-symbolic", "go-top-symbolic", "go-up-symbolic", "grip-lines-symbolic", "help-about-symbolic", "help-contents-symbolic", "help-faq-symbolic", "image-red-eye-symbolic", "insert-image-symbolic", "insert-link-symbolic", "insert-object-symbolic", "insert-text-symbolic", "list-add-symbolic", "list-remove-symbolic", "mail-forward-symbolic", "mail-mark-important-symbolic", "mail-mark-junk-symbolic", "mail-mark-notjunk-symbolic", "mail-mark-read-symbolic", "mail-mark-unread-symbolic", "mail-message-new-symbolic", "mail-reply-all-symbolic", "mail-send-receive-symbolic", "mail-send-symbolic", "media-eject-symbolic", "media-playback-pause-symbolic", "media-playback-start-symbolic-rtl", "media-playback-start-symbolic", "media-playback-stop-symbolic", "media-record-symbolic", "media-seek-backward-symbolic", "media-seek-forward-symbolic", "media-skip-backward-symbolic", "media-skip-forward-symbolic", "notification-alert-symbolic", "object-flip-horizontal-symbolic", "object-flip-vertical-symbolic", "object-rotate-left-symbolic", "object-rotate-right-symbolic", "object-select-symbolic", "open-menu-symbolic", "pan-down-symbolic", "pan-end-symbolic", "pan-start-symbolic", "pan-up-symbolic", "process-stop-symbolic", "system-lock-screen-symbolic", "system-log-out-symbolic", "system-reboot-symbolic", "system-run-symbolic", "system-search-symbolic", "system-shutdown-symbolic", "system-suspend-symbolic", "tools-check-spelling-symbolic", "view-fullscreen-symbolic", "view-more-horizontal-symbolic", "view-more-symbolic", "view-refresh-symbolic", "view-restore-symbolic", "view-sort-ascending-symbolic", "view-sort-descending-symbolic", "window-close-symbolic", "window-maximize-symbolic", "window-minimize-symbolic", "window-new-symbolic", "window-restore-symbolic", "window-stack-symbolic", "window-swap-symbolic", "zoom-fit-best-symbolic", "zoom-in-symbolic", "zoom-original-symbolic", "zoom-out-symbolic", "accessories-calculator-symbolic", "accessories-character-map-symbolic", "accessories-clock-symbolic", "accessories-dictionary-symbolic", "accessories-screenshot-symbolic", "accessories-text-editor-symbolic", "addressbook-symbolic", "application-default-symbolic", "application-font-symbolic", "chat-symbolic", "cheese-symbolic", "disks-symbolic", "disk-usage-analyzer-symbolic", "document-viewer-symbolic", "firmware-manager-symbolic", "help-browser-symbolic", "help-contents-symbolic", "help-faq-symbolic", "mail-archive-symbolic", "multimedia-audio-player-symbolic", "multimedia-equalizer-symbolic", "multimedia-photo-manager-symbolic", "multimedia-photo-viewer-symbolic", "multimedia-video-player-symbolic", "multimedia-volume-control-symbolic", "office-calendar-symbolic", "password-manager-symbolic", "preferences-appearance-symbolic", "preferences-desktop-accessibility-symbolic", "preferences-desktop-locale-symbolic", "preferences-desktop-screensaver-symbolic", "preferences-desktop-wallpaper-symbolic", "preferences-dock-symbolic", "preferences-workspaces-symbolic", "setroubleshoot_icon-symbolic", "sparkleshare-symbolic", "system-file-manager-symbolic", "system-software-install-symbolic", "system-users-symbolic", "user-info-symbolic", "utilities-system-monitor-symbolic", "utilities-terminal-symbolic", "utilities-tweak-tool-symbolic", "weather-symbolic", "web-browser-symbolic", "applications-accessibility-symbolic", "applications-engineering-symbolic", "applications-games-symbolic", "applications-graphics-symbolic", "applications-multimedia-symbolic", "applications-science-symbolic", "applications-system-symbolic", "applications-utilities-symbolic", "applications-video-symbolic", "preferences-desktop-online-accounts-symbolic", "preferences-other-symbolic", "preferences-system-symbolic", "slideshow-symbolic", "system-help-symbolic", "ac-adapter-symbolic", "airplane-mode-symbolic", "audio-card-symbolic", "audio-card-usb-symbolic", "audio-headphones-symbolic", "audio-headset-symbolic", "audio-input-microphone-symbolic", "audio-speakers-symbolic", "audio-speaker-symbolic", "audio-speaker-testing-symbolic", "audio-subwoofer-symbolic", "audio-subwoofer-testing-symbolic", "battery-symbolic", "bluetooth-symbolic", "camera-photo-symbolic", "camera-video-symbolic", "camera-web-symbolic", "computer-symbolic", "display-projector-symbolic", "display-symbolic", "drive-harddisk-ieee1394-symbolic", "drive-harddisk-solidstate-symbolic", "drive-harddisk-system-symbolic", "drive-harddisk-usb-symbolic", "drive-multidisk-symbolic", "drive-optical-symbolic", "drive-removable-media-symbolic", "input-dialpad-symbolic", "input-gaming-symbolic", "input-keyboard-symbolic", "input-mouse-symbolic", "input-tablet-symbolic", "input-touchpad-symbolic", "laptop-symbolic", "media-flash-symbolic", "media-floppy-symbolic", "media-removable-symbolic", "media-tape-symbolic", "media-zip-symbolic", "multimedia-player-symbolic", "network-wired-symbolic", "network-wireless-symbolic", "payment-card-symbolic", "phone-symbolic", "printer-network-symbolic", "printer-symbolic", "scanner-symbolic", "sim-card-symbolic", "smartphone-symbolic", "speaker-symbolic", "tablet-symbolic", "tv-symbolic", "uninterruptible-power-supply-symbolic", "video-display-symbolic", "emblem-default-symbolic", "emblem-documents-symbolic", "emblem-favorite-symbolic", "emblem-important-symbolic", "emblem-music-symbolic", "emblem-ok-symbolic", "emblem-photos-symbolic", "emblem-shared-symbolic", "emblem-synchronizing-symbolic", "emblem-system-symbolic", "emblem-videos-symbolic", "application-certificate-symbolic", "application-rss+xml-symbolic", "application-x-addon-symbolic", "application-x-executable-symbolic", "application-x-firmware-symbolic", "audio-x-generic-symbolic", "image-x-generic-symbolic", "inode-directory-symbolic", "media-optical-symbolic", "package-x-generic-symbolic", "playlist-symbolic", "text-html-symbolic", "text-x-generic-symbolic", "video-x-generic-symbolic", "x-office-address-book-symbolic", "x-office-calendar-symbolic", "x-office-document-symbolic", "x-office-drawing-symbolic", "x-office-presentation-symbolic", "x-office-spreadsheet-symbolic", "applications-audio-symbolic", "applications-office-symbolic", "folder-documents-symbolic", "folder-download-symbolic", "folder-music-symbolic", "folder-pictures-symbolic", "folder-publicshare-symbolic", "folder-recent-symbolic", "folder-remote-symbolic", "folder-saved-search-symbolic", "folder-symbolic", "folder-templates-symbolic", "folder-videos-symbolic", "mail-archive-symbolic", "mail-folder-inbox-symbolic", "mail-folder-outbox-symbolic", "network-server-symbolic", "network-workgroup-symbolic", "start-here-symbolic", "user-bookmarks-symbolic", "user-desktop-symbolic", "user-home-symbolic", "user-trash-symbolic", "appointment-missed-symbolic", "appointment-soon-symbolic", "audio-volume-high-symbolic", "audio-volume-low-symbolic", "audio-volume-medium-symbolic", "audio-volume-muted-symbolic", "audio-volume-overamplified-symbolic", "changes-allow-symbolic", "changes-prevent-symbolic", "checkbox-checked-symbolic", "checkbox-mixed-symbolic", "dialog-error-symbolic", "dialog-information-symbolic", "dialog-password-symbolic", "dialog-question-symbolic", "dialog-warning-symbolic", "folder-drag-accept-symbolic", "folder-open-symbolic", "folder-visiting-symbolic", "image-loading-symbolic", "keyboard-brightness-symbolic", "mail-attachment-symbolic", "mail-read-symbolic", "mail-replied-symbolic", "mail-unread-symbolic", "media-playlist-repeat-symbolic-rtl", "media-playlist-repeat-symbolic", "media-playlist-shuffle-symbolic-rtl", "media-playlist-shuffle-symbolic", "microphone-sensitivity-high-symbolic", "microphone-sensitivity-low-symbolic", "microphone-sensitivity-medium-symbolic", "microphone-sensitivity-muted-symbolic", "network-disconnected-symbolic", "network-error-symbolic", "network-idle-symbolic", "network-receive-symbolic", "network-transmit-receive-symbolic", "network-transmit-symbolic", "network-wired-acquiring-symbolic", "network-wired-disconnected-symbolic", "network-wired-error-symbolic", "network-wired-no-route-symbolic", "network-wired-symbolic", "network-wireless-acquiring-symbolic", "network-wireless-connected-symbolic", "network-wireless-disconnected-symbolic", "network-wireless-encrypted-symbolic", "network-wireless-error-symbolic", "network-wireless-hotspot-symbolic", "network-wireless-no-route-symbolic", "network-wireless-signal-excellent-symbolic", "network-wireless-signal-good-symbolic", "network-wireless-signal-none-symbolic", "network-wireless-signal-ok-symbolic", "network-wireless-signal-weak-symbolic", "printer-error-symbolic", "printer-printing-symbolic", "radio-checked-symbolic", "security-high-symbolic", "security-low-symbolic", "security-medium-symbolic", "software-update-available-symbolic", "software-update-urgent-symbolic", "task-due-symbolic", "task-past-due-symbolic", "user-available-symbolic", "user-away-symbolic", "user-idle-symbolic", "user-offline-symbolic", "user-trash-full-symbolic", "weather-clear-night-symbolic", "weather-clear-symbolic", "weather-few-clouds-night-symbolic", "weather-few-clouds-symbolic", "weather-fog-symbolic", "weather-overcast-symbolic", "weather-severe-alert-symbolic", "weather-showers-scattered-symbolic", "weather-showers-symbolic", "weather-snow-symbolic", "weather-storm-symbolic"];
-                let icon_buttons: Vec<Element<_>> = icons.into_iter().map(|icon_name| {
-                    widget::button::icon(widget::icon::from_name(icon_name).size(32).handle())
-                        .on_press(Message::DialogUpdate(DialogPage::Icon(icon_name.to_string())))
-                        .into()
-                }).collect();
+                let icons = vec![
+                    "address-book-new-symbolic",
+                    "application-exit-symbolic",
+                    "application-menu-symbolic",
+                    "appointment-new-symbolic",
+                    "call-start-symbolic",
+                    "call-stop-symbolic",
+                    "close-menu-symbolic",
+                    "contact-new-symbolic",
+                    "date-symbolic",
+                    "document-new-symbolic",
+                    "document-open-recent-symbolic",
+                    "document-open-symbolic",
+                    "document-page-setup-symbolic",
+                    "document-print-preview-symbolic",
+                    "document-print-symbolic",
+                    "document-properties-symbolic",
+                    "document-revert-symbolic",
+                    "document-save-as-symbolic",
+                    "document-save-symbolic",
+                    "document-send-symbolic",
+                    "edit-clear-symbolic-rtl",
+                    "edit-clear-symbolic",
+                    "edit-copy-symbolic",
+                    "edit-cut-symbolic",
+                    "edit-delete-symbolic",
+                    "edit-find-replace-symbolic",
+                    "edit-find-symbolic",
+                    "edit-paste-symbolic",
+                    "edit-redo-symbolic",
+                    "edit-select-all-symbolic",
+                    "edit-symbolic",
+                    "edit-undo-symbolic",
+                    "focus-windows-symbolic",
+                    "folder-new-symbolic",
+                    "format-indent-less-symbolic",
+                    "format-indent-more-symbolic",
+                    "format-justify-center-symbolic",
+                    "format-justify-fill-symbolic",
+                    "format-justify-left-symbolic",
+                    "format-justify-right-symbolic",
+                    "format-text-bold-symbolic",
+                    "format-text-direction-ltr-symbolic",
+                    "format-text-direction-symbolic-rtl",
+                    "format-text-italic-symbolic",
+                    "format-text-strikethrough-symbolic",
+                    "format-text-underline-symbolic",
+                    "go-bottom-symbolic",
+                    "go-down-symbolic",
+                    "go-first-symbolic",
+                    "go-home-symbolic",
+                    "go-jump-symbolic",
+                    "go-last-symbolic",
+                    "go-next-symbolic",
+                    "go-previous-symbolic",
+                    "go-top-symbolic",
+                    "go-up-symbolic",
+                    "grip-lines-symbolic",
+                    "help-about-symbolic",
+                    "help-contents-symbolic",
+                    "help-faq-symbolic",
+                    "image-red-eye-symbolic",
+                    "insert-image-symbolic",
+                    "insert-link-symbolic",
+                    "insert-object-symbolic",
+                    "insert-text-symbolic",
+                    "list-add-symbolic",
+                    "list-remove-symbolic",
+                    "mail-forward-symbolic",
+                    "mail-mark-important-symbolic",
+                    "mail-mark-junk-symbolic",
+                    "mail-mark-notjunk-symbolic",
+                    "mail-mark-read-symbolic",
+                    "mail-mark-unread-symbolic",
+                    "mail-message-new-symbolic",
+                    "mail-reply-all-symbolic",
+                    "mail-send-receive-symbolic",
+                    "mail-send-symbolic",
+                    "media-eject-symbolic",
+                    "media-playback-pause-symbolic",
+                    "media-playback-start-symbolic-rtl",
+                    "media-playback-start-symbolic",
+                    "media-playback-stop-symbolic",
+                    "media-record-symbolic",
+                    "media-seek-backward-symbolic",
+                    "media-seek-forward-symbolic",
+                    "media-skip-backward-symbolic",
+                    "media-skip-forward-symbolic",
+                    "notification-alert-symbolic",
+                    "object-flip-horizontal-symbolic",
+                    "object-flip-vertical-symbolic",
+                    "object-rotate-left-symbolic",
+                    "object-rotate-right-symbolic",
+                    "object-select-symbolic",
+                    "open-menu-symbolic",
+                    "pan-down-symbolic",
+                    "pan-end-symbolic",
+                    "pan-start-symbolic",
+                    "pan-up-symbolic",
+                    "process-stop-symbolic",
+                    "system-lock-screen-symbolic",
+                    "system-log-out-symbolic",
+                    "system-reboot-symbolic",
+                    "system-run-symbolic",
+                    "system-search-symbolic",
+                    "system-shutdown-symbolic",
+                    "system-suspend-symbolic",
+                    "tools-check-spelling-symbolic",
+                    "view-fullscreen-symbolic",
+                    "view-more-horizontal-symbolic",
+                    "view-more-symbolic",
+                    "view-refresh-symbolic",
+                    "view-restore-symbolic",
+                    "view-sort-ascending-symbolic",
+                    "view-sort-descending-symbolic",
+                    "window-close-symbolic",
+                    "window-maximize-symbolic",
+                    "window-minimize-symbolic",
+                    "window-new-symbolic",
+                    "window-restore-symbolic",
+                    "window-stack-symbolic",
+                    "window-swap-symbolic",
+                    "zoom-fit-best-symbolic",
+                    "zoom-in-symbolic",
+                    "zoom-original-symbolic",
+                    "zoom-out-symbolic",
+                    "accessories-calculator-symbolic",
+                    "accessories-character-map-symbolic",
+                    "accessories-clock-symbolic",
+                    "accessories-dictionary-symbolic",
+                    "accessories-screenshot-symbolic",
+                    "accessories-text-editor-symbolic",
+                    "addressbook-symbolic",
+                    "application-default-symbolic",
+                    "application-font-symbolic",
+                    "chat-symbolic",
+                    "cheese-symbolic",
+                    "disks-symbolic",
+                    "disk-usage-analyzer-symbolic",
+                    "document-viewer-symbolic",
+                    "firmware-manager-symbolic",
+                    "help-browser-symbolic",
+                    "help-contents-symbolic",
+                    "help-faq-symbolic",
+                    "mail-archive-symbolic",
+                    "multimedia-audio-player-symbolic",
+                    "multimedia-equalizer-symbolic",
+                    "multimedia-photo-manager-symbolic",
+                    "multimedia-photo-viewer-symbolic",
+                    "multimedia-video-player-symbolic",
+                    "multimedia-volume-control-symbolic",
+                    "office-calendar-symbolic",
+                    "password-manager-symbolic",
+                    "preferences-appearance-symbolic",
+                    "preferences-desktop-accessibility-symbolic",
+                    "preferences-desktop-locale-symbolic",
+                    "preferences-desktop-screensaver-symbolic",
+                    "preferences-desktop-wallpaper-symbolic",
+                    "preferences-dock-symbolic",
+                    "preferences-workspaces-symbolic",
+                    "setroubleshoot_icon-symbolic",
+                    "sparkleshare-symbolic",
+                    "system-file-manager-symbolic",
+                    "system-software-install-symbolic",
+                    "system-users-symbolic",
+                    "user-info-symbolic",
+                    "utilities-system-monitor-symbolic",
+                    "utilities-terminal-symbolic",
+                    "utilities-tweak-tool-symbolic",
+                    "weather-symbolic",
+                    "web-browser-symbolic",
+                    "applications-accessibility-symbolic",
+                    "applications-engineering-symbolic",
+                    "applications-games-symbolic",
+                    "applications-graphics-symbolic",
+                    "applications-multimedia-symbolic",
+                    "applications-science-symbolic",
+                    "applications-system-symbolic",
+                    "applications-utilities-symbolic",
+                    "applications-video-symbolic",
+                    "preferences-desktop-online-accounts-symbolic",
+                    "preferences-other-symbolic",
+                    "preferences-system-symbolic",
+                    "slideshow-symbolic",
+                    "system-help-symbolic",
+                    "ac-adapter-symbolic",
+                    "airplane-mode-symbolic",
+                    "audio-card-symbolic",
+                    "audio-card-usb-symbolic",
+                    "audio-headphones-symbolic",
+                    "audio-headset-symbolic",
+                    "audio-input-microphone-symbolic",
+                    "audio-speakers-symbolic",
+                    "audio-speaker-symbolic",
+                    "audio-speaker-testing-symbolic",
+                    "audio-subwoofer-symbolic",
+                    "audio-subwoofer-testing-symbolic",
+                    "battery-symbolic",
+                    "bluetooth-symbolic",
+                    "camera-photo-symbolic",
+                    "camera-video-symbolic",
+                    "camera-web-symbolic",
+                    "computer-symbolic",
+                    "display-projector-symbolic",
+                    "display-symbolic",
+                    "drive-harddisk-ieee1394-symbolic",
+                    "drive-harddisk-solidstate-symbolic",
+                    "drive-harddisk-system-symbolic",
+                    "drive-harddisk-usb-symbolic",
+                    "drive-multidisk-symbolic",
+                    "drive-optical-symbolic",
+                    "drive-removable-media-symbolic",
+                    "input-dialpad-symbolic",
+                    "input-gaming-symbolic",
+                    "input-keyboard-symbolic",
+                    "input-mouse-symbolic",
+                    "input-tablet-symbolic",
+                    "input-touchpad-symbolic",
+                    "laptop-symbolic",
+                    "media-flash-symbolic",
+                    "media-floppy-symbolic",
+                    "media-removable-symbolic",
+                    "media-tape-symbolic",
+                    "media-zip-symbolic",
+                    "multimedia-player-symbolic",
+                    "network-wired-symbolic",
+                    "network-wireless-symbolic",
+                    "payment-card-symbolic",
+                    "phone-symbolic",
+                    "printer-network-symbolic",
+                    "printer-symbolic",
+                    "scanner-symbolic",
+                    "sim-card-symbolic",
+                    "smartphone-symbolic",
+                    "speaker-symbolic",
+                    "tablet-symbolic",
+                    "tv-symbolic",
+                    "uninterruptible-power-supply-symbolic",
+                    "video-display-symbolic",
+                    "emblem-default-symbolic",
+                    "emblem-documents-symbolic",
+                    "emblem-favorite-symbolic",
+                    "emblem-important-symbolic",
+                    "emblem-music-symbolic",
+                    "emblem-ok-symbolic",
+                    "emblem-photos-symbolic",
+                    "emblem-shared-symbolic",
+                    "emblem-synchronizing-symbolic",
+                    "emblem-system-symbolic",
+                    "emblem-videos-symbolic",
+                    "application-certificate-symbolic",
+                    "application-rss+xml-symbolic",
+                    "application-x-addon-symbolic",
+                    "application-x-executable-symbolic",
+                    "application-x-firmware-symbolic",
+                    "audio-x-generic-symbolic",
+                    "image-x-generic-symbolic",
+                    "inode-directory-symbolic",
+                    "media-optical-symbolic",
+                    "package-x-generic-symbolic",
+                    "playlist-symbolic",
+                    "text-html-symbolic",
+                    "text-x-generic-symbolic",
+                    "video-x-generic-symbolic",
+                    "x-office-address-book-symbolic",
+                    "x-office-calendar-symbolic",
+                    "x-office-document-symbolic",
+                    "x-office-drawing-symbolic",
+                    "x-office-presentation-symbolic",
+                    "x-office-spreadsheet-symbolic",
+                    "applications-audio-symbolic",
+                    "applications-office-symbolic",
+                    "folder-documents-symbolic",
+                    "folder-download-symbolic",
+                    "folder-music-symbolic",
+                    "folder-pictures-symbolic",
+                    "folder-publicshare-symbolic",
+                    "folder-recent-symbolic",
+                    "folder-remote-symbolic",
+                    "folder-saved-search-symbolic",
+                    "folder-symbolic",
+                    "folder-templates-symbolic",
+                    "folder-videos-symbolic",
+                    "mail-archive-symbolic",
+                    "mail-folder-inbox-symbolic",
+                    "mail-folder-outbox-symbolic",
+                    "network-server-symbolic",
+                    "network-workgroup-symbolic",
+                    "start-here-symbolic",
+                    "user-bookmarks-symbolic",
+                    "user-desktop-symbolic",
+                    "user-home-symbolic",
+                    "user-trash-symbolic",
+                    "appointment-missed-symbolic",
+                    "appointment-soon-symbolic",
+                    "audio-volume-high-symbolic",
+                    "audio-volume-low-symbolic",
+                    "audio-volume-medium-symbolic",
+                    "audio-volume-muted-symbolic",
+                    "audio-volume-overamplified-symbolic",
+                    "changes-allow-symbolic",
+                    "changes-prevent-symbolic",
+                    "checkbox-checked-symbolic",
+                    "checkbox-mixed-symbolic",
+                    "dialog-error-symbolic",
+                    "dialog-information-symbolic",
+                    "dialog-password-symbolic",
+                    "dialog-question-symbolic",
+                    "dialog-warning-symbolic",
+                    "folder-drag-accept-symbolic",
+                    "folder-open-symbolic",
+                    "folder-visiting-symbolic",
+                    "image-loading-symbolic",
+                    "keyboard-brightness-symbolic",
+                    "mail-attachment-symbolic",
+                    "mail-read-symbolic",
+                    "mail-replied-symbolic",
+                    "mail-unread-symbolic",
+                    "media-playlist-repeat-symbolic-rtl",
+                    "media-playlist-repeat-symbolic",
+                    "media-playlist-shuffle-symbolic-rtl",
+                    "media-playlist-shuffle-symbolic",
+                    "microphone-sensitivity-high-symbolic",
+                    "microphone-sensitivity-low-symbolic",
+                    "microphone-sensitivity-medium-symbolic",
+                    "microphone-sensitivity-muted-symbolic",
+                    "network-disconnected-symbolic",
+                    "network-error-symbolic",
+                    "network-idle-symbolic",
+                    "network-receive-symbolic",
+                    "network-transmit-receive-symbolic",
+                    "network-transmit-symbolic",
+                    "network-wired-acquiring-symbolic",
+                    "network-wired-disconnected-symbolic",
+                    "network-wired-error-symbolic",
+                    "network-wired-no-route-symbolic",
+                    "network-wired-symbolic",
+                    "network-wireless-acquiring-symbolic",
+                    "network-wireless-connected-symbolic",
+                    "network-wireless-disconnected-symbolic",
+                    "network-wireless-encrypted-symbolic",
+                    "network-wireless-error-symbolic",
+                    "network-wireless-hotspot-symbolic",
+                    "network-wireless-no-route-symbolic",
+                    "network-wireless-signal-excellent-symbolic",
+                    "network-wireless-signal-good-symbolic",
+                    "network-wireless-signal-none-symbolic",
+                    "network-wireless-signal-ok-symbolic",
+                    "network-wireless-signal-weak-symbolic",
+                    "printer-error-symbolic",
+                    "printer-printing-symbolic",
+                    "radio-checked-symbolic",
+                    "security-high-symbolic",
+                    "security-low-symbolic",
+                    "security-medium-symbolic",
+                    "software-update-available-symbolic",
+                    "software-update-urgent-symbolic",
+                    "task-due-symbolic",
+                    "task-past-due-symbolic",
+                    "user-available-symbolic",
+                    "user-away-symbolic",
+                    "user-idle-symbolic",
+                    "user-offline-symbolic",
+                    "user-trash-full-symbolic",
+                    "weather-clear-night-symbolic",
+                    "weather-clear-symbolic",
+                    "weather-few-clouds-night-symbolic",
+                    "weather-few-clouds-symbolic",
+                    "weather-fog-symbolic",
+                    "weather-overcast-symbolic",
+                    "weather-severe-alert-symbolic",
+                    "weather-showers-scattered-symbolic",
+                    "weather-showers-symbolic",
+                    "weather-snow-symbolic",
+                    "weather-storm-symbolic",
+                ];
+                let icon_buttons: Vec<Element<_>> = icons
+                    .into_iter()
+                    .map(|icon_name| {
+                        widget::button::icon(widget::icon::from_name(icon_name).size(32).handle())
+                            .on_press(Message::DialogUpdate(DialogPage::Icon(
+                                icon_name.to_string(),
+                            )))
+                            .into()
+                    })
+                    .collect();
                 let mut dialog = widget::dialog(fl!("icon-select"))
                     .body(fl!("icon-select-body"))
                     .primary_action(
@@ -322,12 +716,38 @@ impl Application for App {
                     .secondary_action(
                         widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
                     )
-                    .control(widget::container(scrollable(widget::flex_row(icon_buttons))).height(Length::Fixed(200.0)));
+                    .control(
+                        widget::container(scrollable(widget::flex_row(icon_buttons)))
+                            .height(Length::Fixed(200.0)),
+                    );
 
                 if !icon.is_empty() {
                     dialog = dialog.icon(widget::icon::from_name(icon.as_str()).size(32).icon());
                 }
 
+                dialog
+            }
+            DialogPage::Calendar(date) => {
+                let dialog = widget::dialog(fl!("select-date"))
+                    .primary_action(
+                        widget::button::suggested(fl!("ok"))
+                            .on_press_maybe(Some(Message::DialogComplete)),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
+                    )
+                    .control(widget::container(
+                        widget::calendar(
+                            &date,
+                            Message::CalendarUpdate(CalendarAction::PrevMonth),
+                            Message::CalendarUpdate(CalendarAction::NextMonth),
+                            |day| Message::CalendarUpdate(CalendarAction::DaySelected(day)),
+                        )
+                    )
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Center)
+                        .align_y(Vertical::Center)
+                    );
                 dialog
             }
         };
@@ -524,16 +944,14 @@ impl Application for App {
                             }));
                         }
                         details::Command::SetTitle(id, title) => {
-                            commands.push(self.update(Message::Content(content::Message::SetTitle(
-                                id.clone(),
-                                title.clone(),
-                            ))));
+                            commands.push(self.update(Message::Content(
+                                content::Message::SetTitle(id.clone(), title.clone()),
+                            )));
                         }
                         details::Command::SetNotes(id, notes) => {
-                            commands.push(self.update(Message::Content(content::Message::SetNotes(
-                                id.clone(),
-                                notes.clone(),
-                            ))));
+                            commands.push(self.update(Message::Content(
+                                content::Message::SetNotes(id.clone(), notes.clone()),
+                            )));
                         }
                         details::Command::Favorite(id, favorite) => {
                             commands.push(self.update(Message::Content(
@@ -544,6 +962,9 @@ impl Application for App {
                             commands.push(self.update(Message::Content(
                                 content::Message::SetPriority(id.clone(), priority),
                             )));
+                        }
+                        details::Command::OpenCalendarDialog => {
+                            commands.push(self.update(Message::OpenCalendarDialog));
                         }
                     }
                 }
@@ -660,6 +1081,9 @@ impl Application for App {
                     self.dialog_pages.push_back(DialogPage::Icon(String::new()));
                 }
             }
+            Message::OpenCalendarDialog => {
+                self.dialog_pages.push_back(DialogPage::Calendar(self.selected_date));
+            }
             Message::DialogCancel => {
                 self.dialog_pages.pop_front();
             }
@@ -692,7 +1116,10 @@ impl Application for App {
                         }
                         DialogPage::Icon(icon) => {
                             let entity = self.nav_model.active();
-                            self.nav_model.icon_set(entity, widget::icon::from_name(icon.clone()).size(16).icon());
+                            self.nav_model.icon_set(
+                                entity,
+                                widget::icon::from_name(icon.clone()).size(16).icon(),
+                            );
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                 list.icon = Some(icon);
                                 let command =
@@ -702,12 +1129,30 @@ impl Application for App {
                                 commands.push(command);
                             }
                         }
+                        DialogPage::Calendar(date) => {
+                            self.selected_date = date;
+                            self.details.update(details::Message::SetDueDate(date));
+                        }
                     }
                 }
             }
             Message::DialogUpdate(dialog_page) => {
                 //TODO: panicless way to do this?
                 self.dialog_pages[0] = dialog_page;
+            }
+            Message::CalendarUpdate(action) => {
+                match action {
+                    CalendarAction::PrevMonth => {
+                        widget::calendar::set_prev_month(&mut self.selected_date);
+                    }
+                    CalendarAction::NextMonth => {
+                        widget::calendar::set_next_month(&mut self.selected_date);
+                    }
+                    CalendarAction::DaySelected(day) => {
+                        widget::calendar::set_day(&mut self.selected_date, day);
+                    }
+                }
+                self.dialog_pages[0] = DialogPage::Calendar(self.selected_date);
             }
         }
 
