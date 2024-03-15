@@ -50,13 +50,25 @@ impl Content {
         }
     }
 
+    fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
+        let cosmic_theme::Spacing { space_s, .. } = theme::active().cosmic().spacing;
+
+        widget::row::with_capacity(2)
+            .align_items(Alignment::Center)
+            .spacing(space_s)
+            .push_maybe(match list.icon.as_deref() {
+                Some(icon) => Some(widget::icon::from_name(icon).size(24).icon()),
+                None => None,
+            })
+            .push(widget::text::title3(&list.name))
+            .into()
+    }
+
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing {
-            space_s, space_xxs, ..
-        } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
 
         if self.tasks.is_empty() {
-            return self.empty();
+            return self.empty(list);
         }
 
         let mut items = widget::list::list_column().spacing(space_xxs);
@@ -88,18 +100,9 @@ impl Content {
             items = items.add(button);
         }
 
-        let header = widget::row::with_capacity(2)
-            .align_items(Alignment::Center)
-            .spacing(space_s)
-            .push_maybe(match list.icon.as_deref() {
-                Some(icon) => Some(widget::icon::from_name(icon).size(24).icon()),
-                None => None,
-            })
-            .push(widget::text::title3(&list.name));
-
         widget::column::with_capacity(2)
             .spacing(space_xxs)
-            .push(header)
+            .push(self.list_header(list))
             .push(items)
             .apply(widget::container)
             .height(Length::Shrink)
@@ -109,8 +112,10 @@ impl Content {
             .into()
     }
 
-    pub fn empty(&self) -> Element<Message> {
-        widget::container(
+    pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
+        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+
+        let container = widget::container(
             widget::column::with_children(vec![
                 widget::icon::from_name("task-past-due-symbolic")
                     .size(56)
@@ -124,8 +129,14 @@ impl Content {
         .align_y(Vertical::Center)
         .align_x(Horizontal::Center)
         .height(Length::Fill)
-        .width(Length::Fill)
-        .into()
+        .width(Length::Fill);
+
+        widget::column::with_capacity(2)
+            .spacing(space_xxs)
+            .padding([0, space_xxs, 0, space_xxs])
+            .push(self.list_header(list))
+            .push(container)
+            .into()
     }
 
     pub fn new_task_view(&self) -> Element<Message> {
