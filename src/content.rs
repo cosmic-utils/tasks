@@ -1,7 +1,7 @@
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Color, Length, Subscription};
 use cosmic::iced_widget::row;
-use cosmic::widget::scrollable;
+use cosmic::prelude::CollectionWidget;
 use cosmic::{cosmic_theme, theme, widget, Apply, Element};
 use done_core::models::list::List;
 use done_core::models::priority::Priority;
@@ -50,45 +50,61 @@ impl Content {
         }
     }
 
-    pub fn list_view(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+    pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
+        let cosmic_theme::Spacing {
+            space_s, space_xxs, ..
+        } = theme::active().cosmic().spacing;
 
         if self.tasks.is_empty() {
             return self.empty();
         }
 
-        let items = self
-            .tasks
-            .iter()
-            .map(|item| {
-                let row = widget::row::with_children(vec![
-                    widget::checkbox("", item.status == Status::Completed, |value| {
-                        Message::Complete(item.id.clone(), value)
-                    })
-                    .into(),
-                    widget::text(item.title.clone()).width(Length::Fill).into(),
-                    widget::icon::from_name("user-trash-full-symbolic")
-                        .size(16)
-                        .apply(widget::button::icon)
-                        .on_press(Message::Delete(item.id.clone()))
-                        .into(),
-                ])
-                .align_items(Alignment::Center)
-                .spacing(space_xxs);
-                widget::button(row)
-                    .width(Length::Fill)
-                    .height(Length::Shrink)
-                    .padding(space_xxs)
-                    .style(button_style(false, true))
-                    .on_press(Message::Select(item.clone()))
-                    .into()
-            })
-            .collect();
+        let mut items = widget::list::list_column().spacing(space_xxs);
 
-        widget::column::with_children(items)
+        for item in &self.tasks {
+            let item_checkbox = widget::checkbox("", item.status == Status::Completed, |value| {
+                Message::Complete(item.id.clone(), value)
+            });
+
+            let delete_button = widget::icon::from_name("user-trash-full-symbolic")
+                .size(16)
+                .apply(widget::button::icon)
+                .on_press(Message::Delete(item.id.clone()));
+
+            let row = widget::row::with_capacity(3)
+                .align_items(Alignment::Center)
+                .spacing(space_xxs)
+                .push(item_checkbox)
+                .push(widget::text(item.title.clone()).width(Length::Fill))
+                .push(delete_button);
+
+            let button = widget::button(row)
+                .width(Length::Fill)
+                .height(Length::Shrink)
+                .style(cosmic::theme::Button::Image)
+                .style(button_style(false, true))
+                .on_press(Message::Select(item.clone()));
+
+            items = items.add(button);
+        }
+
+        let header = widget::row::with_capacity(2)
+            .align_items(Alignment::Center)
+            .spacing(space_s)
+            .push_maybe(match list.icon.as_deref() {
+                Some(icon) => Some(widget::icon::from_name(icon).size(24).icon()),
+                None => None,
+            })
+            .push(widget::text::title3(&list.name));
+
+        widget::column::with_capacity(2)
             .spacing(space_xxs)
+            .push(header)
+            .push(items)
+            .apply(widget::container)
+            .height(Length::Shrink)
             .padding([0, space_xxs, 0, space_xxs])
-            .apply(scrollable)
+            .apply(widget::scrollable)
             .height(Length::Fill)
             .into()
     }
@@ -208,7 +224,7 @@ impl Content {
     }
 
     pub fn view(&self) -> Element<Message> {
-        if self.list.is_none() {
+        let Some(ref list) = self.list else {
             return widget::container(
                 widget::column::with_children(vec![
                     widget::icon::from_name("applications-office-symbolic") // replace "icon-name" with the name of your icon
@@ -225,17 +241,15 @@ impl Content {
             .height(Length::Fill)
             .width(Length::Fill)
             .into();
-        }
+        };
 
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
-
-        widget::container(widget::column::with_children(vec![
-            self.list_view(),
-            self.new_task_view(),
-        ]))
-        .height(Length::Fill)
-        .width(Length::Fill)
-        .into()
+        widget::column::with_capacity(2)
+            .push(self.list_view(list))
+            .push(self.new_task_view())
+            .apply(widget::container)
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .into()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
@@ -251,20 +265,25 @@ fn button_appearance(
     hovered: bool,
 ) -> widget::button::Appearance {
     let cosmic = theme.cosmic();
+    // TODO: Use this instead when it's working properly.
+    // let container = theme.current_container();
+
     let mut appearance = widget::button::Appearance::new();
+
     if selected {
         if accent {
-            appearance.background = Some(Color::from(cosmic.accent_color()).into());
+            appearance.background = Some(Color::from(cosmic.primary_component_color()).into());
             appearance.icon_color = Some(Color::from(cosmic.on_accent_color()));
             appearance.text_color = Some(Color::from(cosmic.on_accent_color()));
         } else {
             appearance.background = Some(Color::from(cosmic.bg_component_color()).into());
         }
     }
+
     if hovered {
-        appearance.background = Some(Color::from(cosmic.button_bg_color()).into());
-        appearance.icon_color = Some(Color::from(cosmic.on_bg_color()));
-        appearance.text_color = Some(Color::from(cosmic.on_bg_color()));
+        appearance.background = Some(Color::from(cosmic.secondary_component_color()).into());
+        appearance.icon_color = Some(Color::from(cosmic.on_secondary_component_color()));
+        appearance.text_color = Some(Color::from(cosmic.on_secondary_component_color()));
     }
 
     if focused && accent {
