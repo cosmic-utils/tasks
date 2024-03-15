@@ -1,11 +1,11 @@
 use std::ops::IndexMut;
 
 use chrono::NaiveDate;
-use cosmic::{cosmic_theme, Element, theme, widget};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
@@ -139,7 +139,11 @@ impl Details {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xxs, space_xs, .. } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing {
+            space_xxs,
+            space_xs,
+            ..
+        } = theme::active().cosmic().spacing;
 
         if let Some(task) = self.task.as_ref() {
             let mut sub_tasks: Vec<Element<Message>> = task
@@ -162,14 +166,14 @@ impl Details {
             return widget::settings::view_column(vec![
                 widget::settings::view_section(fl!("details"))
                     .add(
-                        widget::column::with_children(
-                            vec![
-                                widget::text::body(fl!("title")).into(),
-                                widget::text_input(fl!("title"), &task.title).on_input(Message::SetTitle).into(),
-                            ]
-                        )
-                            .spacing(space_xxs)
-                            .padding([0, 15, 0, 15]),
+                        widget::column::with_children(vec![
+                            widget::text::body(fl!("title")).into(),
+                            widget::text_input(fl!("title"), &task.title)
+                                .on_input(Message::SetTitle)
+                                .into(),
+                        ])
+                        .spacing(space_xxs)
+                        .padding([0, 15, 0, 15]),
                     )
                     .add(
                         widget::settings::item::builder(fl!("favorite")).control(widget::checkbox(
@@ -186,36 +190,38 @@ impl Details {
                         ),
                     )
                     .add(
-                        widget::settings::item::builder(fl!("due-date"))
-                            .control(
-                                widget::button(widget::text(
-                                    if self.due_date.is_some() {
-                                        self.due_date.as_ref().unwrap().format("%m-%d-%Y").to_string()
-                                    } else {
-                                        fl!("select-date")
-                                    },
-                                ))
-                                    .on_press(Message::OpenCalendarDialog)
-                            ),
+                        widget::settings::item::builder(fl!("due-date")).control(
+                            widget::button(widget::text(if self.due_date.is_some() {
+                                self.due_date
+                                    .as_ref()
+                                    .unwrap()
+                                    .format("%m-%d-%Y")
+                                    .to_string()
+                            } else {
+                                fl!("select-date")
+                            }))
+                            .on_press(Message::OpenCalendarDialog),
+                        ),
                     )
                     .add(
-                        widget::column::with_children(
-                            vec![
-                                widget::text::body(fl!("notes")).into(),
-                                widget::text_input(fl!("notes"), &task.notes).on_input(Message::SetNotes).into(),
-                            ]
-                        )
-                            .spacing(space_xxs)
-                            .padding([0, 15, 0, 15]),
+                        widget::column::with_children(vec![
+                            widget::text::body(fl!("notes")).into(),
+                            widget::text_input(fl!("notes"), &task.notes)
+                                .on_input(Message::SetNotes)
+                                .into(),
+                        ])
+                        .spacing(space_xxs)
+                        .padding([0, 15, 0, 15]),
                     )
                     .into(),
                 widget::settings::view_section(fl!("sub-tasks"))
                     .add(widget::column::with_children(sub_tasks).spacing(space_xs))
                     .into(),
             ])
-                .into();
+            .into();
         }
-        widget::settings::view_column(vec![widget::settings::view_section(fl!("details")).into()]).into()
+        widget::settings::view_column(vec![widget::settings::view_section(fl!("details")).into()])
+            .into()
     }
 
     fn sub_task_input(&self) -> Element<Message> {
@@ -234,12 +240,12 @@ impl Details {
                     .size(16)
                     .handle(),
             )
-                .on_press(Message::AddTask)
-                .into(),
+            .on_press(Message::AddTask)
+            .into(),
         ])
-            .padding([0, space_s])
-            .spacing(space_xs)
-            .align_items(Alignment::Center)
-            .into()
+        .padding([0, space_s])
+        .spacing(space_xs)
+        .align_items(Alignment::Center)
+        .into()
     }
 }

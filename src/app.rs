@@ -1,28 +1,28 @@
-use std::{env, process};
 use std::any::TypeId;
 use std::collections::{HashMap, VecDeque};
+use std::{env, process};
 
 use chrono::{Local, NaiveDate};
-use cosmic::{
-    app, Application, ApplicationExt, Command, cosmic_config, cosmic_theme, Element, executor,
-    theme, widget,
-};
-use cosmic::app::{Core, message, Message as CosmicMessage};
-use cosmic::iced::{
-    Alignment, event, Event, keyboard::Event as KeyEvent, Length, Subscription, window,
-};
+use cosmic::app::{message, Core, Message as CosmicMessage};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::widget::{scrollable, segmented_button};
+use cosmic::iced::{
+    event, keyboard::Event as KeyEvent, window, Alignment, Event, Length, Subscription,
+};
 use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
+use cosmic::widget::{scrollable, segmented_button};
+use cosmic::{
+    app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt,
+    Command, Element,
+};
 use done_core::models::list::List;
 use done_core::service::Service;
 
-use crate::{content, details, fl, menu, todo};
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
 use crate::details::Details;
 use crate::key_bind::{key_binds, KeyBind};
+use crate::{content, details, fl, menu, todo};
 
 pub struct App {
     core: Core,
@@ -37,7 +37,6 @@ pub struct App {
     modifiers: Modifiers,
     dialog_pages: VecDeque<DialogPage>,
     dialog_text_input: widget::Id,
-    selected_date: NaiveDate,
 }
 
 #[derive(Debug, Clone)]
@@ -52,7 +51,6 @@ pub enum Message {
     DialogCancel,
     DialogComplete,
     DialogUpdate(DialogPage),
-    CalendarUpdate(CalendarAction),
     Key(Modifiers, Key),
     Modifiers(Modifiers),
     AppTheme(AppTheme),
@@ -64,13 +62,6 @@ pub enum Message {
     AddList(List),
     DeleteList,
     OpenCalendarDialog,
-}
-
-#[derive(Debug, Clone)]
-pub enum CalendarAction {
-    PrevMonth,
-    NextMonth,
-    DaySelected(u32),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -164,10 +155,10 @@ impl App {
                 .padding(0)
                 .into(),
         ])
-            .align_items(Alignment::Center)
-            .spacing(space_xxs)
-            .width(Length::Fill)
-            .into()
+        .align_items(Alignment::Center)
+        .spacing(space_xxs)
+        .width(Length::Fill)
+        .into()
     }
 
     fn settings(&self) -> Element<Message> {
@@ -191,7 +182,7 @@ impl App {
                 )),
             )
             .into()])
-            .into()
+        .into()
     }
 
     fn create_nav_item(&mut self, list: List) -> EntityMut<SingleSelect> {
@@ -238,7 +229,6 @@ impl Application for App {
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
-            selected_date: Local::now().date_naive(),
         };
 
         let commands = vec![Command::perform(
@@ -289,7 +279,7 @@ impl Application for App {
                             .on_input(move |name| Message::DialogUpdate(DialogPage::New(name)))
                             .into(),
                     ])
-                        .spacing(space_xxs),
+                    .spacing(space_xxs),
                 ),
             DialogPage::Rename { to: name } => widget::dialog(fl!("rename-list"))
                 .primary_action(
@@ -309,7 +299,7 @@ impl Application for App {
                             })
                             .into(),
                     ])
-                        .spacing(space_xxs),
+                    .spacing(space_xxs),
                 ),
             DialogPage::Delete => widget::dialog(fl!("delete-list"))
                 .body(fl!("delete-list-confirm"))
@@ -736,17 +726,13 @@ impl Application for App {
                     .secondary_action(
                         widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
                     )
-                    .control(widget::container(
-                        widget::calendar(
-                            &date,
-                            Message::CalendarUpdate(CalendarAction::PrevMonth),
-                            Message::CalendarUpdate(CalendarAction::NextMonth),
-                            |day| Message::CalendarUpdate(CalendarAction::DaySelected(day)),
-                        )
-                    )
+                    .control(
+                        widget::container(widget::calendar(&date, |date| {
+                            Message::DialogUpdate(DialogPage::Calendar(date))
+                        }))
                         .width(Length::Fill)
                         .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
+                        .align_y(Vertical::Center),
                     );
                 dialog
             }
@@ -809,31 +795,31 @@ impl Application for App {
                 Self::APP_ID.into(),
                 CONFIG_VERSION,
             )
-                .map(|update| {
-                    if !update.errors.is_empty() {
-                        log::info!(
+            .map(|update| {
+                if !update.errors.is_empty() {
+                    log::info!(
                         "errors loading config {:?}: {:?}",
                         update.keys,
                         update.errors
                     );
-                    }
-                    Message::SystemThemeModeChange(update.config)
-                }),
+                }
+                Message::SystemThemeModeChange(update.config)
+            }),
             cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
                 TypeId::of::<ThemeSubscription>(),
                 cosmic_theme::THEME_MODE_ID.into(),
                 cosmic_theme::ThemeMode::version(),
             )
-                .map(|update| {
-                    if !update.errors.is_empty() {
-                        log::info!(
+            .map(|update| {
+                if !update.errors.is_empty() {
+                    log::info!(
                         "errors loading theme mode {:?}: {:?}",
                         update.keys,
                         update.errors
                     );
-                    }
-                    Message::SystemThemeModeChange(update.config)
-                }),
+                }
+                Message::SystemThemeModeChange(update.config)
+            }),
         ];
 
         subscriptions.push(self.content.subscription().map(Message::Content));
@@ -1082,7 +1068,8 @@ impl Application for App {
                 }
             }
             Message::OpenCalendarDialog => {
-                self.dialog_pages.push_back(DialogPage::Calendar(self.selected_date));
+                self.dialog_pages
+                    .push_back(DialogPage::Calendar(Local::now().date_naive()));
             }
             Message::DialogCancel => {
                 self.dialog_pages.pop_front();
@@ -1130,7 +1117,6 @@ impl Application for App {
                             }
                         }
                         DialogPage::Calendar(date) => {
-                            self.selected_date = date;
                             self.details.update(details::Message::SetDueDate(date));
                         }
                     }
@@ -1139,20 +1125,6 @@ impl Application for App {
             Message::DialogUpdate(dialog_page) => {
                 //TODO: panicless way to do this?
                 self.dialog_pages[0] = dialog_page;
-            }
-            Message::CalendarUpdate(action) => {
-                match action {
-                    CalendarAction::PrevMonth => {
-                        widget::calendar::set_prev_month(&mut self.selected_date);
-                    }
-                    CalendarAction::NextMonth => {
-                        widget::calendar::set_next_month(&mut self.selected_date);
-                    }
-                    CalendarAction::DaySelected(day) => {
-                        widget::calendar::set_day(&mut self.selected_date, day);
-                    }
-                }
-                self.dialog_pages[0] = DialogPage::Calendar(self.selected_date);
             }
         }
 
