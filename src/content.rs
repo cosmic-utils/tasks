@@ -66,14 +66,20 @@ impl Content {
 
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let cosmic_theme::Spacing {
-            space_xxs, space_m, ..
+            space_none,
+            space_xxxs,
+            space_xxs,
+            space_xs,
+            ..
         } = theme::active().cosmic().spacing;
 
         if self.tasks.is_empty() {
             return self.empty(list);
         }
 
-        let mut items = widget::list::list_column().spacing(space_xxs);
+        let mut items = widget::list::list_column()
+            .spacing(space_xxxs)
+            .padding([space_none, space_xxs]);
 
         for item in &self.tasks {
             let item_checkbox = widget::checkbox("", item.status == Status::Completed, |value| {
@@ -83,7 +89,7 @@ impl Content {
             let delete_button = widget::icon::from_name("user-trash-full-symbolic")
                 .size(16)
                 .apply(widget::button::icon)
-                .style(cosmic::theme::Button::Destructive)
+                .style(theme::Button::Destructive)
                 .on_press(Message::Delete(item.id.clone()));
 
             let row = widget::row::with_capacity(3)
@@ -94,7 +100,7 @@ impl Content {
                 .push(delete_button);
 
             let button = widget::button(row)
-                .padding([space_xxs, space_m])
+                .padding([space_xxs, space_xs])
                 .width(Length::Fill)
                 .height(Length::Shrink)
                 .style(button_style(false, true))
@@ -158,7 +164,7 @@ impl Content {
             .on_press(Message::AddTask)
             .into(),
         ])
-        .padding([0, space_xxs, 0, space_xxs])
+        .padding([space_xxs, space_xxs, 0, space_xxs])
         .spacing(space_xxs)
         .align_items(Alignment::Center)
         .into()
