@@ -36,3 +36,6 @@ fork = "0.1"
 
 [build-dependencies]
 vergen = { version = "8", features = ["git", "gitcl"] }
+
+[patch."https://github.com/pop-os/libcosmic.git"]
+libcosmic = { git = "https://github.com/edfloreshz/libcosmic.git" }

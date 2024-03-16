@@ -9,6 +9,8 @@ use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::{
     event, keyboard::Event as KeyEvent, window, Alignment, Event, Length, Subscription,
 };
+use cosmic::widget::menu::action::MenuAction;
+use cosmic::widget::menu::key_bind::KeyBind;
 use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
 use cosmic::widget::{scrollable, segmented_button};
 use cosmic::{
@@ -21,7 +23,7 @@ use done_core::service::Service;
 use crate::config::{AppTheme, CONFIG_VERSION};
 use crate::content::Content;
 use crate::details::Details;
-use crate::key_bind::{key_binds, KeyBind};
+use crate::key_bind::key_binds;
 use crate::{content, details, fl, menu, todo};
 
 pub struct App {
@@ -110,8 +112,9 @@ pub enum Action {
     Icon,
 }
 
-impl Action {
-    pub fn message(self, _entity_opt: Option<Entity>) -> Message {
+impl MenuAction for Action {
+    type Message = Message;
+    fn message(&self, _entity_opt: Option<Entity>) -> Self::Message {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
             Action::ItemDown => Message::Content(content::Message::ItemDown),
@@ -727,7 +730,7 @@ impl Application for App {
                         widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
                     )
                     .control(
-                        widget::container(widget::calendar(&date, |date| {
+                        widget::container(widget::calendar(date, |date| {
                             Message::DialogUpdate(DialogPage::Calendar(date))
                         }))
                         .width(Length::Fill)
@@ -743,6 +746,12 @@ impl Application for App {
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
         vec![menu::menu_bar(&self.key_binds)]
+    }
+
+    fn header_center(&self) -> Vec<Element<Self::Message>> {
+        vec![widget::button(widget::text(fl!("cosmic-todo")))
+            .style(theme::Button::MenuRoot)
+            .into()]
     }
 
     fn header_end(&self) -> Vec<Element<Self::Message>> {

@@ -56,10 +56,11 @@ impl Content {
         widget::row::with_capacity(2)
             .align_items(Alignment::Center)
             .spacing(space_s)
-            .push_maybe(match list.icon.as_deref() {
-                Some(icon) => Some(widget::icon::from_name(icon).size(24).icon()),
-                None => None,
-            })
+            .push_maybe(
+                list.icon
+                    .as_deref()
+                    .map(|icon| widget::icon::from_name(icon).size(24).icon()),
+            )
             .push(widget::text::title3(&list.name))
             .into()
     }

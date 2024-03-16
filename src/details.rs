@@ -1,6 +1,6 @@
 use std::ops::IndexMut;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
@@ -14,7 +14,6 @@ use crate::fl;
 
 pub struct Details {
     pub task: Option<Task>,
-    due_date: Option<NaiveDate>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
 }
@@ -69,7 +68,6 @@ impl Details {
 
         Self {
             task: None,
-            due_date: None,
             priority_model,
             subtask_input: String::new(),
         }
@@ -132,7 +130,11 @@ impl Details {
                 commands.push(Command::OpenCalendarDialog);
             }
             Message::SetDueDate(date) => {
-                self.due_date = Some(date);
+                let tz = Utc::now().timezone();
+                if let Some(task) = &mut self.task {
+                    task.due_date = Some(tz.from_utc_datetime(&date.into()));
+                    commands.push(Command::Update(task.clone()));
+                }
             }
         }
         commands
@@ -192,12 +194,16 @@ impl Details {
                     )
                     .add(
                         widget::settings::item::builder(fl!("due-date")).control(
-                            widget::button::text(if self.due_date.is_some() {
-                                self.due_date
-                                    .as_ref()
-                                    .unwrap()
-                                    .format("%m-%d-%Y")
-                                    .to_string()
+                            widget::button::text(if let Some(task) = &self.task {
+                                if task.due_date.is_some() {
+                                    task.due_date
+                                        .as_ref()
+                                        .unwrap()
+                                        .format("%m-%d-%Y")
+                                        .to_string()
+                                } else {
+                                    fl!("select-date")
+                                }
                             } else {
                                 fl!("select-date")
                             })
