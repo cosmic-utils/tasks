@@ -21,11 +21,11 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             menu_items(
                 key_binds,
                 vec![
-                    MenuItem::Action(fl!("new-window"), Action::WindowNew),
-                    MenuItem::Separator,
-                    MenuItem::Action(fl!("new-list"), Action::NewList),
-                    MenuItem::Separator,
-                    MenuItem::Action(fl!("quit"), Action::WindowClose),
+                    MenuItem::Button(fl!("new-window"), Action::WindowNew),
+                    MenuItem::Divider,
+                    MenuItem::Button(fl!("new-list"), Action::NewList),
+                    MenuItem::Divider,
+                    MenuItem::Button(fl!("quit"), Action::WindowClose),
                 ],
             ),
         ),
@@ -34,11 +34,11 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             menu_items(
                 key_binds,
                 vec![
-                    MenuItem::Action(fl!("rename"), Action::RenameList),
-                    MenuItem::Separator,
-                    MenuItem::Action(fl!("delete"), Action::DeleteList),
-                    MenuItem::Separator,
-                    MenuItem::Action(fl!("icon"), Action::Icon),
+                    MenuItem::Button(fl!("rename"), Action::RenameList),
+                    MenuItem::Divider,
+                    MenuItem::Button(fl!("delete"), Action::DeleteList),
+                    MenuItem::Divider,
+                    MenuItem::Button(fl!("icon"), Action::Icon),
                 ],
             ),
         ),
@@ -47,9 +47,9 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             menu_items(
                 key_binds,
                 vec![
-                    MenuItem::Action(fl!("menu-settings"), Action::Settings),
-                    MenuItem::Separator,
-                    MenuItem::Action(fl!("menu-about"), Action::About),
+                    MenuItem::Button(fl!("menu-settings"), Action::Settings),
+                    MenuItem::Divider,
+                    MenuItem::Button(fl!("menu-about"), Action::About),
                 ],
             ),
         ),
