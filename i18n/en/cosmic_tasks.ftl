@@ -1,4 +1,4 @@
-cosmic-todo = COSMIC To-do
+cosmic-tasks = COSMIC Tasks
 trash = Trash
 about = About
 
@@ -82,4 +82,4 @@ delete = Delete
 ## View
 view = View
 menu-settings = Settings...
-menu-about = About COSMIC To-do...
+menu-about = About COSMIC Tasks...

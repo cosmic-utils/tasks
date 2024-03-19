@@ -1,4 +1,4 @@
-cosmic-todo = COSMIC To-do
+cosmic-tasks = COSMIC Tasks
 empty-folder = Cartella vuota
 empty-folder-hidden = Cartella vuota (contiene elementi nascosti)
 filesystem = Filesystem
@@ -97,4 +97,4 @@ view = Vista
 grid-view = Griglia
 list-view = Lista
 menu-settings = Impostazioni...
-menu-about = Informazioni su COSMIC To-do...
+menu-about = Informazioni su COSMIC Tasks...

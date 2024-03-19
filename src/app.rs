@@ -137,18 +137,18 @@ impl App {
 
     fn about(&self) -> Element<Message> {
         let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
-        let repository = "https://github.com/edfloreshz/cosmic-todo";
+        let repository = "https://github.com/edfloreshz/cosmic-tasks";
         let hash = env!("VERGEN_GIT_SHA");
         let short_hash: String = hash.chars().take(7).collect();
         let date = env!("VERGEN_GIT_COMMIT_DATE");
         widget::column::with_children(vec![
             widget::svg(widget::svg::Handle::from_memory(
                 &include_bytes!(
-                    "../res/icons/hicolor/128x128/apps/com.system76.CosmicTodo.svg"
+                    "../res/icons/hicolor/128x128/apps/com.system76.CosmicTasks.svg"
                 )[..],
             ))
                 .into(),
-            widget::text::title3(fl!("cosmic-todo")).into(),
+            widget::text::title3(fl!("cosmic-tasks")).into(),
             widget::button::link(repository)
                 .on_press(Message::LaunchUrl(repository.to_string()))
                 .padding(0)
@@ -205,7 +205,7 @@ impl Application for App {
     type Executor = executor::Default;
     type Flags = Flags;
     type Message = Message;
-    const APP_ID: &'static str = "com.system76.CosmicTodo";
+    const APP_ID: &'static str = "com.system76.CosmicTasks";
 
     fn core(&self) -> &Core {
         &self.core

@@ -1,4 +1,4 @@
-cosmic-todo = COSMICファイル
+cosmic-tasks = COSMICファイル
 empty-folder = 空のフォルダ
 empty-folder-hidden = 空のフォルダ（隠しファイルあり）
 filesystem = ファイルシステム

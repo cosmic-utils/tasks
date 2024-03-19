@@ -1,4 +1,4 @@
-cosmic-todo = Ficheiros COSMIC
+cosmic-tasks = Ficheiros COSMIC
 empty-folder = Pasta vazia
 empty-folder-hidden = Pasta vazia (tem ficheiros ocultos)
 filesystem = Sistema de ficheiros
