@@ -45,23 +45,17 @@ impl Details {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
-                    .icon(widget::icon(
-                        widget::icon::from_name("security-medium-symbolic").handle(),
-                    ))
+                    .icon(crate::get_icon("flag-outline-thin-symbolic", 16))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
-                    .icon(widget::icon(
-                        widget::icon::from_name("security-high-symbolic").handle(),
-                    ))
+                    .icon(crate::get_icon("flag-outline-thick-symbolic", 16))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
-                    .icon(widget::icon(
-                        widget::icon::from_name("security-low-symbolic").handle(),
-                    ))
+                    .icon(crate::get_icon("flag-filled-symbolic", 16))
                     .data(Priority::High)
             })
             .build();
@@ -242,13 +236,9 @@ impl Details {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button::icon(
-                widget::icon::from_name("mail-send-symbolic")
-                    .size(16)
-                    .handle(),
-            )
-            .on_press(Message::AddTask)
-            .into(),
+            widget::button(crate::get_icon("mail-send-symbolic", 16))
+                .on_press(Message::AddTask)
+                .into(),
         ])
         .padding([0, space_s])
         .spacing(space_xs)

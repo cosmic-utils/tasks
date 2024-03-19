@@ -87,9 +87,7 @@ impl Content {
                 Message::Complete(item.id.clone(), value)
             });
 
-            let delete_button = widget::icon::from_name("user-trash-full-symbolic")
-                .size(16)
-                .apply(widget::button::icon)
+            let delete_button = widget::button(crate::get_icon("user-trash-full-symbolic", 16))
                 .style(theme::Button::Destructive)
                 .on_press(Message::Delete(item.id.clone()));
 
@@ -127,9 +125,7 @@ impl Content {
 
         let container = widget::container(
             widget::column::with_children(vec![
-                widget::icon::from_name("task-past-due-symbolic")
-                    .size(56)
-                    .into(),
+                crate::get_icon("task-past-due-symbolic", 56).into(),
                 widget::text::title1(fl!("no-tasks")).into(),
                 widget::text(fl!("no-tasks-suggestion")).into(),
             ])
@@ -157,13 +153,10 @@ impl Content {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button::icon(
-                widget::icon::from_name("mail-send-symbolic")
-                    .size(16)
-                    .handle(),
-            )
-            .on_press(Message::AddTask)
-            .into(),
+            widget::button(crate::get_icon("mail-send-symbolic", 16))
+                .style(theme::Button::Suggested)
+                .on_press(Message::AddTask)
+                .into(),
         ])
         .padding([space_xxs, space_xxs, 0, space_xxs])
         .spacing(space_xxs)
@@ -248,9 +241,7 @@ impl Content {
         let Some(ref list) = self.list else {
             return widget::container(
                 widget::column::with_children(vec![
-                    widget::icon::from_name("applications-office-symbolic") // replace "icon-name" with the name of your icon
-                        .size(56)
-                        .into(),
+                    crate::get_icon("applications-office-symbolic", 56).into(),
                     widget::text::title1(fl!("no-list-selected")).into(),
                     widget::text(fl!("no-list-suggestion")).into(),
                 ])

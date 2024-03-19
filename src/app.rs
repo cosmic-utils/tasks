@@ -749,9 +749,7 @@ impl Application for App {
     }
 
     fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![widget::button(widget::text(fl!("cosmic-todo")))
-            .style(theme::Button::MenuRoot)
-            .into()]
+        vec![]
     }
 
     fn header_end(&self) -> Vec<Element<Self::Message>> {
