@@ -31,22 +31,22 @@ impl IconCache {
             };
         }
 
-        bundle!("edit-clear-symbolic", 16);
-        bundle!("folder-open-symbolic", 16);
-        bundle!("go-down-symbolic", 16);
-        bundle!("go-next-symbolic", 16);
-        bundle!("go-up-symbolic", 16);
-        bundle!("list-add-symbolic", 16);
-        bundle!("object-select-symbolic", 16);
-        bundle!("replace-symbolic", 16);
-        bundle!("replace-all-symbolic", 16);
-        bundle!("window-close-symbolic", 16);
+        bundle!("edit-clear-symbolic", 18);
+        bundle!("folder-open-symbolic", 18);
+        bundle!("go-down-symbolic", 18);
+        bundle!("go-next-symbolic", 18);
+        bundle!("go-up-symbolic", 18);
+        bundle!("list-add-symbolic", 18);
+        bundle!("object-select-symbolic", 18);
+        bundle!("replace-symbolic", 18);
+        bundle!("replace-all-symbolic", 18);
+        bundle!("window-close-symbolic", 18);
 
-        bundle!("paper-plane-symbolic", 16);
-        bundle!("task-past-due-symbolic", 16);
-        bundle!("user-trash-full-symbolic", 16);
-        bundle!("mail-send-symbolic", 16);
-        bundle!("applications-office-symbolic", 16);
+        bundle!("paper-plane-symbolic", 18);
+        bundle!("task-past-due-symbolic", 18);
+        bundle!("user-trash-full-symbolic", 18);
+        bundle!("mail-send-symbolic", 18);
+        bundle!("applications-office-symbolic", 18);
 
         bundle!("flag-filled-symbolic", 16);
         bundle!("flag-outline-thick-symbolic", 16);

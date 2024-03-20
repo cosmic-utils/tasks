@@ -5,7 +5,7 @@ use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::{cosmic_theme, theme, widget, Element};
+use cosmic::{cosmic_theme, theme, widget, Element, iced};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
@@ -16,6 +16,7 @@ pub struct Details {
     pub task: Option<Task>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
+    pub selected_index: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -23,20 +24,21 @@ pub enum Message {
     SetTitle(String),
     SetNotes(String),
     CompleteSubTask(usize, bool),
+    DeleteSubTask(usize),
     Favorite(bool),
     PriorityActivate(Entity),
     SubTaskInput(String),
+    SetSubTaskTitle(usize, String),
     AddTask,
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
+    SubTaskEditDone,
+    SubTaskEditStart(usize),
 }
 
 pub enum Command {
-    Update(Task),
-    SetTitle(String, String),
-    SetNotes(String, String),
-    Favorite(String, bool),
-    PriorityActivate(String, Priority),
+    Focus(widget::Id),
+    UpdateTask(Task),
     OpenCalendarDialog,
 }
 
@@ -64,6 +66,7 @@ impl Details {
             task: None,
             priority_model,
             subtask_input: String::new(),
+            selected_index: None,
         }
     }
 
@@ -73,28 +76,30 @@ impl Details {
             Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.title = title.clone();
-                    commands.push(Command::SetTitle(task.id.clone(), title));
                 }
             }
             Message::SetNotes(notes) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.notes = notes.clone();
-                    commands.push(Command::SetNotes(task.id.clone(), notes));
                 }
             }
             Message::Favorite(favorite) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.favorite = favorite;
-                    commands.push(Command::Favorite(task.id.clone(), favorite));
                 }
             }
             Message::PriorityActivate(entity) => {
                 self.priority_model.activate(entity);
                 let priority = self.priority_model.data::<Priority>(entity);
-                if let Some(task) = &self.task {
+                if let Some(task) = &mut self.task {
                     if let Some(priority) = priority {
-                        commands.push(Command::PriorityActivate(task.id.clone(), *priority));
+                        task.priority = priority.clone();
                     }
+                }
+            }
+            Message::SetSubTaskTitle(i, title) => {
+                if let Some(ref mut task) = &mut self.task {
+                    task.sub_tasks.index_mut(i).title = title.clone();
                 }
             }
             Message::CompleteSubTask(i, completed) => {
@@ -104,19 +109,33 @@ impl Details {
                     } else {
                         Status::NotStarted
                     };
-                    commands.push(Command::Update(task.clone()));
+                }
+            }
+            Message::SubTaskEditDone => {
+                commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
+                self.selected_index = None;
+            }
+            Message::SubTaskEditStart(i) => {
+                self.selected_index = Some(i);
+                commands.push(Command::Focus(widget::Id::new("sub_task_input")));
+            }
+            Message::DeleteSubTask(i) => {
+                if let Some(ref mut task) = &mut self.task {
+                    task.sub_tasks.index_mut(i).deletion_date = Some(Utc::now());
+                    task.sub_tasks.remove(i);
                 }
             }
             Message::SubTaskInput(text) => {
                 self.subtask_input = text;
+                self.selected_index = None;
             }
             Message::AddTask => {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
                         task.sub_tasks
                             .push(Task::new(self.subtask_input.clone(), task.id.clone()));
-                        commands.push(Command::Update(task.clone()));
                         self.subtask_input.clear();
+                        commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
                     }
                 }
             }
@@ -127,10 +146,14 @@ impl Details {
                 let tz = Utc::now().timezone();
                 if let Some(task) = &mut self.task {
                     task.due_date = Some(tz.from_utc_datetime(&date.into()));
-                    commands.push(Command::Update(task.clone()));
                 }
             }
         }
+
+        if let Some(task) = &self.task {
+            commands.push(Command::UpdateTask(task.clone()));
+        }
+
         commands
     }
 
@@ -147,12 +170,33 @@ impl Details {
                 .iter()
                 .enumerate()
                 .map(|(i, sub_task)| {
-                    widget::settings::item::builder(sub_task.title.clone())
-                        .control(widget::checkbox(
+                    widget::row::with_children(vec![
+                        widget::checkbox(
                             "",
                             sub_task.status == Status::Completed,
                             move |value| Message::CompleteSubTask(i, value),
-                        ))
+                        ).into(),
+                        if self.selected_index.is_some() && i == self.selected_index.unwrap() {
+                            widget::text_input(fl!("title"), sub_task.title.clone())
+                                .id(widget::Id::new("sub_task_input"))
+                                .on_input(move |title| Message::SetSubTaskTitle(i, title))
+                                .on_submit(Message::SubTaskEditDone)
+                                .into()
+                        } else {
+                            widget::button(widget::text(sub_task.title.clone()))
+                                .padding(space_xxs)
+                                .on_press(Message::SubTaskEditStart(i))
+                                .width(Length::Fill)
+                                .style(widget::button::Style::Transparent)
+                                .into()
+                        },
+                        widget::button(crate::get_icon("user-trash-full-symbolic", 18))
+                            .style(widget::button::Style::Destructive)
+                            .on_press(Message::DeleteSubTask(i)).into()
+                    ])
+                        .align_items(iced::Alignment::Center)
+                        .padding([0, 18])
+                        .spacing(12)
                         .into()
                 })
                 .collect();
@@ -227,16 +271,21 @@ impl Details {
 
     fn sub_task_input(&self) -> Element<Message> {
         let cosmic_theme::Spacing {
-            space_xs, space_s, ..
+            space_xxs,
+            space_xs,
+            space_s,
+            ..
         } = theme::active().cosmic().spacing;
 
         row(vec![
             widget::text_input(fl!("add-sub-task"), &self.subtask_input)
+                .id(widget::Id::new("new_sub_task_input"))
                 .on_input(Message::SubTaskInput)
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(crate::get_icon("mail-send-symbolic", 16))
+            widget::button(crate::get_icon("mail-send-symbolic", 18))
+                .padding(space_xxs)
                 .on_press(Message::AddTask)
                 .into(),
         ])

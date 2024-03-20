@@ -64,6 +64,7 @@ pub enum Message {
     AddList(List),
     DeleteList,
     OpenCalendarDialog,
+    Focus(widget::Id),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -928,36 +929,16 @@ impl Application for App {
                 let details_commands = self.details.update(message);
                 for details_command in details_commands {
                     match details_command {
-                        details::Command::Update(task) => {
-                            commands.push(Command::perform(todo::update_task(task), |result| {
-                                match result {
-                                    Ok(_) => message::none(),
-                                    Err(_) => message::none(),
-                                }
-                            }));
-                        }
-                        details::Command::SetTitle(id, title) => {
+                        details::Command::UpdateTask(task) => {
                             commands.push(self.update(Message::Content(
-                                content::Message::SetTitle(id.clone(), title.clone()),
-                            )));
-                        }
-                        details::Command::SetNotes(id, notes) => {
-                            commands.push(self.update(Message::Content(
-                                content::Message::SetNotes(id.clone(), notes.clone()),
-                            )));
-                        }
-                        details::Command::Favorite(id, favorite) => {
-                            commands.push(self.update(Message::Content(
-                                content::Message::Favorite(id.clone(), favorite),
-                            )));
-                        }
-                        details::Command::PriorityActivate(id, priority) => {
-                            commands.push(self.update(Message::Content(
-                                content::Message::SetPriority(id.clone(), priority),
+                                content::Message::UpdateTask(task.clone()),
                             )));
                         }
                         details::Command::OpenCalendarDialog => {
                             commands.push(self.update(Message::OpenCalendarDialog));
+                        }
+                        details::Command::Focus(id) => {
+                            commands.push(self.update(Message::Focus(id)));
                         }
                     }
                 }
@@ -1133,6 +1114,7 @@ impl Application for App {
                 //TODO: panicless way to do this?
                 self.dialog_pages[0] = dialog_page;
             }
+            Message::Focus(id) => return Command::batch(vec![widget::text_input::focus(id)]),
         }
 
         if !commands.is_empty() {

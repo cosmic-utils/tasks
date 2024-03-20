@@ -4,7 +4,6 @@ use cosmic::iced_widget::row;
 use cosmic::prelude::CollectionWidget;
 use cosmic::{cosmic_theme, theme, widget, Apply, Element};
 use done_core::models::list::List;
-use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
 
@@ -19,9 +18,6 @@ pub struct Content {
 #[derive(Debug, Clone)]
 pub enum Message {
     List(Option<List>),
-    SetTitle(String, String),
-    SetNotes(String, String),
-    Favorite(String, bool),
     Complete(String, bool),
     Delete(String),
     Select(Task),
@@ -30,7 +26,7 @@ pub enum Message {
     ItemUp,
     Input(String),
     AddTask,
-    SetPriority(String, Priority),
+    UpdateTask(Task),
 }
 
 pub enum Command {
@@ -87,7 +83,8 @@ impl Content {
                 Message::Complete(item.id.clone(), value)
             });
 
-            let delete_button = widget::button(crate::get_icon("user-trash-full-symbolic", 16))
+            let delete_button = widget::button(crate::get_icon("user-trash-full-symbolic", 18))
+                .padding(space_xxs)
                 .style(theme::Button::Destructive)
                 .on_press(Message::Delete(item.id.clone()));
 
@@ -153,7 +150,8 @@ impl Content {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(crate::get_icon("mail-send-symbolic", 16))
+            widget::button(crate::get_icon("mail-send-symbolic", 18))
+                .padding(space_xxs)
                 .style(theme::Button::Suggested)
                 .on_press(Message::AddTask)
                 .into(),
@@ -205,31 +203,10 @@ impl Content {
                     }
                 }
             }
-            Message::SetPriority(id, priority) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == id);
+            Message::UpdateTask(updated_task) => {
+                let task = self.tasks.iter_mut().find(|t| t.id == updated_task.id);
                 if let Some(task) = task {
-                    task.priority = priority;
-                    commands.push(Command::UpdateTask(task.clone()));
-                }
-            }
-            Message::SetTitle(id, title) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == id);
-                if let Some(task) = task {
-                    task.title = title;
-                    commands.push(Command::UpdateTask(task.clone()));
-                }
-            }
-            Message::SetNotes(id, notes) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == id);
-                if let Some(task) = task {
-                    task.notes = notes;
-                    commands.push(Command::UpdateTask(task.clone()));
-                }
-            }
-            Message::Favorite(id, favorite) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == id);
-                if let Some(task) = task {
-                    task.favorite = favorite;
+                    *task = updated_task.clone();
                     commands.push(Command::UpdateTask(task.clone()));
                 }
             }
