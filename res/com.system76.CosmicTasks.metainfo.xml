@@ -21,7 +21,10 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/master/res/icons/hicolor/256x256/apps/com.system76.CosmicTasks.svg</icon>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window.png</image>
+      <image>https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window-light.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window-dark.png</image>
     </screenshot>
   </screenshots>
   <provides>

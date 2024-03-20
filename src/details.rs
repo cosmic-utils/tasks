@@ -5,7 +5,7 @@ use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::{cosmic_theme, theme, widget, Element, iced};
+use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
@@ -187,14 +187,14 @@ impl Details {
                                 .padding(space_xxs)
                                 .on_press(Message::SubTaskEditStart(i))
                                 .width(Length::Fill)
-                                .style(widget::button::Style::Transparent)
+                                .style(widget::button::Style::Text)
                                 .into()
                         },
                         widget::button(crate::get_icon("user-trash-full-symbolic", 18))
                             .style(widget::button::Style::Destructive)
                             .on_press(Message::DeleteSubTask(i)).into()
                     ])
-                        .align_items(iced::Alignment::Center)
+                        .align_items(Alignment::Center)
                         .padding([0, 18])
                         .spacing(12)
                         .into()

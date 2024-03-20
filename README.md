@@ -2,6 +2,7 @@
 
 A simple task management application for the COSMIC desktop.
 
-![window.png](https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/c749eb9c260c9654342f09d105d592bd8944800a/res/screenshots/window.png)
+![window-light.png](https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window-light.png#gh-light-mode-only)
+![window-dark.png](https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window-dark.png#gh-dark-mode-only)
 
 
