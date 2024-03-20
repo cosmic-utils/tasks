@@ -772,15 +772,18 @@ impl Application for App {
     }
 
     fn on_nav_select(&mut self, entity: Entity) -> Command<CosmicMessage<Self::Message>> {
+        let mut commands = vec![];
         self.nav_model.activate(entity);
         let location_opt = self.nav_model.data::<List>(entity);
 
         if let Some(list) = location_opt {
             let message = Message::Content(content::Message::List(Some(list.clone())));
+            let window_title = format!("{} - {}", list.name, fl!("cosmic-tasks"));
+            commands.push(self.set_window_title(window_title, self.main_window_id()));
             return self.update(message);
         }
 
-        Command::none()
+        Command::batch(commands)
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
