@@ -43,7 +43,7 @@ select-date = Izaberite datum
 
 # Dialogs
 cancel = Poništi
-ok = Ok
+ok = U redu
 confirm = Potvrdi
 save = Sačuvaj
 list-name = Ime spiska
