@@ -1,9 +1,57 @@
-empty-folder = Prazna fascikla
-empty-folder-hidden = Prazna fascikla (ima skrivene stavke)
-filesystem = Sistem datoteka
+cosmic-tasks = COSMIC Zadaci
 trash = Otpad
+about = O programu
+
+# Content
+add-new-task = Dodaj novi zadatak
+
+# Details
+title = Naslov
+details = Detalji
+favorite = Dodaj u omiljene
+priority = Prioritet
+due-date = Rok
+reminder = Podsetnik
+notes = Napomene
+
+# Empty
+no-tasks = Nema zadataka
+no-tasks-suggestion = Pokušajte da dodate zadatak pomoću polja za tekst ispod
+no-list-selected = Nije izabran spisak
+no-list-suggestion = Napravite ili izaberite novi spisak da biste započeli
+
+sub-tasks = Podzadaci
+add-sub-task = Dodaj podzadatak
+
+# New List Dialog
+create-list = Napravi novi spisak
+
+# Rename List Dialog
+rename-list = Preimenuj spisak
+
+# Rename List Dialog
+delete-list = Izabrani spisak će biti obrisan
+delete-list-confirm = Da li ste sigurni da želite da izbrišete ovaj spisak?
+
+# Icon Dialog
+icon = Postavi ikonicu
+icon-select = Izaberite ikonicu
+icon-select-body = Izaberite ikonicu za spisak
+
+# Date Dialog
+select-date = Izaberite datum
+
+# Dialogs
+cancel = Poništi
+ok = U redu
+confirm = Potvrdi
+save = Sačuvaj
+list-name = Ime spiska
 
 # Context Pages
+
+## About
+git-description = Git commit {$hash}, {$date}
 
 ## Properties
 properties = Svojstva
@@ -18,30 +66,20 @@ match-desktop = Kao sistem
 dark = Tamna
 light = Svetla
 
-# Context menu
-new-file = Nova datoteka
-new-folder = Nova fascikla
-move-to-trash = Premesti u otpad
-restore-from-trash = Vrati iz otpada
-
 # Menu
 
 ## File
 file = Datoteka
-new-tab = Nova kartica
 new-window = Novi prozor
-close-tab = Zatvori karticu
+new-list = Novi spisak
 quit = Izađi
 
 ## Edit
 edit = Uredi
-cut = Iseci
-copy = Kopiraj
-paste = Nalepi
-select-all = Izaberi sve
+rename = Preimenuj
+delete = Izbriši
 
 ## View
 view = Prikaz
-grid-view = Prikaži mrežu
-list-view = Prikaži spisak
 menu-settings = Podešavanja...
+menu-about = O COSMIC Zadacima...
