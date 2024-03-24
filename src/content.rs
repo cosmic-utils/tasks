@@ -1,3 +1,4 @@
+use crate::app::config;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Color, Length, Subscription};
 use cosmic::iced_widget::row;
@@ -75,6 +76,7 @@ impl Content {
         }
 
         let mut items = widget::list::list_column()
+            .style(theme::Container::ContextDrawer)
             .spacing(space_xxxs)
             .padding([space_none, space_xxs]);
 
@@ -83,7 +85,7 @@ impl Content {
                 Message::Complete(item.id.clone(), value)
             });
 
-            let delete_button = widget::button(crate::get_icon("user-trash-full-symbolic", 18))
+            let delete_button = widget::button(config::get_icon("user-trash-full-symbolic", 18))
                 .padding(space_xxs)
                 .style(theme::Button::Destructive)
                 .on_press(Message::Delete(item.id.clone()));
@@ -122,7 +124,7 @@ impl Content {
 
         let container = widget::container(
             widget::column::with_children(vec![
-                crate::get_icon("task-past-due-symbolic", 56).into(),
+                config::get_icon("task-past-due-symbolic", 56).into(),
                 widget::text::title1(fl!("no-tasks")).into(),
                 widget::text(fl!("no-tasks-suggestion")).into(),
             ])
@@ -150,7 +152,7 @@ impl Content {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(crate::get_icon("mail-send-symbolic", 18))
+            widget::button(config::get_icon("mail-send-symbolic", 18))
                 .padding(space_xxs)
                 .style(theme::Button::Suggested)
                 .on_press(Message::AddTask)
@@ -218,7 +220,7 @@ impl Content {
         let Some(ref list) = self.list else {
             return widget::container(
                 widget::column::with_children(vec![
-                    crate::get_icon("applications-office-symbolic", 56).into(),
+                    config::get_icon("applications-office-symbolic", 56).into(),
                     widget::text::title1(fl!("no-list-selected")).into(),
                     widget::text(fl!("no-list-suggestion")).into(),
                 ])

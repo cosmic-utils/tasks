@@ -20,11 +20,17 @@ use cosmic::{
 use done_core::models::list::List;
 use done_core::service::Service;
 
-use crate::config::{AppTheme, CONFIG_VERSION};
+use crate::app::config::{AppTheme, CONFIG_VERSION};
+use crate::app::key_bind::key_binds;
 use crate::content::Content;
 use crate::details::Details;
-use crate::key_bind::key_binds;
-use crate::{content, details, fl, menu, todo};
+use crate::{content, details, fl, todo};
+
+pub mod config;
+pub mod icon_cache;
+mod key_bind;
+pub mod localize;
+pub mod menu;
 
 pub struct App {
     core: Core,
@@ -32,7 +38,7 @@ pub struct App {
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
-    config: crate::config::Config,
+    config: config::Config,
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
@@ -96,7 +102,7 @@ pub enum DialogPage {
 #[derive(Clone, Debug)]
 pub struct Flags {
     pub config_handler: Option<cosmic_config::Config>,
-    pub config: crate::config::Config,
+    pub config: config::Config,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

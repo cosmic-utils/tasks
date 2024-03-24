@@ -1,5 +1,7 @@
 use std::ops::IndexMut;
 
+use crate::app::config;
+use crate::app::config::get_icon;
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
@@ -14,9 +16,9 @@ use crate::fl;
 
 pub struct Details {
     pub task: Option<Task>,
+    pub is_editable: bool,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
-    pub selected_index: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +35,7 @@ pub enum Message {
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
     SubTaskEditDone,
-    SubTaskEditStart(usize),
+    EditMode(bool),
 }
 
 pub enum Command {
@@ -47,17 +49,17 @@ impl Details {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
-                    .icon(crate::get_icon("flag-outline-thin-symbolic", 16))
+                    .icon(config::get_icon("flag-outline-thin-symbolic", 16))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
-                    .icon(crate::get_icon("flag-outline-thick-symbolic", 16))
+                    .icon(config::get_icon("flag-outline-thick-symbolic", 16))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
-                    .icon(crate::get_icon("flag-filled-symbolic", 16))
+                    .icon(config::get_icon("flag-filled-symbolic", 16))
                     .data(Priority::High)
             })
             .build();
@@ -65,14 +67,17 @@ impl Details {
         Self {
             task: None,
             priority_model,
+            is_editable: false,
             subtask_input: String::new(),
-            selected_index: None,
         }
     }
 
     pub fn update(&mut self, message: Message) -> Vec<Command> {
         let mut commands = vec![];
         match message {
+            Message::EditMode(is_editable) => {
+                println!("{is_editable}");
+            }
             Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.title = title.clone();
@@ -93,7 +98,7 @@ impl Details {
                 let priority = self.priority_model.data::<Priority>(entity);
                 if let Some(task) = &mut self.task {
                     if let Some(priority) = priority {
-                        task.priority = priority.clone();
+                        task.priority = *priority;
                     }
                 }
             }
@@ -113,11 +118,6 @@ impl Details {
             }
             Message::SubTaskEditDone => {
                 commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
-                self.selected_index = None;
-            }
-            Message::SubTaskEditStart(i) => {
-                self.selected_index = Some(i);
-                commands.push(Command::Focus(widget::Id::new("sub_task_input")));
             }
             Message::DeleteSubTask(i) => {
                 if let Some(ref mut task) = &mut self.task {
@@ -127,7 +127,6 @@ impl Details {
             }
             Message::SubTaskInput(text) => {
                 self.subtask_input = text;
-                self.selected_index = None;
             }
             Message::AddTask => {
                 if let Some(ref mut task) = &mut self.task {
@@ -171,33 +170,27 @@ impl Details {
                 .enumerate()
                 .map(|(i, sub_task)| {
                     widget::row::with_children(vec![
-                        widget::checkbox(
-                            "",
-                            sub_task.status == Status::Completed,
-                            move |value| Message::CompleteSubTask(i, value),
-                        ).into(),
-                        if self.selected_index.is_some() && i == self.selected_index.unwrap() {
-                            widget::text_input(fl!("title"), sub_task.title.clone())
-                                .id(widget::Id::new("sub_task_input"))
-                                .on_input(move |title| Message::SetSubTaskTitle(i, title))
-                                .on_submit(Message::SubTaskEditDone)
-                                .into()
-                        } else {
-                            widget::button(widget::text(sub_task.title.clone()))
-                                .padding(space_xxs)
-                                .on_press(Message::SubTaskEditStart(i))
-                                .width(Length::Fill)
-                                .style(widget::button::Style::Text)
-                                .into()
-                        },
-                        widget::button(crate::get_icon("user-trash-full-symbolic", 18))
+                        widget::checkbox("", sub_task.status == Status::Completed, move |value| {
+                            Message::CompleteSubTask(i, value)
+                        })
+                        .into(),
+                        widget::text_input(fl!("title"), sub_task.title.clone())
+                            .id(widget::Id::new("sub_task_input"))
+                            .on_input(move |title| Message::SetSubTaskTitle(i, title))
+                            .on_submit(Message::SubTaskEditDone)
+                            .editable()
+                            .trailing_icon(widget::button(get_icon("edit-symbolic", 16)).into())
+                            .on_toggle_edit(Message::EditMode)
+                            .into(),
+                        widget::button(config::get_icon("user-trash-full-symbolic", 18))
                             .style(widget::button::Style::Destructive)
-                            .on_press(Message::DeleteSubTask(i)).into()
+                            .on_press(Message::DeleteSubTask(i))
+                            .into(),
                     ])
-                        .align_items(Alignment::Center)
-                        .padding([0, 18])
-                        .spacing(12)
-                        .into()
+                    .align_items(Alignment::Center)
+                    .padding([0, 18])
+                    .spacing(12)
+                    .into()
                 })
                 .collect();
 
@@ -284,7 +277,7 @@ impl Details {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(crate::get_icon("mail-send-symbolic", 18))
+            widget::button(config::get_icon("mail-send-symbolic", 18))
                 .padding(space_xxs)
                 .on_press(Message::AddTask)
                 .into(),

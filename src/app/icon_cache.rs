@@ -2,6 +2,9 @@
 
 use cosmic::widget::icon;
 use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+
+pub(crate) static ICON_CACHE: OnceLock<Mutex<IconCache>> = OnceLock::new();
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IconCacheKey {
@@ -20,7 +23,7 @@ impl IconCache {
         macro_rules! bundle {
             ($name:expr, $size:expr) => {
                 let data: &'static [u8] =
-                    include_bytes!(concat!("../res/icons/bundled/", $name, ".svg"));
+                    include_bytes!(concat!("../../res/icons/bundled/", $name, ".svg"));
                 cache.insert(
                     IconCacheKey {
                         name: $name,
