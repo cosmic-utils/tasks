@@ -3,6 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use std::{env, process};
 
 use chrono::{Local, NaiveDate};
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::app::{message, Core, Message as CosmicMessage};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
@@ -18,6 +19,7 @@ use cosmic::{
     Command, Element,
 };
 use done_core::models::list::List;
+use done_core::models::task::Task;
 use done_core::service::Service;
 
 use crate::app::config::{AppTheme, CONFIG_VERSION};
@@ -31,6 +33,7 @@ pub mod icon_cache;
 mod key_bind;
 pub mod localize;
 pub mod menu;
+pub mod markdown;
 
 pub struct App {
     core: Core,
@@ -67,10 +70,12 @@ pub enum Message {
     OpenRenameListDialog,
     OpenDeleteListDialog,
     OpenIconDialog,
+    OpenCalendarDialog,
+    OpenExportDialog(String),
     AddList(List),
     DeleteList,
-    OpenCalendarDialog,
     Focus(widget::Id),
+    Export(Vec<Task>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -97,6 +102,7 @@ pub enum DialogPage {
     Rename { to: String },
     Delete,
     Calendar(NaiveDate),
+    Export(String),
 }
 
 #[derive(Clone, Debug)]
@@ -746,6 +752,22 @@ impl Application for App {
                     );
                 dialog
             }
+            DialogPage::Export(contents) => {
+                let dialog = widget::dialog(fl!("export"))
+                    .control(
+                        widget::container(scrollable(widget::text(contents)).width(Length::Fill))
+                            .height(Length::Fixed(200.0)).width(Length::Fill),
+                    )
+                    .primary_action(
+                        widget::button::suggested(fl!("copy"))
+                            .on_press_maybe(Some(Message::DialogComplete)),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
+                    );
+
+                dialog
+            }
         };
 
         Some(dialog.into())
@@ -931,6 +953,9 @@ impl Application for App {
                                 });
                             commands.push(command);
                         }
+                        content::Command::Export(tasks) => {
+                            commands.push(self.update(Message::Export(tasks)));
+                        }
                     }
                 }
             }
@@ -1034,6 +1059,12 @@ impl Application for App {
                 }
                 self.nav_model.remove(self.nav_model.active());
             }
+            Message::Export(tasks) => {
+                if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
+                    let exported_markdown = todo::export_list(list.clone(), tasks);
+                    commands.push(self.update(Message::OpenExportDialog(exported_markdown)));
+                }
+            }
             Message::OpenNewListDialog => {
                 self.dialog_pages.push_back(DialogPage::New(String::new()));
                 return widget::text_input::focus(self.dialog_text_input.clone());
@@ -1067,6 +1098,10 @@ impl Application for App {
             Message::OpenCalendarDialog => {
                 self.dialog_pages
                     .push_back(DialogPage::Calendar(Local::now().date_naive()));
+            }
+            Message::OpenExportDialog(content) => {
+                self.dialog_pages
+                    .push_back(DialogPage::Export(content));
             }
             Message::DialogCancel => {
                 self.dialog_pages.pop_front();
@@ -1115,6 +1150,10 @@ impl Application for App {
                         }
                         DialogPage::Calendar(date) => {
                             self.details.update(details::Message::SetDueDate(date));
+                        }
+                        DialogPage::Export(content) => {
+                            let mut clipboard = ClipboardContext::new().unwrap();
+                            clipboard.set_contents(content).unwrap();
                         }
                     }
                 }

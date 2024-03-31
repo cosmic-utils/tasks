@@ -41,9 +41,13 @@ icon-select-body = Choose an icon for the list
 # Date Dialog
 select-date = Select a date
 
+# Export Dialog
+export = Export
+
 # Dialogs
 cancel = Cancel
 ok = Ok
+copy = Copy
 confirm = Confirm
 save = Save
 list-name = List name
