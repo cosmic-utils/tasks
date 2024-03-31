@@ -35,7 +35,6 @@ pub enum Message {
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
     SubTaskEditDone,
-    EditMode(bool),
 }
 
 pub enum Command {
@@ -75,9 +74,6 @@ impl Details {
     pub fn update(&mut self, message: Message) -> Vec<Command> {
         let mut commands = vec![];
         match message {
-            Message::EditMode(is_editable) => {
-                println!("{is_editable}");
-            }
             Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.title = title.clone();
@@ -178,11 +174,9 @@ impl Details {
                             .id(widget::Id::new("sub_task_input"))
                             .on_input(move |title| Message::SetSubTaskTitle(i, title))
                             .on_submit(Message::SubTaskEditDone)
-                            .editable()
-                            .trailing_icon(widget::button(get_icon("edit-symbolic", 16)).into())
-                            .on_toggle_edit(Message::EditMode)
                             .into(),
                         widget::button(config::get_icon("user-trash-full-symbolic", 18))
+                            .padding(space_xxs)
                             .style(widget::button::Style::Destructive)
                             .on_press(Message::DeleteSubTask(i))
                             .into(),
