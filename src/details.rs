@@ -1,7 +1,6 @@
 use std::ops::IndexMut;
 
 use crate::app::config;
-use crate::app::config::get_icon;
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;

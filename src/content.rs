@@ -28,6 +28,7 @@ pub enum Message {
     Input(String),
     AddTask,
     UpdateTask(Task),
+    Export(Vec<Task>),
 }
 
 pub enum Command {
@@ -36,6 +37,7 @@ pub enum Command {
     UpdateTask(Task),
     Delete(String),
     CreateTask(Task),
+    Export(Vec<Task>),
 }
 
 impl Content {
@@ -48,17 +50,23 @@ impl Content {
     }
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing { space_s, .. } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing { space_none, space_xxs, space_s, .. } = theme::active().cosmic().spacing;
+        let export_button = widget::button(config::get_icon("share-symbolic", 18))
+            .style(theme::Button::Suggested)
+            .padding(space_xxs)
+            .on_press(Message::Export(self.tasks.clone()));
 
-        widget::row::with_capacity(2)
+        widget::row::with_capacity(3)
             .align_items(Alignment::Center)
             .spacing(space_s)
+            .padding([space_none, space_xxs])
             .push_maybe(
                 list.icon
                     .as_deref()
                     .map(|icon| widget::icon::from_name(icon).size(24).icon()),
             )
-            .push(widget::text::title3(&list.name))
+            .push(widget::text::title3(&list.name).width(Length::Fill))
+            .push(export_button)
             .into()
     }
 
@@ -211,6 +219,9 @@ impl Content {
                     *task = updated_task.clone();
                     commands.push(Command::UpdateTask(task.clone()));
                 }
+            }
+            Message::Export(tasks) => {
+                commands.push(Command::Export(tasks));
             }
         }
         commands
