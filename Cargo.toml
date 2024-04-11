@@ -22,6 +22,7 @@ tokio = "1"
 done_core = { git = "https://github.com/edfloreshz/done" }
 tracing = "0.1.40"
 cli-clipboard = "0.4.0"
+slotmap = "1.0.7"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
@@ -38,9 +39,9 @@ fork = "0.1"
 [build-dependencies]
 vergen = { version = "8", features = ["git", "gitcl"] }
 
-#[patch."https://github.com/pop-os/libcosmic.git"]
-#libcosmic = { git = "https://github.com/edfloreshz/libcosmic.git", branch = "editable_input_internal" }
+# [patch."https://github.com/pop-os/libcosmic.git"]
+# libcosmic = { git = "https://github.com/edfloreshz/libcosmic.git", branch = "editable_input_internal" }
 
-#[patch."https://github.com/pop-os/libcosmic.git"]
-#libcosmic = { path = "../libcosmic" }
+# [patch."https://github.com/pop-os/libcosmic.git"]
+# libcosmic = { path = "../libcosmic" }
 

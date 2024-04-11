@@ -7,31 +7,38 @@ use cosmic::{cosmic_theme, theme, widget, Apply, Element};
 use done_core::models::list::List;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
+use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
 
 pub struct Content {
     list: Option<List>,
-    tasks: Vec<Task>,
+    tasks: SlotMap<DefaultKey, Task>,
+    editing: SecondaryMap<DefaultKey, bool>,
+    task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     input: String,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    List(Option<List>),
-    Complete(String, bool),
-    Delete(String),
-    Select(Task),
-    SetItems(Vec<Task>),
+    AddTask,
+    Complete(DefaultKey, bool),
+    Delete(DefaultKey),
+    EditMode(DefaultKey, bool),
+    Export(Vec<Task>),
+    Input(String),
     ItemDown,
     ItemUp,
-    Input(String),
-    AddTask,
+    List(Option<List>),
+    Select(Task),
+    SetItems(Vec<Task>),
+    TitleSubmit(DefaultKey),
+    TitleUpdate(DefaultKey, String),
     UpdateTask(Task),
-    Export(Vec<Task>),
 }
 
 pub enum Command {
+    Iced(cosmic::app::Command<super::app::Message>),
     GetTasks(String),
     DisplayTask(Task),
     UpdateTask(Task),
@@ -44,17 +51,24 @@ impl Content {
     pub fn new() -> Self {
         Self {
             list: None,
-            tasks: Vec::new(),
+            tasks: SlotMap::new(),
+            editing: SecondaryMap::new(),
+            task_input_ids: SecondaryMap::new(),
             input: String::new(),
         }
     }
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing { space_none, space_xxs, space_s, .. } = theme::active().cosmic().spacing;
+        let cosmic_theme::Spacing {
+            space_none,
+            space_xxs,
+            space_s,
+            ..
+        } = theme::active().cosmic().spacing;
         let export_button = widget::button(config::get_icon("share-symbolic", 18))
             .style(theme::Button::Suggested)
             .padding(space_xxs)
-            .on_press(Message::Export(self.tasks.clone()));
+            .on_press(Message::Export(self.tasks.values().cloned().collect()));
 
         widget::row::with_capacity(3)
             .align_items(Alignment::Center)
@@ -88,21 +102,32 @@ impl Content {
             .spacing(space_xxxs)
             .padding([space_none, space_xxs]);
 
-        for item in &self.tasks {
-            let item_checkbox = widget::checkbox("", item.status == Status::Completed, |value| {
-                Message::Complete(item.id.clone(), value)
-            });
+        for (id, item) in &self.tasks {
+            let item_checkbox =
+                widget::checkbox("", item.status == Status::Completed, move |value| {
+                    Message::Complete(id, value)
+                });
 
             let delete_button = widget::button(config::get_icon("user-trash-full-symbolic", 18))
                 .padding(space_xxs)
                 .style(theme::Button::Destructive)
-                .on_press(Message::Delete(item.id.clone()));
+                .on_press(Message::Delete(id));
+
+            let task_item_text =
+                widget::editable_input("", &item.title, *self.editing.get(id).unwrap_or(&false), {
+                    let id = id.clone();
+                    move |editing| Message::EditMode(id, editing)
+                })
+                .id(self.task_input_ids[id].clone())
+                .on_submit(Message::TitleSubmit(id.clone()))
+                .on_input(move |text| Message::TitleUpdate(id, text))
+                .width(Length::Fill);
 
             let row = widget::row::with_capacity(3)
                 .align_items(Alignment::Center)
                 .spacing(space_xxs)
                 .push(item_checkbox)
-                .push(widget::text(item.title.clone()).width(Length::Fill))
+                .push(task_item_text)
                 .push(delete_button);
 
             let button = widget::button(row)
@@ -183,16 +208,44 @@ impl Content {
             }
             Message::ItemDown => {}
             Message::ItemUp => {}
-            Message::Delete(id) => {
-                commands.push(Command::Delete(id.clone()));
-                self.tasks.retain(|t| t.id != id);
+            Message::TitleUpdate(id, title) => {
+                if let Some(task) = self.tasks.get_mut(id) {
+                    task.title = title;
+                }
             }
-            Message::SetItems(tasks) => self.tasks = tasks,
+            Message::TitleSubmit(id) => {
+                if let Some(task) = self.tasks.get(id) {
+                    commands.push(Command::UpdateTask(task.clone()));
+                    self.editing.insert(id, false);
+                }
+            }
+            Message::Delete(id) => {
+                if let Some(task) = self.tasks.remove(id) {
+                    commands.push(Command::Delete(task.id));
+                }
+            }
+            Message::EditMode(id, editing) => {
+                self.editing.insert(id, editing);
+                if editing {
+                    commands.push(Command::Iced(widget::text_input::focus(
+                        self.task_input_ids[id].clone(),
+                    )));
+                } else if let Some(task) = self.tasks.get(id) {
+                    commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
+            Message::SetItems(tasks) => {
+                self.tasks.clear();
+                tasks.into_iter().for_each(|task| {
+                    let id = self.tasks.insert(task);
+                    self.task_input_ids.insert(id, widget::Id::unique());
+                });
+            }
             Message::Select(task) => {
                 commands.push(Command::DisplayTask(task));
             }
             Message::Complete(id, complete) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == id);
+                let task = self.tasks.get_mut(id);
                 if let Some(task) = task {
                     task.status = if complete {
                         Status::Completed
@@ -208,13 +261,13 @@ impl Content {
                     if !self.input.is_empty() {
                         let task = Task::new(self.input.clone(), list.id.clone());
                         commands.push(Command::CreateTask(task.clone()));
-                        self.tasks.push(task);
+                        self.tasks.insert(task);
                         self.input.clear();
                     }
                 }
             }
             Message::UpdateTask(updated_task) => {
-                let task = self.tasks.iter_mut().find(|t| t.id == updated_task.id);
+                let task = self.tasks.values_mut().find(|t| t.id == updated_task.id);
                 if let Some(task) = task {
                     *task = updated_task.clone();
                     commands.push(Command::UpdateTask(task.clone()));

@@ -32,8 +32,8 @@ pub mod config;
 pub mod icon_cache;
 mod key_bind;
 pub mod localize;
-pub mod menu;
 pub mod markdown;
+pub mod menu;
 
 pub struct App {
     core: Core,
@@ -756,7 +756,8 @@ impl Application for App {
                 let dialog = widget::dialog(fl!("export"))
                     .control(
                         widget::container(scrollable(widget::text(contents)).width(Length::Fill))
-                            .height(Length::Fixed(200.0)).width(Length::Fill),
+                            .height(Length::Fixed(200.0))
+                            .width(Length::Fill),
                     )
                     .primary_action(
                         widget::button::suggested(fl!("copy"))
@@ -901,6 +902,7 @@ impl Application for App {
                 let content_commands = self.content.update(message);
                 for content_command in content_commands {
                     match content_command {
+                        content::Command::Iced(command) => return command,
                         content::Command::GetTasks(list_id) => {
                             commands.push(Command::perform(todo::fetch_tasks(list_id), |result| {
                                 match result {
@@ -1100,8 +1102,7 @@ impl Application for App {
                     .push_back(DialogPage::Calendar(Local::now().date_naive()));
             }
             Message::OpenExportDialog(content) => {
-                self.dialog_pages
-                    .push_back(DialogPage::Export(content));
+                self.dialog_pages.push_back(DialogPage::Export(content));
             }
             Message::DialogCancel => {
                 self.dialog_pages.pop_front();
