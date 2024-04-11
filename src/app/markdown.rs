@@ -14,9 +14,26 @@ impl Markdown for List {
 
 impl Markdown for Task {
     fn markdown(&self) -> String {
-        let mut task = format!("- [{}] {}\n", if self.status == Status::Completed { "x" } else { " " }, self.title);
+        let mut task = format!(
+            "- [{}] {}\n",
+            if self.status == Status::Completed {
+                "x"
+            } else {
+                " "
+            },
+            self.title
+        );
         let sub_tasks = self.sub_tasks.iter().fold(String::new(), |acc, sub_task| {
-            format!("{}  - [{}] {}\n", acc, if sub_task.status == Status::Completed { "x" } else { " " }, sub_task.title)
+            format!(
+                "{}  - [{}] {}\n",
+                acc,
+                if sub_task.status == Status::Completed {
+                    "x"
+                } else {
+                    " "
+                },
+                sub_task.title
+            )
         });
         task.push_str(&sub_tasks);
         task
