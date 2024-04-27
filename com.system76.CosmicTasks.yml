@@ -1,0 +1,33 @@
+id: com.system76.CosmicTasks
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: cosmic-tasks
+finish-args:
+  - "--share=ipc"
+  - "--socket=fallback-x11"
+  - "--socket=wayland"
+  - "--device=dri"
+build-options:
+  append-path: "/usr/lib/sdk/rust-stable/bin"
+  build-args:
+    - "--share=network"
+  env:
+    CARGO_HOME: "/run/build/cosmic-tasks/cargo"
+modules:
+  - name: cosmic-tasks
+    buildsystem: simple
+    build-commands:
+      - curl -L https://github.com/casey/just/releases/download/1.25.2/just-1.25.2-x86_64-unknown-linux-musl.tar.gz -o just.tar.gz
+      - mkdir just
+      - tar -xvzf just.tar.gz -C just
+      - install -Dm0755 just/just /app/bin
+      - ./just/just vendor
+      - ./just/just build-vendored
+      - ./just/just install
+    sources:
+      - type: git
+        branch: main
+        url: https://github.com/edfloreshz/cosmic-tasks.git

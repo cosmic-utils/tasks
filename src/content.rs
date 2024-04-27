@@ -1,6 +1,6 @@
 use crate::app::config;
 use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::{Alignment, Color, Length, Subscription};
+use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::prelude::CollectionWidget;
 use cosmic::{cosmic_theme, theme, widget, Apply, Element};
@@ -316,60 +316,5 @@ impl Content {
 
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::none()
-    }
-}
-
-fn button_appearance(
-    theme: &theme::Theme,
-    selected: bool,
-    focused: bool,
-    accent: bool,
-    hovered: bool,
-) -> widget::button::Appearance {
-    let cosmic = theme.cosmic();
-    // TODO: Use this instead when it's working properly.
-    // let container = theme.current_container();
-
-    let mut appearance = widget::button::Appearance::new();
-
-    if selected {
-        if accent {
-            appearance.background = Some(Color::from(cosmic.primary_component_color()).into());
-            appearance.icon_color = Some(Color::from(cosmic.on_accent_color()));
-            appearance.text_color = Some(Color::from(cosmic.on_accent_color()));
-        } else {
-            appearance.background = Some(Color::from(cosmic.bg_component_color()).into());
-        }
-    }
-
-    if hovered {
-        appearance.background = Some(Color::from(cosmic.secondary_component_color()).into());
-        appearance.icon_color = Some(Color::from(cosmic.on_secondary_component_color()));
-        appearance.text_color = Some(Color::from(cosmic.on_secondary_component_color()));
-    }
-
-    if focused && accent {
-        appearance.outline_width = 1.0;
-        appearance.outline_color = Color::from(cosmic.accent_color());
-        appearance.border_width = 2.0;
-        appearance.border_color = Color::TRANSPARENT;
-    }
-    appearance.border_radius = cosmic.radius_s().into();
-    appearance
-}
-
-fn button_style(selected: bool, accent: bool) -> theme::Button {
-    //TODO: move to libcosmic?
-    theme::Button::Custom {
-        active: Box::new(move |focused, theme| {
-            button_appearance(theme, selected, focused, accent, false)
-        }),
-        disabled: Box::new(move |theme| button_appearance(theme, selected, false, accent, false)),
-        hovered: Box::new(move |focused, theme| {
-            button_appearance(theme, selected, focused, accent, true)
-        }),
-        pressed: Box::new(move |focused, theme| {
-            button_appearance(theme, selected, focused, accent, false)
-        }),
     }
 }
