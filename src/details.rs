@@ -1,5 +1,3 @@
-use std::ops::IndexMut;
-
 use crate::app::config;
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
@@ -10,6 +8,7 @@ use cosmic::{cosmic_theme, theme, widget, Element};
 use done_core::models::priority::Priority;
 use done_core::models::status::Status;
 use done_core::models::task::Task;
+use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
 
@@ -18,28 +17,33 @@ pub struct Details {
     pub is_editable: bool,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
+    pub subtasks: SlotMap<DefaultKey, Task>,
+    pub editing: SecondaryMap<DefaultKey, bool>,
+    pub sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SetTitle(String),
     SetNotes(String),
-    CompleteSubTask(usize, bool),
-    DeleteSubTask(usize),
     Favorite(bool),
+    CompleteSubTask(DefaultKey, bool),
+    DeleteSubTask(DefaultKey),
+    SetSubTaskTitle(DefaultKey, String),
+    SubTaskEditDone,
+    EditMode(DefaultKey, bool),
     PriorityActivate(Entity),
     SubTaskInput(String),
-    SetSubTaskTitle(usize, String),
     AddTask,
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
-    SubTaskEditDone,
 }
 
 pub enum Command {
     Focus(widget::Id),
     UpdateTask(Task),
     OpenCalendarDialog,
+    Iced(cosmic::app::Command<super::app::Message>),
 }
 
 impl Details {
@@ -67,6 +71,9 @@ impl Details {
             priority_model,
             is_editable: false,
             subtask_input: String::new(),
+            subtasks: SlotMap::new(),
+            editing: SecondaryMap::new(),
+            sub_task_input_ids: SecondaryMap::new(),
         }
     }
 
@@ -88,6 +95,16 @@ impl Details {
                     task.favorite = favorite;
                 }
             }
+            Message::EditMode(id, editing) => {
+                self.editing.insert(id, editing);
+                if editing {
+                    commands.push(Command::Iced(widget::text_input::focus(
+                        self.sub_task_input_ids[id].clone(),
+                    )));
+                } else if let Some(task) = self.subtasks.get(id) {
+                    commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
             Message::PriorityActivate(entity) => {
                 self.priority_model.activate(entity);
                 let priority = self.priority_model.data::<Priority>(entity);
@@ -97,28 +114,27 @@ impl Details {
                     }
                 }
             }
-            Message::SetSubTaskTitle(i, title) => {
-                if let Some(ref mut task) = &mut self.task {
-                    task.sub_tasks.index_mut(i).title = title.clone();
+            Message::SetSubTaskTitle(id, title) => {
+                let task = self.subtasks.get_mut(id);
+                if let Some(task) = task {
+                    task.title = title.clone();
                 }
             }
-            Message::CompleteSubTask(i, completed) => {
-                if let Some(ref mut task) = &mut self.task {
-                    task.sub_tasks.index_mut(i).status = if completed {
+            Message::CompleteSubTask(id, completed) => {
+                let task = self.subtasks.get_mut(id);
+                if let Some(task) = task {
+                    task.status = if completed {
                         Status::Completed
                     } else {
                         Status::NotStarted
                     };
                 }
             }
+            Message::DeleteSubTask(id) => {
+                self.subtasks.remove(id);
+            },
             Message::SubTaskEditDone => {
                 commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
-            }
-            Message::DeleteSubTask(i) => {
-                if let Some(ref mut task) = &mut self.task {
-                    task.sub_tasks.index_mut(i).deletion_date = Some(Utc::now());
-                    task.sub_tasks.remove(i);
-                }
             }
             Message::SubTaskInput(text) => {
                 self.subtask_input = text;
@@ -126,8 +142,10 @@ impl Details {
             Message::AddTask => {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
-                        task.sub_tasks
-                            .push(Task::new(self.subtask_input.clone(), task.id.clone()));
+                        let sub_task = Task::new(self.subtask_input.clone(), task.id.clone());
+                        task.sub_tasks.push(sub_task.clone());
+                        let id = self.subtasks.insert(sub_task);
+                        self.sub_task_input_ids.insert(id, widget::Id::unique());
                         self.subtask_input.clear();
                         commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
                     }
@@ -144,7 +162,8 @@ impl Details {
             }
         }
 
-        if let Some(task) = &self.task {
+        if let Some(task) = &mut self.task {
+            task.sub_tasks = self.subtasks.values().cloned().collect();
             commands.push(Command::UpdateTask(task.clone()));
         }
 
@@ -153,39 +172,43 @@ impl Details {
 
     pub fn view(&self) -> Element<Message> {
         let cosmic_theme::Spacing {
+            space_none,
             space_xxs,
             space_xs,
+            space_s,
             ..
         } = theme::active().cosmic().spacing;
 
         if let Some(task) = self.task.as_ref() {
-            let mut sub_tasks: Vec<Element<Message>> = task
-                .sub_tasks
-                .iter()
-                .enumerate()
-                .map(|(i, sub_task)| {
-                    widget::row::with_children(vec![
-                        widget::checkbox("", sub_task.status == Status::Completed, move |value| {
-                            Message::CompleteSubTask(i, value)
-                        })
-                        .into(),
-                        widget::text_input(fl!("title"), sub_task.title.clone())
-                            .id(widget::Id::new("sub_task_input"))
-                            .on_input(move |title| Message::SetSubTaskTitle(i, title))
-                            .on_submit(Message::SubTaskEditDone)
-                            .into(),
-                        widget::button(config::get_icon("user-trash-full-symbolic", 18))
-                            .padding(space_xxs)
-                            .style(widget::button::Style::Destructive)
-                            .on_press(Message::DeleteSubTask(i))
-                            .into(),
-                    ])
-                    .align_items(Alignment::Center)
-                    .padding([0, 18])
-                    .spacing(12)
-                    .into()
+            let mut sub_tasks: Vec<Element<Message>> = vec![];
+            for (id, sub_task) in &self.subtasks {
+                let item_checkbox = widget::checkbox("", sub_task.status == Status::Completed, move |value| {
+                    Message::CompleteSubTask(id, value)
+                });
+
+                let sub_task_item = widget::editable_input(fl!("title"), sub_task.title.clone(), *self.editing.get(id).unwrap_or(&false), {
+                    let id = id.clone();
+                    move |editing| Message::EditMode(id, editing)
                 })
-                .collect();
+                    .id(self.sub_task_input_ids[id].clone())
+                    .on_input(move |title| Message::SetSubTaskTitle(id, title))
+                    .on_submit(Message::SubTaskEditDone);
+
+                let delete_button = widget::button(config::get_icon("user-trash-full-symbolic", 18))
+                    .padding(space_xxs)
+                    .style(widget::button::Style::Destructive)
+                    .on_press(Message::DeleteSubTask(id));
+
+                let row = widget::row::with_capacity(3)
+                    .align_items(Alignment::Center)
+                    .padding([space_none, space_s])
+                    .spacing(space_xs)
+                    .push(item_checkbox)
+                    .push(sub_task_item)
+                    .push(delete_button);
+
+                sub_tasks.push(row.into());
+            }
 
             sub_tasks.push(self.sub_task_input());
 

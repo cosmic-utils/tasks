@@ -919,8 +919,13 @@ impl Application for App {
                             if let Some(entity) = entity {
                                 self.details.priority_model.activate(entity);
                             }
-
+                            self.details.subtasks.clear();
+                            self.details.sub_task_input_ids.clear();
                             self.details.task = Some(task.clone());
+                            task.sub_tasks.into_iter().for_each(|task| {
+                                let id = self.details.subtasks.insert(task);
+                                self.details.sub_task_input_ids.insert(id, widget::Id::unique());
+                            });
                             commands.push(
                                 self.update(Message::ToggleContextPage(ContextPage::TaskDetails)),
                             );
@@ -976,6 +981,7 @@ impl Application for App {
                         details::Command::Focus(id) => {
                             commands.push(self.update(Message::Focus(id)));
                         }
+                        details::Command::Iced(command) => return command,
                     }
                 }
             }

@@ -89,7 +89,6 @@ impl Content {
             space_none,
             space_xxxs,
             space_xxs,
-            space_xs,
             ..
         } = theme::active().cosmic().spacing;
 
@@ -113,6 +112,11 @@ impl Content {
                 .style(theme::Button::Destructive)
                 .on_press(Message::Delete(id));
 
+            let details_button = widget::button(config::get_icon("info-outline-symbolic", 18))
+                .padding(space_xxs)
+                .style(theme::Button::Standard)
+                .on_press(Message::Select(item.clone()));
+
             let task_item_text =
                 widget::editable_input("", &item.title, *self.editing.get(id).unwrap_or(&false), {
                     let id = id.clone();
@@ -123,21 +127,23 @@ impl Content {
                 .on_input(move |text| Message::TitleUpdate(id, text))
                 .width(Length::Fill);
 
-            let row = widget::row::with_capacity(3)
+            let row = widget::row::with_capacity(4)
                 .align_items(Alignment::Center)
                 .spacing(space_xxs)
+                .padding([space_xxxs, space_xxs])
                 .push(item_checkbox)
                 .push(task_item_text)
+                .push(details_button)
                 .push(delete_button);
 
-            let button = widget::button(row)
-                .padding([space_xxs, space_xs])
-                .width(Length::Fill)
-                .height(Length::Shrink)
-                .style(button_style(false, true))
-                .on_press(Message::Select(item.clone()));
+            // let button = widget::button(row)
+            //     .padding([space_xxs, space_xs])
+            //     .width(Length::Fill)
+            //     .height(Length::Shrink)
+            //     .style(button_style(false, true))
+            //     .on_press(Message::Select(item.clone()));
 
-            items = items.add(button);
+            items = items.add(row);
         }
 
         widget::column::with_capacity(2)
@@ -261,7 +267,8 @@ impl Content {
                     if !self.input.is_empty() {
                         let task = Task::new(self.input.clone(), list.id.clone());
                         commands.push(Command::CreateTask(task.clone()));
-                        self.tasks.insert(task);
+                        let id = self.tasks.insert(task);
+                        self.task_input_ids.insert(id, widget::Id::unique());
                         self.input.clear();
                     }
                 }

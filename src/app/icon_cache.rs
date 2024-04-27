@@ -49,6 +49,7 @@ impl IconCache {
         bundle!("paper-plane-symbolic", 18);
         bundle!("task-past-due-symbolic", 18);
         bundle!("user-trash-full-symbolic", 18);
+        bundle!("info-outline-symbolic", 18);
         bundle!("mail-send-symbolic", 18);
         bundle!("applications-office-symbolic", 18);
 
