@@ -23,11 +23,11 @@ modules:
       - curl -L https://github.com/casey/just/releases/download/1.25.2/just-1.25.2-x86_64-unknown-linux-musl.tar.gz -o just.tar.gz
       - mkdir just
       - tar -xvzf just.tar.gz -C just
-      - install -Dm0755 just/just /app/bin
+      - install -Dm0755 just/just /app/bin/just
+      - ls /app/bin/
       - ./just/just vendor
       - ./just/just build-vendored
-      - ./just/just install
+      - install -Dm0755 target/release/cosmic-tasks /app/bin/cosmic-tasks
     sources:
-      - type: git
-        branch: main
-        url: https://github.com/edfloreshz/cosmic-tasks.git
+      - type: dir
+        path: .
