@@ -3,13 +3,16 @@ export APPID := 'com.system76.CosmicTasks'
 
 rootdir := ''
 prefix := '/usr'
+flatpak-prefix := '/app'
 
 base-dir := absolute_path(clean(rootdir / prefix))
+flatpak-base-dir := absolute_path(clean(rootdir / flatpak-prefix))
 
 export INSTALL_DIR := base-dir / 'share'
 
 bin-src := 'target' / 'release' / name
 bin-dst := base-dir / 'bin' / name
+flatpak-bin-dst := flatpak-base-dir / 'bin' / name
 
 desktop := APPID + '.desktop'
 desktop-src := 'res' / desktop
@@ -64,6 +67,15 @@ run *args:
 # Installs files
 install:
     install -Dm0755 {{bin-src}} {{bin-dst}}
+    install -Dm0644 {{desktop-src}} {{desktop-dst}}
+    install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
+    for size in `ls {{icons-src}}`; do \
+        install -Dm0644 "{{icons-src}}/$size/apps/{{APPID}}.svg" "{{icons-dst}}/$size/apps/{{APPID}}.svg"; \
+    done
+
+# Installs files
+flatpak:
+    install -Dm0755 {{bin-src}} {{flatpak-bin-dst}}
     install -Dm0644 {{desktop-src}} {{desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
     for size in `ls {{icons-src}}`; do \
