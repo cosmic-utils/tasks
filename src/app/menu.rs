@@ -3,9 +3,8 @@
 use std::collections::HashMap;
 
 use cosmic::widget::menu::key_bind::KeyBind;
-use cosmic::widget::menu::menu_tree::{menu_items, menu_root, MenuItem};
 use cosmic::{
-    widget::menu::{ItemHeight, ItemWidth, MenuBar, MenuTree},
+    widget::menu::{ItemHeight, ItemWidth, MenuBar, Tree, root, items, Item},
     Element,
 };
 
@@ -16,40 +15,40 @@ use crate::{
 
 pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message> {
     MenuBar::new(vec![
-        MenuTree::with_children(
-            menu_root(fl!("file")),
-            menu_items(
+        Tree::with_children(
+            root(fl!("file")),
+            items(
                 key_binds,
                 vec![
-                    MenuItem::Button(fl!("new-window"), Action::WindowNew),
-                    MenuItem::Divider,
-                    MenuItem::Button(fl!("new-list"), Action::NewList),
-                    MenuItem::Divider,
-                    MenuItem::Button(fl!("quit"), Action::WindowClose),
+                    Item::Button(fl!("new-window"), Action::WindowNew),
+                    Item::Divider,
+                    Item::Button(fl!("new-list"), Action::NewList),
+                    Item::Divider,
+                    Item::Button(fl!("quit"), Action::WindowClose),
                 ],
             ),
         ),
-        MenuTree::with_children(
-            menu_root(fl!("edit")),
-            menu_items(
+        Tree::with_children(
+            root(fl!("edit")),
+            items(
                 key_binds,
                 vec![
-                    MenuItem::Button(fl!("rename"), Action::RenameList),
-                    MenuItem::Divider,
-                    MenuItem::Button(fl!("delete"), Action::DeleteList),
-                    MenuItem::Divider,
-                    MenuItem::Button(fl!("icon"), Action::Icon),
+                    Item::Button(fl!("rename"), Action::RenameList),
+                    Item::Divider,
+                    Item::Button(fl!("delete"), Action::DeleteList),
+                    Item::Divider,
+                    Item::Button(fl!("icon"), Action::Icon),
                 ],
             ),
         ),
-        MenuTree::with_children(
-            menu_root(fl!("view")),
-            menu_items(
+        Tree::with_children(
+            root(fl!("view")),
+            items(
                 key_binds,
                 vec![
-                    MenuItem::Button(fl!("menu-settings"), Action::Settings),
-                    MenuItem::Divider,
-                    MenuItem::Button(fl!("menu-about"), Action::About),
+                    Item::Button(fl!("menu-settings"), Action::Settings),
+                    Item::Divider,
+                    Item::Button(fl!("menu-about"), Action::About),
                 ],
             ),
         ),
