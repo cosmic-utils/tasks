@@ -28,7 +28,7 @@ modules:
         url: https://github.com/casey/just/releases/download/1.25.2/just-1.25.2-x86_64-unknown-linux-musl.tar.gz
         sha256: ad56bf1a804243b51ef2c2eec4b3a8177f970ccc414cbbee219c2e5c06f7bcc9
         only_arches:
-          - amd64
+          - x86_64
       - type: archive
         strip-components: 0
         dest-filename: just.tar.gz
