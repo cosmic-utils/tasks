@@ -1120,6 +1120,7 @@ dependencies = [
  "cli-clipboard",
  "dirs",
  "done_core",
+ "emojis",
  "env_logger",
  "fork",
  "i18n-embed",
@@ -1515,6 +1516,7 @@ dependencies = [
  "chrono",
  "diesel",
  "diesel_migrations",
+ "emojis",
  "futures",
  "libset",
  "serde",
@@ -1576,6 +1578,15 @@ name = "either"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
+
+[[package]]
+name = "emojis"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f619a926616ae7149a0d82610b051134a0d6c4ae2962d990c06c847a445c5d9"
+dependencies = [
+ "phf",
+]
 
 [[package]]
 name = "enumflags2"

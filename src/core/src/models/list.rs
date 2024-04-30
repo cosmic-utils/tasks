@@ -31,7 +31,7 @@ impl List {
 			name: name.to_string(),
 			service,
 			description: String::new(),
-			icon: Some("✍️".to_string()),
+			icon: Some(emojis::get_by_shortcode("pencil").unwrap().to_string()),
 		}
 	}
 }

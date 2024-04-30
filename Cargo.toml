@@ -23,6 +23,7 @@ done_core = { path = "src/core" }
 tracing = "0.1.40"
 cli-clipboard = "0.4.0"
 slotmap = "1.0.7"
+emojis = "0.6.1"
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"

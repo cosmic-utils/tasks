@@ -2,7 +2,6 @@ use crate::app::config;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
-use cosmic::prelude::CollectionWidget;
 use cosmic::{cosmic_theme, theme, widget, Apply, Element};
 use done_core::models::list::List;
 use done_core::models::status::Status;
@@ -59,26 +58,19 @@ impl Content {
     }
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing {
-            space_none,
-            space_xxs,
-            space_s,
-            ..
-        } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
         let export_button = widget::button(config::get_icon("share-symbolic", 18))
             .style(theme::Button::Suggested)
-            .padding(space_xxs)
+            .padding(spacing.space_xxs)
             .on_press(Message::Export(self.tasks.values().cloned().collect()));
+        let default_icon = emojis::get_by_shortcode("pencil").unwrap().to_string();
+        let icon = list.icon.clone().unwrap_or(default_icon);
 
         widget::row::with_capacity(3)
             .align_items(Alignment::Center)
-            .spacing(space_s)
-            .padding([space_none, space_xxs])
-            .push_maybe(
-                list.icon
-                    .as_deref()
-                    .map(|icon| widget::icon::from_name(icon).size(24).icon()),
-            )
+            .spacing(spacing.space_s)
+            .padding([spacing.space_none, spacing.space_xxs])
+            .push(widget::text(icon).size(spacing.space_m))
             .push(widget::text::title3(&list.name).width(Length::Fill))
             .push(export_button)
             .into()
