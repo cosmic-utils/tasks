@@ -76,6 +76,7 @@ pub enum Message {
     DeleteList,
     Focus(widget::Id),
     Export(Vec<Task>),
+    NavMenuAction(NavMenuAction),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -140,6 +141,21 @@ impl MenuAction for Action {
             Action::RenameList => Message::OpenRenameListDialog,
             Action::DeleteList => Message::OpenDeleteListDialog,
         }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum NavMenuAction {
+    Rename(segmented_button::Entity),
+    SetIcon(segmented_button::Entity),
+    Delete(segmented_button::Entity),
+}
+
+impl MenuAction for NavMenuAction {
+    type Message = cosmic::app::Message<Message>;
+
+    fn message(&self, _entity: Option<Entity>) -> Self::Message {
+        cosmic::app::Message::App(Message::NavMenuAction(*self))
     }
 }
 
@@ -256,6 +272,20 @@ impl Application for App {
         )];
 
         (app, Command::batch(commands))
+    }
+
+    fn nav_context_menu(
+        &self,
+        id: widget::nav_bar::Id,
+    ) -> Option<Vec<widget::menu::Tree<CosmicMessage<Self::Message>>>> {
+        Some(cosmic::widget::menu::items(
+            &HashMap::new(),
+            vec![
+                cosmic::widget::menu::Item::Button(fl!("rename"), NavMenuAction::Rename(id)),
+                cosmic::widget::menu::Item::Button(fl!("icon"), NavMenuAction::SetIcon(id)),
+                cosmic::widget::menu::Item::Button(fl!("delete"), NavMenuAction::Delete(id)),
+            ],
+        ))
     }
 
     fn context_drawer(&self) -> Option<Element<Message>> {
@@ -924,7 +954,9 @@ impl Application for App {
                             self.details.task = Some(task.clone());
                             task.sub_tasks.into_iter().for_each(|task| {
                                 let id = self.details.subtasks.insert(task);
-                                self.details.sub_task_input_ids.insert(id, widget::Id::unique());
+                                self.details
+                                    .sub_task_input_ids
+                                    .insert(id, widget::Id::unique());
                             });
                             commands.push(
                                 self.update(Message::ToggleContextPage(ContextPage::TaskDetails)),
@@ -985,6 +1017,23 @@ impl Application for App {
                     }
                 }
             }
+            Message::NavMenuAction(action) => match action {
+                NavMenuAction::Rename(entity) => {
+                    if self.nav_model.data::<List>(entity).is_some() {
+                        commands.push(self.update(Message::OpenRenameListDialog))
+                    }
+                }
+                NavMenuAction::SetIcon(entity) => {
+                    if self.nav_model.data::<List>(entity).is_some() {
+                        commands.push(self.update(Message::OpenIconDialog))
+                    }
+                }
+                NavMenuAction::Delete(entity) => {
+                    if self.nav_model.data::<List>(entity).is_some() {
+                        commands.push(self.update(Message::OpenDeleteListDialog))
+                    }
+                }
+            },
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
                     self.core.window.show_context = !self.core.window.show_context;

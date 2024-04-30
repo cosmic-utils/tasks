@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use cosmic::widget::menu::key_bind::KeyBind;
 use cosmic::{
-    widget::menu::{ItemHeight, ItemWidth, MenuBar, Tree, root, items, Item},
+    widget::menu::{items, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
     Element,
 };
 

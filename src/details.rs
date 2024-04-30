@@ -132,7 +132,7 @@ impl Details {
             }
             Message::DeleteSubTask(id) => {
                 self.subtasks.remove(id);
-            },
+            }
             Message::SubTaskEditDone => {
                 commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
             }
@@ -182,22 +182,29 @@ impl Details {
         if let Some(task) = self.task.as_ref() {
             let mut sub_tasks: Vec<Element<Message>> = vec![];
             for (id, sub_task) in &self.subtasks {
-                let item_checkbox = widget::checkbox("", sub_task.status == Status::Completed, move |value| {
-                    Message::CompleteSubTask(id, value)
-                });
+                let item_checkbox =
+                    widget::checkbox("", sub_task.status == Status::Completed, move |value| {
+                        Message::CompleteSubTask(id, value)
+                    });
 
-                let sub_task_item = widget::editable_input(fl!("title"), sub_task.title.clone(), *self.editing.get(id).unwrap_or(&false), {
-                    let id = id.clone();
-                    move |editing| Message::EditMode(id, editing)
-                })
-                    .id(self.sub_task_input_ids[id].clone())
-                    .on_input(move |title| Message::SetSubTaskTitle(id, title))
-                    .on_submit(Message::SubTaskEditDone);
+                let sub_task_item = widget::editable_input(
+                    fl!("title"),
+                    sub_task.title.clone(),
+                    *self.editing.get(id).unwrap_or(&false),
+                    {
+                        let id = id.clone();
+                        move |editing| Message::EditMode(id, editing)
+                    },
+                )
+                .id(self.sub_task_input_ids[id].clone())
+                .on_input(move |title| Message::SetSubTaskTitle(id, title))
+                .on_submit(Message::SubTaskEditDone);
 
-                let delete_button = widget::button(config::get_icon("user-trash-full-symbolic", 18))
-                    .padding(space_xxs)
-                    .style(widget::button::Style::Destructive)
-                    .on_press(Message::DeleteSubTask(id));
+                let delete_button =
+                    widget::button(config::get_icon("user-trash-full-symbolic", 18))
+                        .padding(space_xxs)
+                        .style(widget::button::Style::Destructive)
+                        .on_press(Message::DeleteSubTask(id));
 
                 let row = widget::row::with_capacity(3)
                     .align_items(Alignment::Center)
