@@ -35,9 +35,9 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
                 vec![
                     Item::Button(fl!("rename"), Action::RenameList),
                     Item::Divider,
-                    Item::Button(fl!("delete"), Action::DeleteList),
-                    Item::Divider,
                     Item::Button(fl!("icon"), Action::Icon),
+                    Item::Divider,
+                    Item::Button(fl!("delete"), Action::DeleteList),
                 ],
             ),
         ),
