@@ -25,7 +25,11 @@ impl ComputerStorageEngine {
 
     pub fn tasks(&self, list_id: &str) -> anyhow::Result<Vec<Task>> {
         let mut tasks = vec![];
-        for entry in self.tasks_path().join(list_id).read_dir()? {
+        let path = self.tasks_path().join(list_id);
+        if !path.exists() {
+            return Ok(tasks);
+        }
+        for entry in path.read_dir()? {
             let entry = entry?;
             let path = entry.path();
             let content = std::fs::read_to_string(&path)?;
@@ -37,6 +41,10 @@ impl ComputerStorageEngine {
 
     pub fn lists(&self) -> anyhow::Result<Vec<List>> {
         let mut tasks = vec![];
+        let path = self.lists_path();
+        if !path.exists() {
+            return Ok(tasks);
+        }
         for entry in self.lists_path().read_dir()? {
             let entry = entry?;
             let path = entry.path();
@@ -142,8 +150,10 @@ impl ComputerStorageEngine {
 
     pub fn delete_list(&self, list_id: &str) -> anyhow::Result<()> {
         let path = self.lists_path().join(list_id).with_extension("ron");
+        let tasks = self.tasks_path().join(list_id);
         if path.exists() {
             std::fs::remove_file(path)?;
+            std::fs::remove_dir_all(tasks)?;
             Ok(())
         } else {
             Err(anyhow::anyhow!("List does not exist"))
