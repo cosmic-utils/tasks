@@ -191,10 +191,7 @@ impl Details {
                     fl!("title"),
                     sub_task.title.clone(),
                     *self.editing.get(id).unwrap_or(&false),
-                    {
-                        let id = id.clone();
-                        move |editing| Message::EditMode(id, editing)
-                    },
+                    move |editing| Message::EditMode(id, editing),
                 )
                 .id(self.sub_task_input_ids[id].clone())
                 .on_input(move |title| Message::SetSubTaskTitle(id, title))

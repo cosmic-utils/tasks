@@ -348,7 +348,6 @@ impl Application for App {
                 ),
             DialogPage::Icon(icon) => {
                 let icon_buttons: Vec<Element<_>> = emojis::iter()
-                    .into_iter()
                     .map(|emoji| {
                         widget::button(
                             widget::container(widget::text(emoji.to_string()))

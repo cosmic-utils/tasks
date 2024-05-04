@@ -109,15 +109,16 @@ impl Content {
                 .style(theme::Button::Standard)
                 .on_press(Message::Select(item.clone()));
 
-            let task_item_text =
-                widget::editable_input("", &item.title, *self.editing.get(id).unwrap_or(&false), {
-                    let id = id.clone();
-                    move |editing| Message::EditMode(id, editing)
-                })
-                .id(self.task_input_ids[id].clone())
-                .on_submit(Message::TitleSubmit(id.clone()))
-                .on_input(move |text| Message::TitleUpdate(id, text))
-                .width(Length::Fill);
+            let task_item_text = widget::editable_input(
+                "",
+                &item.title,
+                *self.editing.get(id).unwrap_or(&false),
+                move |editing| Message::EditMode(id, editing),
+            )
+            .id(self.task_input_ids[id].clone())
+            .on_submit(Message::TitleSubmit(id))
+            .on_input(move |text| Message::TitleUpdate(id, text))
+            .width(Length::Fill);
 
             let row = widget::row::with_capacity(4)
                 .align_items(Alignment::Center)
