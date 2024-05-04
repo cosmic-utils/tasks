@@ -18,9 +18,9 @@ use cosmic::{
     app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt,
     Command, Element,
 };
-use done_core::models::list::List;
-use done_core::models::task::Task;
-use done_core::service::Service;
+use cosmic_tasks_core::models::list::List;
+use cosmic_tasks_core::models::task::Task;
+use cosmic_tasks_core::service::{Provider, TaskService};
 
 use crate::app::config::{AppTheme, CONFIG_VERSION};
 use crate::app::key_bind::key_binds;
@@ -38,6 +38,7 @@ pub mod settings;
 
 pub struct App {
     core: Core,
+    service: TaskService,
     nav_model: segmented_button::SingleSelectModel,
     content: Content,
     details: Details,
@@ -249,9 +250,10 @@ impl Application for App {
     fn init(mut core: Core, flags: Self::Flags) -> (Self, Command<CosmicMessage<Self::Message>>) {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default();
-
+        let service = TaskService::new(Self::APP_ID, Provider::Computer);
         let app = App {
             core,
+            service: service.clone(),
             nav_model: nav_model.build(),
             content: Content::new(),
             details: Details::new(),
@@ -266,7 +268,7 @@ impl Application for App {
         };
 
         let commands = vec![Command::perform(
-            todo::fetch_lists(),
+            todo::fetch_lists(service),
             |result| match result {
                 Ok(data) => message::app(Message::PopulateLists(data)),
                 Err(_) => message::none(),
@@ -569,14 +571,15 @@ impl Application for App {
                     match content_command {
                         content::Command::Iced(command) => return command,
                         content::Command::GetTasks(list_id) => {
-                            commands.push(Command::perform(todo::fetch_tasks(list_id), |result| {
-                                match result {
+                            commands.push(Command::perform(
+                                todo::fetch_tasks(list_id, self.service.clone()),
+                                |result| match result {
                                     Ok(data) => message::app(Message::Content(
                                         content::Message::SetItems(data),
                                     )),
                                     Err(_) => message::none(),
-                                }
-                            }));
+                                },
+                            ));
                         }
                         content::Command::DisplayTask(task) => {
                             let entity =
@@ -599,18 +602,24 @@ impl Application for App {
                         }
                         content::Command::UpdateTask(task) => {
                             self.details.task = Some(task.clone());
-                            let command =
-                                Command::perform(todo::update_task(task), |result| match result {
+                            let command = Command::perform(
+                                todo::update_task(task, self.service.clone().clone()),
+                                |result| match result {
                                     Ok(_) => message::none(),
                                     Err(_) => message::none(),
-                                });
+                                },
+                            );
                             commands.push(command);
                         }
                         content::Command::Delete(id) => {
                             if let Some(list) = self.nav_model.data::<List>(self.nav_model.active())
                             {
                                 let command = Command::perform(
-                                    todo::delete_task(list.id.clone(), id.clone()),
+                                    todo::delete_task(
+                                        list.id().clone(),
+                                        id.clone(),
+                                        self.service.clone().clone(),
+                                    ),
                                     |result| match result {
                                         Ok(_) => message::none(),
                                         Err(_) => message::none(),
@@ -620,11 +629,13 @@ impl Application for App {
                             }
                         }
                         content::Command::CreateTask(task) => {
-                            let command =
-                                Command::perform(todo::create_task(task), |result| match result {
+                            let command = Command::perform(
+                                todo::create_task(task, self.service.clone()),
+                                |result| match result {
                                     Ok(_) => message::none(),
                                     Err(_) => message::none(),
-                                });
+                                },
+                            );
                             commands.push(command);
                         }
                         content::Command::Export(tasks) => {
@@ -736,14 +747,13 @@ impl Application for App {
             }
             Message::DeleteList => {
                 if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
-                    let command =
-                        Command::perform(
-                            todo::delete_list(list.id.clone()),
-                            |result| match result {
-                                Ok(_) => message::none(),
-                                Err(_) => message::none(),
-                            },
-                        );
+                    let command = Command::perform(
+                        todo::delete_list(list.id().clone(), self.service.clone()),
+                        |result| match result {
+                            Ok(_) => message::none(),
+                            Err(_) => message::none(),
+                        },
+                    );
 
                     commands.push(self.update(Message::Content(content::Message::List(None))));
 
@@ -801,23 +811,24 @@ impl Application for App {
                 if let Some(dialog_page) = self.dialog_pages.pop_front() {
                     match dialog_page {
                         DialogPage::New(name) => {
-                            let list = List::new(&name, Service::Computer);
-                            commands.push(Command::perform(todo::create_list(list), |result| {
-                                match result {
+                            let list = List::new(&name);
+                            commands.push(Command::perform(
+                                todo::create_list(list, self.service.clone()),
+                                |result| match result {
                                     Ok(list) => message::app(Message::AddList(list)),
                                     Err(_) => message::none(),
-                                }
-                            }));
+                                },
+                            ));
                         }
                         DialogPage::Rename { to: name } => {
                             let entity = self.nav_model.active();
                             self.nav_model.text_set(entity, name.clone());
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                 list.name = name.clone();
-                                let command =
-                                    Command::perform(todo::update_list(list.clone()), |_| {
-                                        message::none()
-                                    });
+                                let command = Command::perform(
+                                    todo::update_list(list.clone(), self.service.clone()),
+                                    |_| message::none(),
+                                );
                                 commands.push(command);
                             }
                         }
@@ -832,10 +843,10 @@ impl Application for App {
                             }
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                 list.icon = Some(icon);
-                                let command =
-                                    Command::perform(todo::update_list(list.clone()), |_| {
-                                        message::none()
-                                    });
+                                let command = Command::perform(
+                                    todo::update_list(list.clone(), self.service.clone()),
+                                    |_| message::none(),
+                                );
                                 commands.push(command);
                             }
                         }

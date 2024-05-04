@@ -3,9 +3,9 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{cosmic_theme, theme, widget, Apply, Element};
-use done_core::models::list::List;
-use done_core::models::status::Status;
-use done_core::models::task::Task;
+use cosmic_tasks_core::models::list::List;
+use cosmic_tasks_core::models::status::Status;
+use cosmic_tasks_core::models::task::Task;
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
@@ -201,7 +201,7 @@ impl Content {
             Message::List(list) => {
                 self.list = list.clone();
                 if let Some(list) = list {
-                    commands.push(Command::GetTasks(list.id));
+                    commands.push(Command::GetTasks(list.id().clone()));
                 }
             }
             Message::ItemDown => {}
@@ -219,7 +219,7 @@ impl Content {
             }
             Message::Delete(id) => {
                 if let Some(task) = self.tasks.remove(id) {
-                    commands.push(Command::Delete(task.id));
+                    commands.push(Command::Delete(task.id().clone()));
                 }
             }
             Message::EditMode(id, editing) => {
@@ -257,7 +257,7 @@ impl Content {
             Message::AddTask => {
                 if let Some(list) = &self.list {
                     if !self.input.is_empty() {
-                        let task = Task::new(self.input.clone(), list.id.clone());
+                        let task = Task::new(self.input.clone(), list.id().clone());
                         commands.push(Command::CreateTask(task.clone()));
                         let id = self.tasks.insert(task);
                         self.task_input_ids.insert(id, widget::Id::unique());
@@ -266,7 +266,10 @@ impl Content {
                 }
             }
             Message::UpdateTask(updated_task) => {
-                let task = self.tasks.values_mut().find(|t| t.id == updated_task.id);
+                let task = self
+                    .tasks
+                    .values_mut()
+                    .find(|t| t.id() == updated_task.id());
                 if let Some(task) = task {
                     *task = updated_task.clone();
                     commands.push(Command::UpdateTask(task.clone()));

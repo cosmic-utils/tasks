@@ -5,9 +5,9 @@ use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::{cosmic_theme, theme, widget, Element};
-use done_core::models::priority::Priority;
-use done_core::models::status::Status;
-use done_core::models::task::Task;
+use cosmic_tasks_core::models::priority::Priority;
+use cosmic_tasks_core::models::status::Status;
+use cosmic_tasks_core::models::task::Task;
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
@@ -142,7 +142,7 @@ impl Details {
             Message::AddTask => {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
-                        let sub_task = Task::new(self.subtask_input.clone(), task.id.clone());
+                        let sub_task = Task::new(self.subtask_input.clone(), task.id().clone());
                         task.sub_tasks.push(sub_task.clone());
                         let id = self.subtasks.insert(sub_task);
                         self.sub_task_input_ids.insert(id, widget::Id::unique());

@@ -1,6 +1,6 @@
-use done_core::models::list::List;
-use done_core::models::status::Status;
-use done_core::models::task::Task;
+use cosmic_tasks_core::models::list::List;
+use cosmic_tasks_core::models::status::Status;
+use cosmic_tasks_core::models::task::Task;
 
 pub trait Markdown {
     fn markdown(&self) -> String;
