@@ -17,10 +17,7 @@ pub struct ComputerStorage {
 
 impl ComputerStorage {
     pub(crate) fn new(application_id: &str) -> Option<Self> {
-        let engine = Self {
-            engine: ComputerStorageEngine::new(application_id)?,
-        };
-        Some(engine)
+        ComputerStorageEngine::new(application_id).map(|engine| Self { engine })
     }
 }
 

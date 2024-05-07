@@ -28,7 +28,8 @@ impl TaskService {
 
     pub fn get_service(&self) -> Option<Box<dyn TasksProvider>> {
         match self.provider {
-            Provider::Computer => Some(Box::new(ComputerStorage::new(&self.app_id)?)),
+            Provider::Computer => ComputerStorage::new(&self.app_id)
+                .map(|storage| Box::new(storage) as Box<dyn TasksProvider>),
         }
     }
 
