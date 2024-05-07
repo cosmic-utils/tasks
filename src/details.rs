@@ -4,7 +4,7 @@ use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::{cosmic_theme, theme, widget, Element};
+use cosmic::{theme, widget, Element};
 use cosmic_tasks_core::models::priority::Priority;
 use cosmic_tasks_core::models::status::Status;
 use cosmic_tasks_core::models::task::Task;
@@ -171,13 +171,7 @@ impl Details {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let cosmic_theme::Spacing {
-            space_none,
-            space_xxs,
-            space_xs,
-            space_s,
-            ..
-        } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
 
         if let Some(task) = self.task.as_ref() {
             let mut sub_tasks: Vec<Element<Message>> = vec![];
@@ -198,14 +192,14 @@ impl Details {
                 .on_submit(Message::SubTaskEditDone);
 
                 let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
-                    .padding(space_xxs)
+                    .padding(spacing.space_xxs)
                     .style(widget::button::Style::Destructive)
                     .on_press(Message::DeleteSubTask(id));
 
                 let row = widget::row::with_capacity(3)
                     .align_items(Alignment::Center)
-                    .padding([space_none, space_s])
-                    .spacing(space_xs)
+                    .padding([spacing.space_none, spacing.space_s])
+                    .spacing(spacing.space_xs)
                     .push(item_checkbox)
                     .push(sub_task_item)
                     .push(delete_button);
@@ -224,7 +218,7 @@ impl Details {
                                 .on_input(Message::SetTitle)
                                 .into(),
                         ])
-                        .spacing(space_xxs)
+                        .spacing(spacing.space_xxs)
                         .padding([0, 15, 0, 15]),
                     )
                     .add(
@@ -267,12 +261,12 @@ impl Details {
                                 .on_input(Message::SetNotes)
                                 .into(),
                         ])
-                        .spacing(space_xxs)
+                        .spacing(spacing.space_xxs)
                         .padding([0, 15, 0, 15]),
                     )
                     .into(),
                 widget::settings::view_section(fl!("sub-tasks"))
-                    .add(widget::column::with_children(sub_tasks).spacing(space_xs))
+                    .add(widget::column::with_children(sub_tasks).spacing(spacing.space_xs))
                     .into(),
             ])
             .into();
@@ -282,12 +276,7 @@ impl Details {
     }
 
     fn sub_task_input(&self) -> Element<Message> {
-        let cosmic_theme::Spacing {
-            space_xxs,
-            space_xs,
-            space_s,
-            ..
-        } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
 
         row(vec![
             widget::text_input(fl!("add-sub-task"), &self.subtask_input)
@@ -297,12 +286,12 @@ impl Details {
                 .width(Length::Fill)
                 .into(),
             widget::button(IconCache::get("mail-send-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .on_press(Message::AddTask)
                 .into(),
         ])
-        .padding([0, space_s])
-        .spacing(space_xs)
+        .padding([spacing.space_none, spacing.space_s])
+        .spacing(spacing.space_xs)
         .align_items(Alignment::Center)
         .into()
     }

@@ -1,9 +1,7 @@
 use crate::app::icon_cache::{IconCache, ICON_CACHE};
-use crate::app::{App, Flags};
+use crate::app::Flags;
 use cosmic::app::Settings;
 use cosmic::iced::{Limits, Size};
-use cosmic::Application;
-use done_core::service::Services;
 use std::sync::Mutex;
 
 use super::config::CosmicTasksConfig;
@@ -13,7 +11,6 @@ pub fn init() -> (Settings, Flags) {
     set_localization();
     set_icon_cache();
     set_logger();
-    start_services();
     let settings = get_app_settings();
     let flags = get_flags();
     (settings, flags)
@@ -36,10 +33,6 @@ pub fn set_logger() {
 
 pub fn set_icon_cache() {
     ICON_CACHE.get_or_init(|| Mutex::new(IconCache::new()));
-}
-
-pub fn start_services() {
-    Services::init(App::APP_ID);
 }
 
 pub fn get_flags() -> Flags {

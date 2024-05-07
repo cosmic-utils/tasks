@@ -66,7 +66,7 @@ pub enum Message {
     DialogUpdate(DialogPage),
     Key(Modifiers, Key),
     Modifiers(Modifiers),
-    AppTheme(AppTheme),
+    AppTheme(usize),
     SystemThemeModeChange(cosmic_theme::ThemeMode),
     OpenNewListDialog,
     OpenRenameListDialog,
@@ -167,7 +167,7 @@ impl App {
     }
 
     fn about(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
         let repository = "https://github.com/edfloreshz/cosmic-tasks";
         let hash = env!("VERGEN_GIT_SHA");
         let short_hash: String = hash.chars().take(7).collect();
@@ -182,15 +182,15 @@ impl App {
             widget::text::title3(fl!("cosmic-tasks")).into(),
             widget::button::link(repository)
                 .on_press(Message::LaunchUrl(repository.to_string()))
-                .padding(0)
+                .padding(spacing.space_none)
                 .into(),
             widget::button::link(fl!("git-description", hash = short_hash.as_str(), date = date))
                 .on_press(Message::LaunchUrl(format!("{}/commits/{}", repository, hash)))
-                .padding(0)
+                .padding(spacing.space_none)
                 .into(),
         ])
         .align_items(Alignment::Center)
-        .spacing(space_xxs)
+        .spacing(spacing.space_xxs)
         .width(Length::Fill)
         .into()
     }
@@ -206,13 +206,7 @@ impl App {
                 widget::settings::item::builder(fl!("theme")).control(widget::dropdown(
                     &self.app_themes,
                     Some(app_theme_selected),
-                    move |index| {
-                        Message::AppTheme(match index {
-                            1 => AppTheme::Dark,
-                            2 => AppTheme::Light,
-                            _ => AppTheme::System,
-                        })
-                    },
+                    Message::AppTheme,
                 )),
             )
             .into()])
@@ -249,12 +243,12 @@ impl Application for App {
 
     fn init(mut core: Core, flags: Self::Flags) -> (Self, Command<CosmicMessage<Self::Message>>) {
         core.nav_bar_toggle_condensed();
-        let nav_model = segmented_button::ModelBuilder::default();
+        let nav_model = segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
         let app = App {
             core,
             service: service.clone(),
-            nav_model: nav_model.build(),
+            nav_model,
             content: Content::new(),
             details: Details::new(),
             config_handler: flags.config_handler,
@@ -708,7 +702,12 @@ impl Application for App {
                     log::warn!("failed to open {:?}: {}", url, err);
                 }
             },
-            Message::AppTheme(app_theme) => {
+            Message::AppTheme(index) => {
+                let app_theme = match index {
+                    1 => AppTheme::Dark,
+                    2 => AppTheme::Light,
+                    _ => AppTheme::System,
+                };
                 config_set!(app_theme, app_theme);
                 return self.update_config();
             }

@@ -2,7 +2,7 @@ use crate::app::icon_cache::IconCache;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
-use cosmic::{cosmic_theme, theme, widget, Apply, Element};
+use cosmic::{theme, widget, Apply, Element};
 use cosmic_tasks_core::models::list::List;
 use cosmic_tasks_core::models::status::Status;
 use cosmic_tasks_core::models::task::Task;
@@ -77,12 +77,7 @@ impl Content {
     }
 
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing {
-            space_none,
-            space_xxxs,
-            space_xxs,
-            ..
-        } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
 
         if self.tasks.is_empty() {
             return self.empty(list);
@@ -90,8 +85,8 @@ impl Content {
 
         let mut items = widget::list::list_column()
             .style(theme::Container::ContextDrawer)
-            .spacing(space_xxxs)
-            .padding([space_none, space_xxs]);
+            .spacing(spacing.space_xxxs)
+            .padding([spacing.space_none, spacing.space_xxs]);
 
         for (id, item) in &self.tasks {
             let item_checkbox =
@@ -100,12 +95,12 @@ impl Content {
                 });
 
             let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .style(theme::Button::Destructive)
                 .on_press(Message::Delete(id));
 
             let details_button = widget::button(IconCache::get("info-outline-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .style(theme::Button::Standard)
                 .on_press(Message::Select(item.clone()));
 
@@ -122,37 +117,35 @@ impl Content {
 
             let row = widget::row::with_capacity(4)
                 .align_items(Alignment::Center)
-                .spacing(space_xxs)
-                .padding([space_xxxs, space_xxs])
+                .spacing(spacing.space_xxs)
+                .padding([spacing.space_xxxs, spacing.space_xxs])
                 .push(item_checkbox)
                 .push(task_item_text)
                 .push(details_button)
                 .push(delete_button);
 
-            // let button = widget::button(row)
-            //     .padding([space_xxs, space_xs])
-            //     .width(Length::Fill)
-            //     .height(Length::Shrink)
-            //     .style(button_style(false, true))
-            //     .on_press(Message::Select(item.clone()));
-
             items = items.add(row);
         }
 
         widget::column::with_capacity(2)
-            .spacing(space_xxs)
+            .spacing(spacing.space_xxs)
             .push(self.list_header(list))
             .push(items)
             .apply(widget::container)
             .height(Length::Shrink)
-            .padding([0, space_xxs, 0, space_xxs])
+            .padding([
+                spacing.space_none,
+                spacing.space_xxs,
+                spacing.space_none,
+                spacing.space_xxs,
+            ])
             .apply(widget::scrollable)
             .height(Length::Fill)
             .into()
     }
 
     pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
 
         let container = widget::container(
             widget::column::with_children(vec![
@@ -169,15 +162,20 @@ impl Content {
         .width(Length::Fill);
 
         widget::column::with_capacity(2)
-            .spacing(space_xxs)
-            .padding([0, space_xxs, 0, space_xxs])
+            .spacing(spacing.space_xxs)
+            .padding([
+                spacing.space_none,
+                spacing.space_xxs,
+                spacing.space_none,
+                spacing.space_xxs,
+            ])
             .push(self.list_header(list))
             .push(container)
             .into()
     }
 
     pub fn new_task_view(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
         row(vec![
             widget::text_input(fl!("add-new-task"), &self.input)
                 .on_input(Message::Input)
@@ -185,13 +183,18 @@ impl Content {
                 .width(Length::Fill)
                 .into(),
             widget::button(IconCache::get("mail-send-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .style(theme::Button::Suggested)
                 .on_press(Message::AddTask)
                 .into(),
         ])
-        .padding([space_xxs, space_xxs, 0, space_xxs])
-        .spacing(space_xxs)
+        .padding([
+            spacing.space_xxs,
+            spacing.space_xxs,
+            spacing.space_none,
+            spacing.space_xxs,
+        ])
+        .spacing(spacing.space_xxs)
         .align_items(Alignment::Center)
         .into()
     }
