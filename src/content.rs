@@ -2,10 +2,10 @@ use crate::app::icon_cache::IconCache;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
-use cosmic::{cosmic_theme, theme, widget, Apply, Element};
-use done_core::models::list::List;
-use done_core::models::status::Status;
-use done_core::models::task::Task;
+use cosmic::{theme, widget, Apply, Element};
+use cosmic_tasks_core::models::list::List;
+use cosmic_tasks_core::models::status::Status;
+use cosmic_tasks_core::models::task::Task;
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
@@ -77,12 +77,7 @@ impl Content {
     }
 
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing {
-            space_none,
-            space_xxxs,
-            space_xxs,
-            ..
-        } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
 
         if self.tasks.is_empty() {
             return self.empty(list);
@@ -90,8 +85,8 @@ impl Content {
 
         let mut items = widget::list::list_column()
             .style(theme::Container::ContextDrawer)
-            .spacing(space_xxxs)
-            .padding([space_none, space_xxs]);
+            .spacing(spacing.space_xxxs)
+            .padding([spacing.space_none, spacing.space_xxs]);
 
         for (id, item) in &self.tasks {
             let item_checkbox =
@@ -100,58 +95,57 @@ impl Content {
                 });
 
             let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .style(theme::Button::Destructive)
                 .on_press(Message::Delete(id));
 
             let details_button = widget::button(IconCache::get("info-outline-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .style(theme::Button::Standard)
                 .on_press(Message::Select(item.clone()));
 
-            let task_item_text =
-                widget::editable_input("", &item.title, *self.editing.get(id).unwrap_or(&false), {
-                    let id = id.clone();
-                    move |editing| Message::EditMode(id, editing)
-                })
-                .id(self.task_input_ids[id].clone())
-                .on_submit(Message::TitleSubmit(id.clone()))
-                .on_input(move |text| Message::TitleUpdate(id, text))
-                .width(Length::Fill);
+            let task_item_text = widget::editable_input(
+                "",
+                &item.title,
+                *self.editing.get(id).unwrap_or(&false),
+                move |editing| Message::EditMode(id, editing),
+            )
+            .id(self.task_input_ids[id].clone())
+            .on_submit(Message::TitleSubmit(id))
+            .on_input(move |text| Message::TitleUpdate(id, text))
+            .width(Length::Fill);
 
             let row = widget::row::with_capacity(4)
                 .align_items(Alignment::Center)
-                .spacing(space_xxs)
-                .padding([space_xxxs, space_xxs])
+                .spacing(spacing.space_xxs)
+                .padding([spacing.space_xxxs, spacing.space_xxs])
                 .push(item_checkbox)
                 .push(task_item_text)
                 .push(details_button)
                 .push(delete_button);
 
-            // let button = widget::button(row)
-            //     .padding([space_xxs, space_xs])
-            //     .width(Length::Fill)
-            //     .height(Length::Shrink)
-            //     .style(button_style(false, true))
-            //     .on_press(Message::Select(item.clone()));
-
             items = items.add(row);
         }
 
         widget::column::with_capacity(2)
-            .spacing(space_xxs)
+            .spacing(spacing.space_xxs)
             .push(self.list_header(list))
             .push(items)
             .apply(widget::container)
             .height(Length::Shrink)
-            .padding([0, space_xxs, 0, space_xxs])
+            .padding([
+                spacing.space_none,
+                spacing.space_xxs,
+                spacing.space_none,
+                spacing.space_xxs,
+            ])
             .apply(widget::scrollable)
             .height(Length::Fill)
             .into()
     }
 
     pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
 
         let container = widget::container(
             widget::column::with_children(vec![
@@ -168,15 +162,20 @@ impl Content {
         .width(Length::Fill);
 
         widget::column::with_capacity(2)
-            .spacing(space_xxs)
-            .padding([0, space_xxs, 0, space_xxs])
+            .spacing(spacing.space_xxs)
+            .padding([
+                spacing.space_none,
+                spacing.space_xxs,
+                spacing.space_none,
+                spacing.space_xxs,
+            ])
             .push(self.list_header(list))
             .push(container)
             .into()
     }
 
     pub fn new_task_view(&self) -> Element<Message> {
-        let cosmic_theme::Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let spacing = theme::active().cosmic().spacing;
         row(vec![
             widget::text_input(fl!("add-new-task"), &self.input)
                 .on_input(Message::Input)
@@ -184,13 +183,18 @@ impl Content {
                 .width(Length::Fill)
                 .into(),
             widget::button(IconCache::get("mail-send-symbolic", 18))
-                .padding(space_xxs)
+                .padding(spacing.space_xxs)
                 .style(theme::Button::Suggested)
                 .on_press(Message::AddTask)
                 .into(),
         ])
-        .padding([space_xxs, space_xxs, 0, space_xxs])
-        .spacing(space_xxs)
+        .padding([
+            spacing.space_xxs,
+            spacing.space_xxs,
+            spacing.space_none,
+            spacing.space_xxs,
+        ])
+        .spacing(spacing.space_xxs)
         .align_items(Alignment::Center)
         .into()
     }
@@ -201,7 +205,7 @@ impl Content {
             Message::List(list) => {
                 self.list = list.clone();
                 if let Some(list) = list {
-                    commands.push(Command::GetTasks(list.id));
+                    commands.push(Command::GetTasks(list.id().clone()));
                 }
             }
             Message::ItemDown => {}
@@ -219,7 +223,7 @@ impl Content {
             }
             Message::Delete(id) => {
                 if let Some(task) = self.tasks.remove(id) {
-                    commands.push(Command::Delete(task.id));
+                    commands.push(Command::Delete(task.id().clone()));
                 }
             }
             Message::EditMode(id, editing) => {
@@ -257,7 +261,7 @@ impl Content {
             Message::AddTask => {
                 if let Some(list) = &self.list {
                     if !self.input.is_empty() {
-                        let task = Task::new(self.input.clone(), list.id.clone());
+                        let task = Task::new(self.input.clone(), list.id().clone());
                         commands.push(Command::CreateTask(task.clone()));
                         let id = self.tasks.insert(task);
                         self.task_input_ids.insert(id, widget::Id::unique());
@@ -266,7 +270,10 @@ impl Content {
                 }
             }
             Message::UpdateTask(updated_task) => {
-                let task = self.tasks.values_mut().find(|t| t.id == updated_task.id);
+                let task = self
+                    .tasks
+                    .values_mut()
+                    .find(|t| t.id() == updated_task.id());
                 if let Some(task) = task {
                     *task = updated_task.clone();
                     commands.push(Command::UpdateTask(task.clone()));
