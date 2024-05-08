@@ -262,13 +262,9 @@ impl Application for App {
             dialog_text_input: widget::Id::unique(),
         };
 
-        let commands = vec![Command::perform(
-            TaskService::migrate(Self::APP_ID),
-            |result| match result {
-                Ok(_) => message::app(Message::FetchLists),
-                Err(_) => message::none(),
-            },
-        )];
+        let commands = vec![Command::perform(TaskService::migrate(Self::APP_ID), |_| {
+            message::app(Message::FetchLists)
+        })];
 
         (app, Command::batch(commands))
     }
