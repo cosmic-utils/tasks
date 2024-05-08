@@ -37,7 +37,7 @@ pub fn localizer() -> Box<dyn Localizer> {
     Box::from(DefaultLocalizer::new(&*LANGUAGE_LOADER, &Localizations))
 }
 
-pub fn localize() {
+pub fn set_localization() {
     let localizer = localizer();
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
 

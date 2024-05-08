@@ -1,4 +1,4 @@
-use crate::app::config;
+use crate::app::icon_cache::IconCache;
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
@@ -51,17 +51,17 @@ impl Details {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
-                    .icon(config::get_icon("flag-outline-thin-symbolic", 16))
+                    .icon(IconCache::get("flag-outline-thin-symbolic", 16))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
-                    .icon(config::get_icon("flag-outline-thick-symbolic", 16))
+                    .icon(IconCache::get("flag-outline-thick-symbolic", 16))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
-                    .icon(config::get_icon("flag-filled-symbolic", 16))
+                    .icon(IconCache::get("flag-filled-symbolic", 16))
                     .data(Priority::High)
             })
             .build();
@@ -200,11 +200,10 @@ impl Details {
                 .on_input(move |title| Message::SetSubTaskTitle(id, title))
                 .on_submit(Message::SubTaskEditDone);
 
-                let delete_button =
-                    widget::button(config::get_icon("user-trash-full-symbolic", 18))
-                        .padding(space_xxs)
-                        .style(widget::button::Style::Destructive)
-                        .on_press(Message::DeleteSubTask(id));
+                let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
+                    .padding(space_xxs)
+                    .style(widget::button::Style::Destructive)
+                    .on_press(Message::DeleteSubTask(id));
 
                 let row = widget::row::with_capacity(3)
                     .align_items(Alignment::Center)
@@ -300,7 +299,7 @@ impl Details {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(config::get_icon("mail-send-symbolic", 18))
+            widget::button(IconCache::get("mail-send-symbolic", 18))
                 .padding(space_xxs)
                 .on_press(Message::AddTask)
                 .into(),

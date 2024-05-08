@@ -34,6 +34,7 @@ mod key_bind;
 pub mod localize;
 pub mod markdown;
 pub mod menu;
+pub mod settings;
 
 pub struct App {
     core: Core,
@@ -41,7 +42,7 @@ pub struct App {
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
-    config: config::Config,
+    config: config::CosmicTasksConfig,
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
@@ -109,7 +110,7 @@ pub enum DialogPage {
 #[derive(Clone, Debug)]
 pub struct Flags {
     pub config_handler: Option<cosmic_config::Config>,
-    pub config: config::Config,
+    pub config: config::CosmicTasksConfig,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -222,7 +223,8 @@ impl App {
             .insert()
             .text(format!(
                 "{} {}",
-                list.icon.clone()
+                list.icon
+                    .clone()
                     .unwrap_or(emojis::get_by_shortcode("pencil").unwrap().to_string()),
                 list.name.clone()
             ))
@@ -351,12 +353,10 @@ impl Application for App {
                                 .width(spacing.space_l)
                                 .height(spacing.space_l)
                                 .align_y(Vertical::Center)
-                                .align_x(Horizontal::Center)
+                                .align_x(Horizontal::Center),
                         )
-                            .on_press(Message::DialogUpdate(DialogPage::Icon(
-                                emoji.to_string(),
-                            )))
-                            .into()
+                        .on_press(Message::DialogUpdate(DialogPage::Icon(emoji.to_string())))
+                        .into()
                     })
                     .collect();
                 let mut dialog = widget::dialog(fl!("icon-select"))
@@ -371,13 +371,15 @@ impl Application for App {
                     .control(
                         widget::container(scrollable(widget::row::with_children(vec![
                             widget::flex_row(icon_buttons).into(),
-                            horizontal_space(Length::Fixed(spacing.space_s as f32)).into()
+                            horizontal_space(Length::Fixed(spacing.space_s as f32)).into(),
                         ])))
-                            .height(Length::Fixed(300.0)),
+                        .height(Length::Fixed(300.0)),
                     );
 
                 if !icon.is_empty() {
-                    dialog = dialog.icon(widget::container(widget::text(icon.as_str()).size(spacing.space_l)));
+                    dialog = dialog.icon(widget::container(
+                        widget::text(icon.as_str()).size(spacing.space_l),
+                    ));
                 }
 
                 dialog
@@ -826,10 +828,7 @@ impl Application for App {
                             if let Some(list) = self.nav_model.active_data::<List>() {
                                 let entity = self.nav_model.active();
                                 let title = format!("{} {}", icon.clone(), list.name.clone());
-                                self.nav_model.text_set(
-                                    entity,
-                                    title,
-                                );
+                                self.nav_model.text_set(entity, title);
                             }
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                 list.icon = Some(icon);
