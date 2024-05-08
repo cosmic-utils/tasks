@@ -261,13 +261,16 @@ impl Application for App {
             dialog_text_input: widget::Id::unique(),
         };
 
-        let commands = vec![Command::perform(
-            todo::fetch_lists(service),
-            |result| match result {
+        let commands = vec![
+            Command::perform(TaskService::migrate(Self::APP_ID), |result| match result {
+                Ok(_) => message::none(),
+                Err(_) => message::none(),
+            }),
+            Command::perform(todo::fetch_lists(service), |result| match result {
                 Ok(data) => message::app(Message::PopulateLists(data)),
                 Err(_) => message::none(),
-            },
-        )];
+            }),
+        ];
 
         (app, Command::batch(commands))
     }
