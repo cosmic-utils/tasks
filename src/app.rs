@@ -58,6 +58,7 @@ pub enum Message {
     Details(details::Message),
     ToggleContextPage(ContextPage),
     LaunchUrl(String),
+    FetchLists,
     PopulateLists(Vec<List>),
     WindowClose,
     WindowNew,
@@ -261,16 +262,13 @@ impl Application for App {
             dialog_text_input: widget::Id::unique(),
         };
 
-        let commands = vec![
-            Command::perform(TaskService::migrate(Self::APP_ID), |result| match result {
-                Ok(_) => message::none(),
+        let commands = vec![Command::perform(
+            TaskService::migrate(Self::APP_ID),
+            |result| match result {
+                Ok(_) => message::app(Message::FetchLists),
                 Err(_) => message::none(),
-            }),
-            Command::perform(todo::fetch_lists(service), |result| match result {
-                Ok(data) => message::app(Message::PopulateLists(data)),
-                Err(_) => message::none(),
-            }),
-        ];
+            },
+        )];
 
         (app, Command::batch(commands))
     }
@@ -716,6 +714,15 @@ impl Application for App {
             }
             Message::SystemThemeModeChange(_) => {
                 return self.update_config();
+            }
+            Message::FetchLists => {
+                commands.push(Command::perform(
+                    todo::fetch_lists(self.service.clone()),
+                    |result| match result {
+                        Ok(data) => message::app(Message::PopulateLists(data)),
+                        Err(_) => message::none(),
+                    },
+                ));
             }
             Message::PopulateLists(lists) => {
                 for list in lists {
