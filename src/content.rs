@@ -133,12 +133,6 @@ impl Content {
             .push(items)
             .apply(widget::container)
             .height(Length::Shrink)
-            .padding([
-                spacing.space_none,
-                spacing.space_xxs,
-                spacing.space_none,
-                spacing.space_xxs,
-            ])
             .apply(widget::scrollable)
             .height(Length::Fill)
             .into()
@@ -163,12 +157,6 @@ impl Content {
 
         widget::column::with_capacity(2)
             .spacing(spacing.space_xxs)
-            .padding([
-                spacing.space_none,
-                spacing.space_xxs,
-                spacing.space_none,
-                spacing.space_xxs,
-            ])
             .push(self.list_header(list))
             .push(container)
             .into()
@@ -188,14 +176,11 @@ impl Content {
                 .on_press(Message::AddTask)
                 .into(),
         ])
-        .padding([
-            spacing.space_xxs,
-            spacing.space_xxs,
-            spacing.space_none,
-            spacing.space_xxs,
-        ])
+        .padding(spacing.space_xxs)
         .spacing(spacing.space_xxs)
         .align_items(Alignment::Center)
+        .apply(widget::container)
+        .style(cosmic::style::Container::List)
         .into()
     }
 
@@ -287,6 +272,8 @@ impl Content {
     }
 
     pub fn view(&self) -> Element<Message> {
+        let spacing = theme::active().cosmic().spacing;
+
         let Some(ref list) = self.list else {
             return widget::container(
                 widget::column::with_children(vec![
@@ -307,6 +294,7 @@ impl Content {
         widget::column::with_capacity(2)
             .push(self.list_view(list))
             .push(self.new_task_view())
+            .spacing(spacing.space_xxs)
             .apply(widget::container)
             .height(Length::Fill)
             .width(Length::Fill)

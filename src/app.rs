@@ -880,7 +880,6 @@ impl Application for App {
 
     fn view(&self) -> Element<Self::Message> {
         let content_view = self.content.view().map(Message::Content);
-
-        widget::column::with_children(vec![content_view]).into()
+        content_view
     }
 }
