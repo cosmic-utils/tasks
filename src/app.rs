@@ -304,6 +304,7 @@ impl Application for App {
                         widget::text_input("", name.as_str())
                             .id(self.dialog_text_input.clone())
                             .on_input(move |name| Message::DialogUpdate(DialogPage::New(name)))
+                            .on_submit(Message::DialogComplete)
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
