@@ -325,6 +325,7 @@ impl Application for App {
                             .on_input(move |name| {
                                 Message::DialogUpdate(DialogPage::Rename { to: name })
                             })
+                            .on_submit(Message::DialogComplete)
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
