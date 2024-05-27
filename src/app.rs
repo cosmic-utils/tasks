@@ -131,7 +131,7 @@ pub enum Action {
 
 impl MenuAction for Action {
     type Message = Message;
-    fn message(&self, _entity_opt: Option<Entity>) -> Self::Message {
+    fn message(&self) -> Self::Message {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
             Action::ItemDown => Message::Content(content::Message::ItemDown),
@@ -157,7 +157,7 @@ pub enum NavMenuAction {
 impl MenuAction for NavMenuAction {
     type Message = cosmic::app::Message<Message>;
 
-    fn message(&self, _entity: Option<Entity>) -> Self::Message {
+    fn message(&self) -> Self::Message {
         cosmic::app::Message::App(Message::NavMenuAction(*self))
     }
 }
@@ -736,7 +736,7 @@ impl Application for App {
             Message::Key(modifiers, key) => {
                 for (key_bind, action) in self.key_binds.iter() {
                     if key_bind.matches(modifiers, &key) {
-                        return self.update(action.message(None));
+                        return self.update(action.message());
                     }
                 }
             }
