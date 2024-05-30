@@ -1,25 +1,61 @@
-empty-folder = Boş klasör
-empty-folder-hidden = Boş klasör (gizli öğelerle)
-filesystem = Dosya sistemi
-home = Ev
+cosmic-tasks = COSMIC Görevler
 trash = Çöp
+about = Hakkında
 
-# Dialog
-cancel = Kapat
-open = Aç
+# Content
+add-new-task = Yeni görev ekle
 
-# List view
-name = İsim
-modified = Değiştirilme
-size = Boyut
+# Details
+title = Başlık
+details = Detaylar
+favorite = Favori
+priority = Öncelikli
+due-date = Son tarih
+reminder = Hatırlatıcı
+notes = Notlar
+
+# Empty
+no-tasks = Görev yok
+no-tasks-suggestion = Aşağıdaki metin alanını kullanarak bir görev ekleyin
+no-list-selected = Bir liste seçilmemiş
+no-list-suggestion = Başlamak için yeni bir liste oluşturun veya mevcut bir liste seçin
+
+sub-tasks = Alt görevler
+add-sub-task = Alt görev ekle
+
+# New List Dialog
+create-list = Yeni bir liste oluştur
+
+# Rename List Dialog
+rename-list = Listeyi yeniden adlandır
+
+# Rename List Dialog
+delete-list = Seçilen liste silinecektir
+delete-list-confirm = Bu listeyi silmek istediğinize emin misiniz?
+
+# Icon Dialog
+icon = Simge belirle
+icon-select = Simge seç
+icon-select-body = Liste için bir simge seçin
+
+# Date Dialog
+select-date = Bir tarih belirleyin
+
+# Export Dialog
+export = Dışarıya aktar
+
+# Dialogs
+cancel = İptal
+ok = Tamam
+copy = Kopyala
+confirm = Onayla
+save = Kaydet
+list-name = Liste ismi
 
 # Context Pages
 
-## Operations
-operations = İşlemler
-pending = Bekliyor
-failed = Başarısız
-complete = Tamamlandı
+## About
+git-description = {$date} tarihinde yapılan {$hash} numaralı Git değişikliği
 
 ## Properties
 properties = Özellikler
@@ -34,30 +70,20 @@ match-desktop = Masaüstüyle eşle
 dark = Karanlık
 light = Aydınlık
 
-# Context menu
-new-file = Yeni dosya
-new-folder = Yeni klasör
-move-to-trash = Çöpe taşı
-restore-from-trash = Çöpten geri yükle
-
 # Menu
 
 ## File
 file = Dosya
-new-tab = Yeni sekme
 new-window = Yeni pencere
-close-tab = Sekmeyi kapat
+new-list = Yeni liste
 quit = Çıkış
 
 ## Edit
 edit = Düzenle
-cut = Kes
-copy = Kopyala
-paste = Yapıştır
-select-all = Hepsini seç
+rename = Yeniden adlandır
+delete = Sil
 
 ## View
 view = Görünüm
-grid-view = Tablo görünümü
-list-view = Liste görünümü
 menu-settings = Ayarlar...
+menu-about = COSMIC Görevler Hakkında...
