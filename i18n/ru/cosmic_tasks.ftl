@@ -1,25 +1,61 @@
-empty-folder = Пустая папка
-empty-folder-hidden = Пустая папка (со скрытыми элементами)
-filesystem = Файловая система
-home = Домашний
+cosmic-tasks = Задачи COSMIC
 trash = Корзина
+about = О программе
 
-# Dialog
-cancel = Отменить
-open = Открыть
+# Content
+add-new-task = Добавить новую задачу
 
-# List view
-name = Имя
-modified = Изменено
-size = Размер
+# Details
+title = Заголовок
+details = Подробности
+favorite = Избранное
+priority = Приоритетность
+due-date = Срок выполнения
+reminder = Напоминание
+notes = Примечания
+
+# Empty
+no-tasks = Нет задач
+no-tasks-suggestion = Попробуйте добавить задачу с помощью текстового поля ниже
+no-list-selected = Список не выбран
+no-list-suggestion = Создайте или выберите новый список, чтобы начать
+
+sub-tasks = Подзадачи
+add-sub-task = Добавить подзадачу
+
+# New List Dialog
+create-list = Создать новый список
+
+# Rename List Dialog
+rename-list = Переименовать список
+
+# Rename List Dialog
+delete-list = Выбранный список будет удален
+delete-list-confirm = Вы уверены, что хотите удалить этот список?
+
+# Icon Dialog
+icon = Установить значок
+icon-select = Выберите значок
+icon-select-body = Choose an icon for the list
+
+# Date Dialog
+select-date = Выберите дату
+
+# Export Dialog
+export = Экспорт
+
+# Dialogs
+cancel = Отмена
+ok = OK
+copy = Копировать
+confirm = Подтвердить
+save = Сохранить
+list-name = Имя списка
 
 # Context Pages
 
-## Operations
-operations = Операции
-pending = В ожидании
-failed = Сбой
-complete = Завершено
+## About
+git-description = Git-коммит {$hash} от {$date}
 
 ## Properties
 properties = Свойства
@@ -31,33 +67,23 @@ settings = Параметры
 appearance = Оформление
 theme = Тема
 match-desktop = Как в системе
-dark = Темная
+dark = Тёмная
 light = Светлая
-
-# Context menu
-new-file = Новый файл
-new-folder = Новая папка
-move-to-trash = Переместить в корзину
-restore-from-trash = Восстановить из корзины
 
 # Menu
 
 ## File
 file = Файл
-new-tab = Новая вкладка
 new-window = Новое окно
-close-tab = Закрыть вкладку
+new-list = Новый список
 quit = Завершить
 
 ## Edit
 edit = Правка
-cut = Вырезать
-copy = Копировать
-paste = Вставить
-select-all = Выбрать все
+rename = Переименовать
+delete = Удалить
 
 ## View
 view = Вид
-grid-view = Сетка
-list-view = Список
 menu-settings = Параметры...
+menu-about = О Задачах COSMIC...
