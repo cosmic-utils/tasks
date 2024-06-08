@@ -25,17 +25,6 @@ cargo build
 
 ## Dependencies
 - [libcosmic](https://github.com/pop-os/libcosmic?tab=readme-ov-file#building)
-- sqlite3
-
-Ubuntu
-```
-sudo apt install libsqlite3-dev
-```
-
-Fedora
-```
-sudo apt install sqlite-devel
-```
 
 # Copyright and licensing
 
