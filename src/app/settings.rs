@@ -2,15 +2,18 @@ use crate::app::icon_cache::{IconCache, ICON_CACHE};
 use crate::app::Flags;
 use cosmic::app::Settings;
 use cosmic::iced::{Limits, Size};
+use cosmic::Application;
 use std::sync::Mutex;
 
 use super::config::OrderlyConfig;
 use super::localize::set_localization;
+use super::Orderly;
 
 pub fn init() -> (Settings, Flags) {
     set_localization();
     set_icon_cache();
     set_logger();
+    migrate();
     let settings = get_app_settings();
     let flags = get_flags();
     (settings, flags)
@@ -43,4 +46,16 @@ pub fn get_flags() -> Flags {
         config,
     };
     flags
+}
+
+pub fn migrate() {
+    const PREV_APP_ID: &str = "com.system76.CosmicTasks";
+    let prev = dirs::data_local_dir().unwrap().join(PREV_APP_ID);
+    let new = dirs::data_local_dir().unwrap().join(Orderly::APP_ID);
+    if prev.exists() {
+        match std::fs::rename(prev, new) {
+            Ok(_) => log::info!("migrated data to new directory"),
+            Err(err) => log::error!("error migrating data: {:?}", err),
+        }
+    }
 }
