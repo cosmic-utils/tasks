@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.system76.CosmicTasks</id>
+  <id>dev.edfloreshz.Orderly</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
   <developer_name>System76</developer_name>
   <update_contact>edfloreshz@proton.me</update_contact>
-  <url type="homepage">https://github.com/edfloreshz/cosmic-tasks</url>
-  <url type="bugtracker">https://github.com/edfloreshz/cosmic-tasks</url>
-  <name>COSMIC Tasks</name>
+  <url type="homepage">https://github.com/edfloreshz/orderly</url>
+  <url type="bugtracker">https://github.com/edfloreshz/orderly</url>
+  <name>Orderly</name>
   <summary>Tasks application for the COSMIC desktop</summary>
   <description>
     <p>Tasks application that provides advanced features with high performance</p>
@@ -17,14 +17,14 @@
         <li>Organize your tasks into lists.</li>
     </ul>
   </description>
-  <launchable type="desktop-id">com.system76.CosmicTasks.desktop</launchable>
-  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/master/res/icons/hicolor/256x256/apps/com.system76.CosmicTasks.svg</icon>
+  <launchable type="desktop-id">dev.edfloreshz.Orderly.desktop</launchable>
+  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/orderly/master/res/icons/hicolor/256x256/apps/dev.edfloreshz.Orderly.svg</icon>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window-light.png</image>
+      <image>https://raw.githubusercontent.com/edfloreshz/orderly/main/res/screenshots/window-light.png</image>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/screenshots/window-dark.png</image>
+      <image>https://raw.githubusercontent.com/edfloreshz/orderly/main/res/screenshots/window-dark.png</image>
     </screenshot>
   </screenshots>
   <provides>
@@ -32,7 +32,7 @@
       <mimetype>text/plain</mimetype>
     </mimetypes>
     <binaries>
-      <binary>cosmic-tasks</binary>
+      <binary>orderly</binary>
     </binaries>
   </provides>
 </component>

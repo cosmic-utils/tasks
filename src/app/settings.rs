@@ -4,7 +4,7 @@ use cosmic::app::Settings;
 use cosmic::iced::{Limits, Size};
 use std::sync::Mutex;
 
-use super::config::CosmicTasksConfig;
+use super::config::OrderlyConfig;
 use super::localize::set_localization;
 
 pub fn init() -> (Settings, Flags) {
@@ -17,7 +17,7 @@ pub fn init() -> (Settings, Flags) {
 }
 
 pub fn get_app_settings() -> Settings {
-    let config = CosmicTasksConfig::config();
+    let config = OrderlyConfig::config();
 
     let mut settings = Settings::default();
     settings = settings.theme(config.app_theme.theme());
@@ -36,10 +36,7 @@ pub fn set_icon_cache() {
 }
 
 pub fn get_flags() -> Flags {
-    let (config_handler, config) = (
-        CosmicTasksConfig::config_handler(),
-        CosmicTasksConfig::config(),
-    );
+    let (config_handler, config) = (OrderlyConfig::config_handler(), OrderlyConfig::config());
 
     let flags = Flags {
         config_handler,

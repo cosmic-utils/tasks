@@ -3,9 +3,9 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{theme, widget, Apply, Element};
-use cosmic_tasks_core::models::list::List;
-use cosmic_tasks_core::models::status::Status;
-use cosmic_tasks_core::models::task::Task;
+use orderly_core::models::list::List;
+use orderly_core::models::status::Status;
+use orderly_core::models::task::Task;
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;

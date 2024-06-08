@@ -1,84 +1,125 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>COSMIC Tasks</title>
-    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/icons/hicolor/256x256/apps/com.system76.CosmicTasks.svg" />
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body>
-    <nav>
-        <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-            <div class="relative flex items-center justify-between h-16">
-                <div class="flex-1 flex items-center justify-center sm:items-stretch sm:justify-start">
-                    <a href="index.html">
-                        <div class="flex-shrink-0 flex items-center space-x-2">
-                            <img class="lg:block h-8 w-auto"
-                                 src="https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/icons/hicolor/256x256/apps/com.system76.CosmicTasks.svg"
-                                 alt="Workflow" />
-                            <h1 class="text-slate-900 dark:text-white text-2xl
-                        font-extrabold tracking-tight">
-                                COSMIC Tasks
-                            </h1>
-                        </div>
-                    </a>
-                </div>
-                <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-                    <div class="hidden sm:block sm:ml-6">
-                        <div class="flex space-x-4">
-                            <a href="https://github.com/edfloreshz"
-                               class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Team</a>
-                            <a href="https://github.com/sponsors/edfloreshz"
-                               class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sponsor
-                                us</a>
-                            <a href="https://github.com/edfloreshz/cosmic-tasks/issues"
-                               class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-                               aria-current="page">Issues</a>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Orderly</title>
+        <link
+            rel="icon"
+            type="image/x-icon"
+            href="https://raw.githubusercontent.com/edfloreshz/orderly/main/res/icons/hicolor/256x256/apps/dev.edfloreshz.Orderly.svg"
+        />
+        <link rel="stylesheet" href="style.css" />
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body>
+        <nav>
+            <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                <div class="relative flex items-center justify-between h-16">
+                    <div
+                        class="flex-1 flex items-center justify-center sm:items-stretch sm:justify-start"
+                    >
+                        <a href="index.html">
+                            <div
+                                class="flex-shrink-0 flex items-center space-x-2"
+                            >
+                                <img
+                                    class="lg:block h-8 w-auto"
+                                    src="https://raw.githubusercontent.com/edfloreshz/orderly/main/res/icons/hicolor/256x256/apps/dev.edfloreshz.Orderly.svg"
+                                    alt="Workflow"
+                                />
+                                <h1
+                                    class="text-slate-900 dark:text-white text-2xl font-extrabold tracking-tight"
+                                >
+                                    Orderly
+                                </h1>
+                            </div>
+                        </a>
+                    </div>
+                    <div
+                        class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0"
+                    >
+                        <div class="hidden sm:block sm:ml-6">
+                            <div class="flex space-x-4">
+                                <a
+                                    href="https://github.com/edfloreshz"
+                                    class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                                    >Team</a
+                                >
+                                <a
+                                    href="https://github.com/sponsors/edfloreshz"
+                                    class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                                    >Sponsor us</a
+                                >
+                                <a
+                                    href="https://github.com/edfloreshz/orderly/issues"
+                                    class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                                    aria-current="page"
+                                    >Issues</a
+                                >
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Mobile menu, show/hide based on menu state. -->
-        <div class="sm:hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-10 space-y-1 text-center">
-                <a href="https://github.com/edfloreshz"
-                   class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Team</a>
-                <a href="https://github.com/sponsors/edfloreshz"
-                   class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sponsor
-                    us</a>
-                <a href="https://github.com/edfloreshz/cosmic-tasks/issues"
-                   class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-                   aria-current="page">Issues</a>
+            <!-- Mobile menu, show/hide based on menu state. -->
+            <div class="sm:hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-10 space-y-1 text-center">
+                    <a
+                        href="https://github.com/edfloreshz"
+                        class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                        >Team</a
+                    >
+                    <a
+                        href="https://github.com/sponsors/edfloreshz"
+                        class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                        >Sponsor us</a
+                    >
+                    <a
+                        href="https://github.com/edfloreshz/orderly/issues"
+                        class="text-slate-900 dark:text-white hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                        aria-current="page"
+                        >Issues</a
+                    >
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid place-content-center text-center">
-                <img class="lg:block w-48 justify-center"
-                     src="https://raw.githubusercontent.com/edfloreshz/cosmic-tasks/main/res/icons/hicolor/256x256/apps/com.system76.CosmicTasks.svg"
-                     alt="Workflow" />
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid place-content-center text-center">
+                    <img
+                        class="lg:block w-48 justify-center"
+                        src="https://raw.githubusercontent.com/edfloreshz/orderly/main/res/icons/hicolor/256x256/apps/dev.edfloreshz.Orderly.svg"
+                        alt="Workflow"
+                    />
+                </div>
+                <br />
+                <div class="text-center mb-10">
+                    <h1
+                        class="text-slate-900 dark:text-white text-5xl leading font-extrabold tracking-tight text-gray-900 sm:text-6xl"
+                    >
+                        Go Supernova
+                    </h1>
+                    <h2
+                        class="dark:text-white leading tracking-tight text-gray-900 sm:text-2xl mt-4"
+                    >
+                        Unleash your interstellar potential
+                    </h2>
+                    <p
+                        class="mt-4 max-w-2xl text-xl dark:text-slate-300 mx-auto"
+                    >
+                        A simple task management app, reaching across the cosmos
+                        to help you get things done
+                    </p>
+                </div>
+                <a
+                    href="https://github.com/edfloreshz/orderly"
+                    class="grid place-content-center text-center"
+                >
+                    <img id="screenshot" />
+                </a>
             </div>
-            <br />
-            <div class="text-center mb-10">
-                <h1 class="text-slate-900 dark:text-white text-5xl leading font-extrabold tracking-tight text-gray-900 sm:text-6xl">
-                    Go Supernova
-                </h1>
-                <h2 class="dark:text-white leading tracking-tight text-gray-900 sm:text-2xl mt-4">
-                    Unleash your interstellar potential
-                </h2>
-                <p class="mt-4 max-w-2xl text-xl dark:text-slate-300 mx-auto">
-                    A simple task management app, reaching across the cosmos to help you get things done
-                </p>
-            </div>
-            <a href="https://github.com/edfloreshz/cosmic-tasks" class="grid place-content-center text-center">
-                <img id="screenshot" />
-            </a>
         </div>
-    </div>
-</body>
+    </body>
 </html>

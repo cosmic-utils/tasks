@@ -1,4 +1,4 @@
-cosmic-tasks = Ficheiros COSMIC
+orderly = Ficheiros COSMIC
 empty-folder = Pasta vazia
 empty-folder-hidden = Pasta vazia (tem ficheiros ocultos)
 filesystem = Sistema de ficheiros
@@ -83,7 +83,7 @@ new-tab = Novo separador
 new-window = Nova janela
 rename = Renomear
 close-tab = Fechar separador
-quit = Sair 
+quit = Sair
 
 ## Edit
 edit = Editar
