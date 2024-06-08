@@ -1,7 +1,7 @@
 use crate::app::markdown::Markdown;
-use cosmic_tasks_core::models::list::List;
-use cosmic_tasks_core::models::task::Task;
-use cosmic_tasks_core::service::TaskService;
+use orderly_core::models::list::List;
+use orderly_core::models::task::Task;
+use orderly_core::service::TaskService;
 use std::error::Error;
 
 pub async fn update_list(list: List, service: TaskService) -> Result<(), Box<dyn Error>> {

@@ -1,4 +1,4 @@
-cosmic-tasks = COSMIC Görevler
+orderly = COSMIC Görevler
 trash = Çöp
 about = Hakkında
 
