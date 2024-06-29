@@ -1,4 +1,4 @@
-orderly = Orderly
+tasks = Tasks
 trash = Trash
 about = About
 
@@ -86,4 +86,4 @@ delete = Delete
 ## View
 view = View
 menu-settings = Settings...
-menu-about = About Orderly...
+menu-about = About Tasks...

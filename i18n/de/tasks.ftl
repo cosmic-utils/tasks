@@ -1,4 +1,4 @@
-orderly = Orderly
+tasks = Tasks
 trash = Papierkorb
 about = Über
 
@@ -86,4 +86,4 @@ delete = Löschen
 ## View
 view = Ansicht
 menu-settings = Einstellungen...
-menu-about = Über Orderly...
+menu-about = Über Tasks...

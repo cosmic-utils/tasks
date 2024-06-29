@@ -1,7 +1,7 @@
 use crate::app::markdown::Markdown;
-use orderly_core::models::list::List;
-use orderly_core::models::task::Task;
-use orderly_core::service::TaskService;
+use tasks_core::models::list::List;
+use tasks_core::models::task::Task;
+use tasks_core::service::TaskService;
 use std::error::Error;
 
 pub async fn update_list(list: List, service: TaskService) -> Result<(), Box<dyn Error>> {

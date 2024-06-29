@@ -1,5 +1,5 @@
-name := 'orderly'
-export APPID := 'dev.edfloreshz.Orderly'
+name := 'tasks'
+export APPID := 'dev.edfloreshz.Tasks'
 
 rootdir := ''
 prefix := '/usr'
@@ -62,7 +62,7 @@ dev *args:
 
 # Run with debug logs
 run *args:
-    env RUST_LOG=orderly=info RUST_BACKTRACE=full cargo run --release {{args}}
+    env RUST_LOG=tasks=info RUST_BACKTRACE=full cargo run --release {{args}}
 
 # Installs files
 install:

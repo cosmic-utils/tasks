@@ -1,5 +1,5 @@
 [package]
-name = "orderly"
+name = "tasks"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,7 +19,7 @@ open = "5.0.2"
 dirs = "5.0.1"
 chrono = "0.4.35"
 tokio = "1"
-orderly-core = { path = "src/core" }
+tasks-core = { path = "src/core" }
 tracing = "0.1.40"
 cli-clipboard = "0.4.0"
 slotmap = "1.0.7"

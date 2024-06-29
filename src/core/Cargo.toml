@@ -1,5 +1,5 @@
 [package]
-name = "orderly-core"
+name = "tasks-core"
 version = "0.1.0"
 edition = "2021"
 

@@ -18,9 +18,9 @@ use cosmic::{
     app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt,
     Command, Element,
 };
-use orderly_core::models::list::List;
-use orderly_core::models::task::Task;
-use orderly_core::service::{Provider, TaskService};
+use tasks_core::models::list::List;
+use tasks_core::models::task::Task;
+use tasks_core::service::{Provider, TaskService};
 
 use crate::app::config::{AppTheme, CONFIG_VERSION};
 use crate::app::key_bind::key_binds;
@@ -36,14 +36,14 @@ pub mod markdown;
 pub mod menu;
 pub mod settings;
 
-pub struct Orderly {
+pub struct Tasks {
     core: Core,
     service: TaskService,
     nav_model: segmented_button::SingleSelectModel,
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
-    config: config::OrderlyConfig,
+    config: config::TasksConfig,
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
@@ -112,7 +112,7 @@ pub enum DialogPage {
 #[derive(Clone, Debug)]
 pub struct Flags {
     pub config_handler: Option<cosmic_config::Config>,
-    pub config: config::OrderlyConfig,
+    pub config: config::TasksConfig,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -162,23 +162,23 @@ impl MenuAction for NavMenuAction {
     }
 }
 
-impl Orderly {
+impl Tasks {
     fn update_config(&mut self) -> Command<CosmicMessage<Message>> {
         app::command::set_theme(self.config.app_theme.theme())
     }
 
     fn about(&self) -> Element<Message> {
         let spacing = theme::active().cosmic().spacing;
-        let repository = "https://github.com/edfloreshz/orderly";
+        let repository = "https://github.com/edfloreshz/tasks";
         let hash = env!("VERGEN_GIT_SHA");
         let short_hash: String = hash.chars().take(7).collect();
         let date = env!("VERGEN_GIT_COMMIT_DATE");
         widget::column::with_children(vec![
             widget::svg(widget::svg::Handle::from_memory(
-                &include_bytes!("../res/icons/hicolor/128x128/apps/dev.edfloreshz.Orderly.svg")[..],
+                &include_bytes!("../res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg")[..],
             ))
             .into(),
-            widget::text::title3(fl!("orderly")).into(),
+            widget::text::title3(fl!("tasks")).into(),
             widget::button::link(repository)
                 .on_press(Message::LaunchUrl(repository.to_string()))
                 .padding(spacing.space_none)
@@ -233,11 +233,11 @@ impl Orderly {
     }
 }
 
-impl Application for Orderly {
+impl Application for Tasks {
     type Executor = executor::Default;
     type Flags = Flags;
     type Message = Message;
-    const APP_ID: &'static str = "dev.edfloreshz.Orderly";
+    const APP_ID: &'static str = "dev.edfloreshz.Tasks";
 
     fn core(&self) -> &Core {
         &self.core
@@ -251,7 +251,7 @@ impl Application for Orderly {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
-        let app = Orderly {
+        let app = Tasks {
             core,
             service: service.clone(),
             nav_model,
@@ -471,7 +471,7 @@ impl Application for Orderly {
 
         if let Some(list) = location_opt {
             let message = Message::Content(content::Message::List(Some(list.clone())));
-            let window_title = format!("{} - {}", list.name, fl!("orderly"));
+            let window_title = format!("{} - {}", list.name, fl!("tasks"));
             commands.push(self.set_window_title(window_title, self.main_window_id()));
             return self.update(message);
         }

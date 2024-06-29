@@ -5,9 +5,9 @@ use cosmic::iced::{Limits, Size};
 use cosmic::Application;
 use std::sync::Mutex;
 
-use super::config::OrderlyConfig;
+use super::config::TasksConfig;
 use super::localize::set_localization;
-use super::Orderly;
+use super::Tasks;
 
 pub fn init() -> (Settings, Flags) {
     set_localization();
@@ -20,7 +20,7 @@ pub fn init() -> (Settings, Flags) {
 }
 
 pub fn get_app_settings() -> Settings {
-    let config = OrderlyConfig::config();
+    let config = TasksConfig::config();
 
     let mut settings = Settings::default();
     settings = settings.theme(config.app_theme.theme());
@@ -39,7 +39,7 @@ pub fn set_icon_cache() {
 }
 
 pub fn get_flags() -> Flags {
-    let (config_handler, config) = (OrderlyConfig::config_handler(), OrderlyConfig::config());
+    let (config_handler, config) = (TasksConfig::config_handler(), TasksConfig::config());
 
     let flags = Flags {
         config_handler,
@@ -49,9 +49,9 @@ pub fn get_flags() -> Flags {
 }
 
 pub fn migrate() {
-    const PREV_APP_ID: &str = "com.system76.CosmicTasks";
+    const PREV_APP_ID: &str = "dev.edfloreshz.Orderly";
     let prev = dirs::data_local_dir().unwrap().join(PREV_APP_ID);
-    let new = dirs::data_local_dir().unwrap().join(Orderly::APP_ID);
+    let new = dirs::data_local_dir().unwrap().join(Tasks::APP_ID);
     if prev.exists() {
         match std::fs::rename(prev, new) {
             Ok(_) => log::info!("migrated data to new directory"),

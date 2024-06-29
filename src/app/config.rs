@@ -1,4 +1,4 @@
-use crate::app::Orderly;
+use crate::app::Tasks;
 use cosmic::{
     cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, Config, CosmicConfigEntry},
     theme, Application,
@@ -8,26 +8,26 @@ use serde::{Deserialize, Serialize};
 pub const CONFIG_VERSION: u64 = 1;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, CosmicConfigEntry)]
-pub struct OrderlyConfig {
+pub struct TasksConfig {
     pub app_theme: AppTheme,
 }
 
-impl OrderlyConfig {
+impl TasksConfig {
     pub fn config_handler() -> Option<Config> {
-        Config::new(Orderly::APP_ID, CONFIG_VERSION).ok()
+        Config::new(Tasks::APP_ID, CONFIG_VERSION).ok()
     }
 
-    pub fn config() -> OrderlyConfig {
+    pub fn config() -> TasksConfig {
         match Self::config_handler() {
             Some(config_handler) => {
                 let config =
-                    OrderlyConfig::get_entry(&config_handler).unwrap_or_else(|(errs, config)| {
+                    TasksConfig::get_entry(&config_handler).unwrap_or_else(|(errs, config)| {
                         log::info!("errors loading config: {:?}", errs);
                         config
                     });
                 config
             }
-            None => OrderlyConfig::default(),
+            None => TasksConfig::default(),
         }
     }
 }

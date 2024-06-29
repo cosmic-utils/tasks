@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>dev.edfloreshz.Orderly</id>
+  <id>dev.edfloreshz.Tasks</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
   <developer_name>System76</developer_name>
   <update_contact>edfloreshz@proton.me</update_contact>
-  <url type="homepage">https://github.com/edfloreshz/orderly</url>
-  <url type="bugtracker">https://github.com/edfloreshz/orderly</url>
-  <name>Orderly</name>
+  <url type="homepage">https://github.com/edfloreshz/tasks</url>
+  <url type="bugtracker">https://github.com/edfloreshz/tasks</url>
+  <name>Tasks</name>
   <summary>Tasks application for the COSMIC desktop</summary>
   <description>
     <p>Tasks application that provides advanced features with high performance</p>
@@ -17,14 +17,14 @@
         <li>Organize your tasks into lists.</li>
     </ul>
   </description>
-  <launchable type="desktop-id">dev.edfloreshz.Orderly.desktop</launchable>
-  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/orderly/master/res/icons/hicolor/256x256/apps/dev.edfloreshz.Orderly.svg</icon>
+  <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
+  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/edfloreshz/orderly/main/res/screenshots/window-light.png</image>
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png</image>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/edfloreshz/orderly/main/res/screenshots/window-dark.png</image>
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png</image>
     </screenshot>
   </screenshots>
   <provides>
@@ -32,7 +32,7 @@
       <mimetype>text/plain</mimetype>
     </mimetypes>
     <binaries>
-      <binary>orderly</binary>
+      <binary>tasks</binary>
     </binaries>
   </provides>
 </component>

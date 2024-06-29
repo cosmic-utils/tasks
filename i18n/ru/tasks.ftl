@@ -1,4 +1,4 @@
-orderly = Задачи COSMIC
+tasks = Задачи COSMIC
 trash = Корзина
 about = О программе
 

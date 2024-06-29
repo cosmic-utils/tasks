@@ -1,11 +1,11 @@
 #TODO: more build-out, desktop actions, translations?
 [Desktop Entry]
-Name=Orderly
-Exec=orderly %F
+Name=Tasks
+Exec=tasks %F
 Terminal=false
 Type=Application
 StartupNotify=true
-Icon=dev.edfloreshz.Orderly
+Icon=dev.edfloreshz.Tasks
 Categories=COSMIC;Utility;FileManager;
 Keywords=Folder;Manager;
 MimeType=inode/directory;

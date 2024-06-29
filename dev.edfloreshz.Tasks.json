@@ -1,10 +1,10 @@
 {
-  "id": "dev.edfloreshz.Orderly",
+  "id": "dev.edfloreshz.Tasks",
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "23.08",
   "sdk": "org.freedesktop.Sdk",
   "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
-  "command": "orderly",
+  "command": "tasks",
   "finish-args": [
     "--share=ipc",
     "--socket=fallback-x11",
@@ -15,7 +15,7 @@
     "append-path": "/usr/lib/sdk/rust-stable/bin",
     "build-args": ["--share=network"],
     "env": {
-      "CARGO_HOME": "/run/build/orderly/cargo"
+      "CARGO_HOME": "/run/build/tasks/cargo"
     }
   },
   "modules": [
@@ -43,14 +43,14 @@
       ]
     },
     {
-      "name": "orderly",
+      "name": "tasks",
       "buildsystem": "simple",
       "build-commands": ["just vendor", "just build-vendored", "just flatpak"],
       "sources": [
         {
           "type": "git",
           "branch": "main",
-          "url": "https://github.com/edfloreshz/orderly.git"
+          "url": "https://github.com/edfloreshz/tasks.git"
         }
       ]
     }
