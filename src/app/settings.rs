@@ -13,7 +13,8 @@ pub fn init() -> (Settings, Flags) {
     set_localization();
     set_icon_cache();
     set_logger();
-    migrate();
+    migrate("com.system76.CosmicTasks");
+    migrate("dev.edfloreshz.Orderly");
     let settings = get_app_settings();
     let flags = get_flags();
     (settings, flags)
@@ -48,9 +49,8 @@ pub fn get_flags() -> Flags {
     flags
 }
 
-pub fn migrate() {
-    const PREV_APP_ID: &str = "dev.edfloreshz.Orderly";
-    let prev = dirs::data_local_dir().unwrap().join(PREV_APP_ID);
+pub fn migrate(prev_app_id: &str) {
+    let prev = dirs::data_local_dir().unwrap().join(prev_app_id);
     let new = dirs::data_local_dir().unwrap().join(Tasks::APP_ID);
     if prev.exists() {
         match std::fs::rename(prev, new) {
