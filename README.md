@@ -1,6 +1,6 @@
 <div align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/edfloreshz/tasks/main/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg" width="150" />
+  <img src="res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg" width="150" />
   <h1>Tasks</h1>
 
   <h3>A simple task management application for the COSMIC™ desktop</h3>
