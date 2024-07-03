@@ -1,38 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>dev.edfloreshz.Tasks</id>
+  <developer id="dev.edfloreshz">
+    <name>Eduardo Flores</name>
+  </developer>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
-  <developer_name>System76</developer_name>
+  <content_rating type="oars-1.1" />
   <update_contact>edfloreshz@proton.me</update_contact>
   <url type="homepage">https://github.com/edfloreshz/tasks</url>
   <url type="bugtracker">https://github.com/edfloreshz/tasks</url>
   <name>Tasks</name>
-  <summary>Tasks application for the COSMIC desktop</summary>
+  <summary>Tasks management application for the COSMIC™ desktop</summary>
   <description>
-    <p>Tasks application that provides advanced features with high performance</p>
+    <p>A simple task management app, reaching across the cosmos to help you get things done</p>
     <ul>
-        <li>Built with Rust for exceptional performance and responsiveness.</li>
-        <li>Organize your tasks into lists.</li>
+        <li>Exceptional performance and responsiveness.</li>
+        <li>Effortless keyboard shortcut support.</li>
+        <li>Expressive emoji integration.</li>
     </ul>
   </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#eaeaffff</color>
+    <color type="primary" scheme_preference="dark">#421676ff</color>
+  </branding>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
+  <releases>
+    <release version="0.1.0" date="2024-07-02">
+        <description>
+            <p>Initial release! 🎉</p>
+            <ul>
+                <li>Organize tasks into lists</li>
+                <li>Rest your eyes with dark mode</li>
+                <li>Manage tasks with ease using keyboard shortcuts</li>
+                <li>Export tasks to Markdown</li>
+            </ul>
+        </description>
+    </release>
+  </releases>
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png</image>
+      <caption>Window in light mode</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png</image>
+      <caption>Window in dark mode</caption>
     </screenshot>
   </screenshots>
   <provides>
-    <mimetypes>
-      <mimetype>text/plain</mimetype>
-    </mimetypes>
-    <binaries>
-      <binary>tasks</binary>
-    </binaries>
+    <id>dev.edfloreshz.Tasks.desktop</id>
+    <binary>tasks</binary>
   </provides>
 </component>

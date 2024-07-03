@@ -1,11 +1,10 @@
-#TODO: more build-out, desktop actions, translations?
 [Desktop Entry]
 Name=Tasks
+GenericName=Task Manager
 Exec=tasks %F
 Terminal=false
 Type=Application
 StartupNotify=true
 Icon=dev.edfloreshz.Tasks
-Categories=COSMIC;Utility;FileManager;
-Keywords=Folder;Manager;
-MimeType=inode/directory;
+Categories=Utility;
+Keywords=Tasks;Management,Todo,Project,Planner,Organizer,Reminder,Checklist,Task,To-do,List;
