@@ -5,10 +5,10 @@ use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::{theme, widget, Element};
+use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 use tasks_core::models::priority::Priority;
 use tasks_core::models::status::Status;
 use tasks_core::models::task::Task;
-use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
 

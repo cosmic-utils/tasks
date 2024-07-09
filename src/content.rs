@@ -3,10 +3,10 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{theme, widget, Apply, Element};
+use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 use tasks_core::models::list::List;
 use tasks_core::models::status::Status;
 use tasks_core::models::task::Task;
-use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::fl;
 

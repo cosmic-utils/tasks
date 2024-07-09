@@ -1,8 +1,8 @@
 use crate::app::markdown::Markdown;
+use std::error::Error;
 use tasks_core::models::list::List;
 use tasks_core::models::task::Task;
 use tasks_core::service::TaskService;
-use std::error::Error;
 
 pub async fn update_list(list: List, service: TaskService) -> Result<(), Box<dyn Error>> {
     if let Some(mut service) = service.get_service() {

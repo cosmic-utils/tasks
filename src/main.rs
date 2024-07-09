@@ -7,7 +7,6 @@ mod content;
 mod details;
 mod todo;
 
-#[rustfmt::skip]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (settings, flags) = app::settings::init();
     cosmic::app::run::<Tasks>(settings, flags)?;
