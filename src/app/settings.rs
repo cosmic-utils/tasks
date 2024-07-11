@@ -53,7 +53,7 @@ pub fn migrate(prev_app_id: &str) {
     let new = dirs::data_local_dir().unwrap().join(Tasks::APP_ID);
     if prev.exists() {
         match std::fs::rename(prev, new) {
-            Ok(_) => log::info!("migrated data to new directory"),
+            Ok(()) => log::info!("migrated data to new directory"),
             Err(err) => log::error!("error migrating data: {:?}", err),
         }
     }

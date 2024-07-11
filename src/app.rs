@@ -120,8 +120,6 @@ pub struct Flags {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Action {
     About,
-    ItemDown,
-    ItemUp,
     Settings,
     WindowClose,
     WindowNew,
@@ -136,8 +134,6 @@ impl MenuAction for Action {
     fn message(&self) -> Self::Message {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
-            Action::ItemDown => Message::Content(content::Message::ItemDown),
-            Action::ItemUp => Message::Content(content::Message::ItemUp),
             Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
             Action::WindowClose => Message::WindowClose,
             Action::WindowNew => Message::WindowNew,
@@ -190,10 +186,7 @@ impl Tasks {
                 hash = short_hash.as_str(),
                 date = date
             ))
-            .on_press(Message::LaunchUrl(format!(
-                "{}/commits/{}",
-                repository, hash
-            )))
+            .on_press(Message::LaunchUrl(format!("{repository}/commits/{hash}")))
             .padding(spacing.space_none)
             .into(),
         ])
@@ -221,7 +214,7 @@ impl Tasks {
         .into()
     }
 
-    fn create_nav_item(&mut self, list: List) -> EntityMut<SingleSelect> {
+    fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
         self.nav_model
             .insert()
             .text(format!(
@@ -289,10 +282,7 @@ impl Application for Tasks {
     }
 
     fn dialog(&self) -> Option<Element<Message>> {
-        let dialog_page = match self.dialog_pages.front() {
-            Some(some) => some,
-            None => return None,
-        };
+        let dialog_page = self.dialog_pages.front()?;
 
         let spacing = theme::active().cosmic().spacing;
 
@@ -372,7 +362,7 @@ impl Application for Tasks {
                     .control(
                         widget::container(scrollable(widget::row::with_children(vec![
                             widget::flex_row(icon_buttons).into(),
-                            horizontal_space(Length::Fixed(spacing.space_s as f32)).into(),
+                            horizontal_space(Length::Fixed(f32::from(spacing.space_s))).into(),
                         ])))
                         .height(Length::Fixed(300.0)),
                     );
@@ -604,8 +594,7 @@ impl Application for Tasks {
                             let command = Command::perform(
                                 todo::update_task(task, self.service.clone().clone()),
                                 |result| match result {
-                                    Ok(_) => message::none(),
-                                    Err(_) => message::none(),
+                                    Ok(()) | Err(_) => message::none(),
                                 },
                             );
                             commands.push(command);
@@ -620,8 +609,7 @@ impl Application for Tasks {
                                         self.service.clone().clone(),
                                     ),
                                     |result| match result {
-                                        Ok(_) => message::none(),
-                                        Err(_) => message::none(),
+                                        Ok(()) | Err(_) => message::none(),
                                     },
                                 );
                                 commands.push(command);
@@ -631,8 +619,7 @@ impl Application for Tasks {
                             let command = Command::perform(
                                 todo::create_task(task, self.service.clone()),
                                 |result| match result {
-                                    Ok(_) => message::none(),
-                                    Err(_) => message::none(),
+                                    Ok(()) | Err(_) => message::none(),
                                 },
                             );
                             commands.push(command);
@@ -665,17 +652,17 @@ impl Application for Tasks {
             Message::NavMenuAction(action) => match action {
                 NavMenuAction::Rename(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenRenameListDialog))
+                        commands.push(self.update(Message::OpenRenameListDialog));
                     }
                 }
                 NavMenuAction::SetIcon(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenIconDialog))
+                        commands.push(self.update(Message::OpenIconDialog));
                     }
                 }
                 NavMenuAction::Delete(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenDeleteListDialog))
+                        commands.push(self.update(Message::OpenDeleteListDialog));
                     }
                 }
             },
@@ -693,13 +680,13 @@ impl Application for Tasks {
             }
             Message::WindowNew => match env::current_exe() {
                 Ok(exe) => match process::Command::new(&exe).spawn() {
-                    Ok(_child) => {}
+                    Ok(_) => {}
                     Err(err) => {
-                        eprintln!("failed to execute {:?}: {}", exe, err);
+                        eprintln!("failed to execute {exe:?}: {err}");
                     }
                 },
                 Err(err) => {
-                    eprintln!("failed to get current executable path: {}", err);
+                    eprintln!("failed to get current executable path: {err}");
                 }
             },
             Message::LaunchUrl(url) => match open::that_detached(&url) {
@@ -731,7 +718,7 @@ impl Application for Tasks {
             }
             Message::PopulateLists(lists) => {
                 for list in lists {
-                    self.create_nav_item(list);
+                    self.create_nav_item(&list);
                 }
                 let Some(entity) = self.nav_model.iter().next() else {
                     return Command::none();
@@ -741,7 +728,7 @@ impl Application for Tasks {
                 commands.push(command);
             }
             Message::Key(modifiers, key) => {
-                for (key_bind, action) in self.key_binds.iter() {
+                for (key_bind, action) in &self.key_binds {
                     if key_bind.matches(modifiers, &key) {
                         return self.update(action.message());
                     }
@@ -751,7 +738,7 @@ impl Application for Tasks {
                 self.modifiers = modifiers;
             }
             Message::AddList(list) => {
-                self.create_nav_item(list);
+                self.create_nav_item(&list);
                 let Some(entity) = self.nav_model.iter().last() else {
                     return Command::none();
                 };
@@ -763,8 +750,7 @@ impl Application for Tasks {
                     let command = Command::perform(
                         todo::delete_list(list.id().clone(), self.service.clone()),
                         |result| match result {
-                            Ok(_) => message::none(),
-                            Err(_) => message::none(),
+                            Ok(()) | Err(_) => message::none(),
                         },
                     );
 
@@ -776,7 +762,7 @@ impl Application for Tasks {
             }
             Message::Export(tasks) => {
                 if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
-                    let exported_markdown = todo::export_list(list.clone(), tasks);
+                    let exported_markdown = todo::export_list(list, &tasks);
                     commands.push(self.update(Message::OpenExportDialog(exported_markdown)));
                 }
             }

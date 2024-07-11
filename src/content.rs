@@ -26,8 +26,6 @@ pub enum Message {
     EditMode(DefaultKey, bool),
     Export(Vec<Task>),
     Input(String),
-    ItemDown,
-    ItemUp,
     List(Option<List>),
     Select(Task),
     SetItems(Vec<Task>),
@@ -193,8 +191,6 @@ impl Content {
                     commands.push(Command::GetTasks(list.id().clone()));
                 }
             }
-            Message::ItemDown => {}
-            Message::ItemUp => {}
             Message::TitleUpdate(id, title) => {
                 if let Some(task) = self.tasks.get_mut(id) {
                     task.title = title;
@@ -223,10 +219,10 @@ impl Content {
             }
             Message::SetItems(tasks) => {
                 self.tasks.clear();
-                tasks.into_iter().for_each(|task| {
+                for task in tasks {
                     let id = self.tasks.insert(task);
                     self.task_input_ids.insert(id, widget::Id::unique());
-                });
+                }
             }
             Message::Select(task) => {
                 commands.push(Command::DisplayTask(task));

@@ -70,8 +70,8 @@ pub async fn delete_task(
     Ok(())
 }
 
-pub fn export_list(list: List, tasks: Vec<Task>) -> String {
+pub fn export_list(list: &List, tasks: &[Task]) -> String {
     let markdown = list.markdown();
-    let tasks_markdown: String = tasks.iter().map(|task| task.markdown()).collect();
-    format!("{}\n{}", markdown, tasks_markdown)
+    let tasks_markdown: String = tasks.iter().map(Markdown::markdown).collect();
+    format!("{markdown}\n{tasks_markdown}")
 }
