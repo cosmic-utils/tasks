@@ -28,7 +28,7 @@ emojis = "0.6.1"
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
-features = ["multi-window", "tokio", "winit", "wgpu"]
+features = ["multi-window", "tokio", "winit", "wgpu", "dbus-config"]
 
 [dependencies.smol_str]
 version = "0.2.1"

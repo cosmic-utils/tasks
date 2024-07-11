@@ -7,8 +7,9 @@
   "command": "tasks",
   "finish-args": [
     "--share=ipc",
-    "--socket=fallback-x11",
     "--socket=wayland",
+    "--socket=fallback-x11",
+    "--talk-name=com.system76.CosmicSettingsDaemon.*",
     "--device=dri"
   ],
   "build-options": {

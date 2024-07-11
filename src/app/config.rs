@@ -20,12 +20,10 @@ impl TasksConfig {
     pub fn config() -> TasksConfig {
         match Self::config_handler() {
             Some(config_handler) => {
-                let config =
-                    TasksConfig::get_entry(&config_handler).unwrap_or_else(|(errs, config)| {
-                        log::info!("errors loading config: {:?}", errs);
-                        config
-                    });
-                config
+                TasksConfig::get_entry(&config_handler).unwrap_or_else(|(errs, config)| {
+                    log::info!("errors loading config: {:?}", errs);
+                    config
+                })
             }
             None => TasksConfig::default(),
         }

@@ -5,6 +5,8 @@ use std::{env, process};
 use chrono::{Local, NaiveDate};
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::app::{message, Core, Message as CosmicMessage};
+use cosmic::cosmic_config::Update;
+use cosmic::cosmic_theme::ThemeMode;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::{
@@ -68,7 +70,7 @@ pub enum Message {
     Key(Modifiers, Key),
     Modifiers(Modifiers),
     AppTheme(usize),
-    SystemThemeModeChange(cosmic_theme::ThemeMode),
+    SystemThemeModeChange,
     OpenNewListDialog,
     OpenRenameListDialog,
     OpenDeleteListDialog,
@@ -499,7 +501,7 @@ impl Application for Tasks {
                 Self::APP_ID.into(),
                 CONFIG_VERSION,
             )
-            .map(|update| {
+            .map(|update: Update<ThemeMode>| {
                 if !update.errors.is_empty() {
                     log::info!(
                         "errors loading config {:?}: {:?}",
@@ -507,14 +509,14 @@ impl Application for Tasks {
                         update.errors
                     );
                 }
-                Message::SystemThemeModeChange(update.config)
+                Message::SystemThemeModeChange
             }),
             cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
                 TypeId::of::<ThemeSubscription>(),
                 cosmic_theme::THEME_MODE_ID.into(),
                 cosmic_theme::ThemeMode::version(),
             )
-            .map(|update| {
+            .map(|update: Update<ThemeMode>| {
                 if !update.errors.is_empty() {
                     log::info!(
                         "errors loading theme mode {:?}: {:?}",
@@ -522,7 +524,7 @@ impl Application for Tasks {
                         update.errors
                     );
                 }
-                Message::SystemThemeModeChange(update.config)
+                Message::SystemThemeModeChange
             }),
         ];
 
@@ -715,7 +717,7 @@ impl Application for Tasks {
                 config_set!(app_theme, app_theme);
                 return self.update_config();
             }
-            Message::SystemThemeModeChange(_) => {
+            Message::SystemThemeModeChange => {
                 return self.update_config();
             }
             Message::FetchLists => {
@@ -835,7 +837,7 @@ impl Application for Tasks {
                             let entity = self.nav_model.active();
                             self.nav_model.text_set(entity, name.clone());
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.name = name.clone();
+                                list.name.clone_from(&name);
                                 let command = Command::perform(
                                     todo::update_list(list.clone(), self.service.clone()),
                                     |_| message::none(),

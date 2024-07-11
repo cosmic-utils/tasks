@@ -188,7 +188,7 @@ impl Content {
         let mut commands = Vec::new();
         match message {
             Message::List(list) => {
-                self.list = list.clone();
+                self.list.clone_from(&list);
                 if let Some(list) = list {
                     commands.push(Command::GetTasks(list.id().clone()));
                 }

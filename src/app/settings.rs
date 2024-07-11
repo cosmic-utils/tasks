@@ -42,11 +42,10 @@ pub fn set_icon_cache() {
 pub fn get_flags() -> Flags {
     let (config_handler, config) = (TasksConfig::config_handler(), TasksConfig::config());
 
-    let flags = Flags {
+    Flags {
         config_handler,
         config,
-    };
-    flags
+    }
 }
 
 pub fn migrate(prev_app_id: &str) {
