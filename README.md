@@ -7,6 +7,10 @@
 
   ![window-light.png](https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png#gh-light-mode-only)
   ![window-dark.png](https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png#gh-dark-mode-only)
+
+  <a href='https://flathub.org/apps/dev.edfloreshz.Tasks'>
+    <img width='200' alt='Get it on Flathub' src='https://flathub.org/api/badge?locale=en'/>
+  </a>
 </div>
 
 # Installation
