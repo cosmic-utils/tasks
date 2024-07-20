@@ -3,7 +3,7 @@
   <img src="res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg" width="150" />
   <h1>Tasks</h1>
 
-  <h3>A simple task management application for the COSMIC™ desktop</h3>
+  <p>A simple task management application for the COSMIC™ desktop</p>
 
   ![window-light.png](https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png#gh-light-mode-only)
   ![window-dark.png](https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png#gh-dark-mode-only)
