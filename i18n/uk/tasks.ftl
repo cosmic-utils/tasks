@@ -1,5 +1,5 @@
-empty-folder = Порожня тека
-empty-folder-hidden = Порожня тека (містить приховані елементи)
+empty-folder = Тека порожня
+empty-folder-hidden = Тека порожня (але містить приховані елементи)
 filesystem = Файлова система
 trash = Смітник
 
@@ -21,7 +21,7 @@ light = Світла
 # Context menu
 new-file = Новий файл
 new-folder = Нова тека
-move-to-trash = Перемістити у смітник
+move-to-trash = Перемістити до смітника
 restore-from-trash = Відновити зі смітника
 
 # Menu
@@ -34,7 +34,7 @@ close-tab = Закрити вкладку
 quit = Вийти
 
 ## Edit
-edit = Редагування
+edit = Зміни
 cut = Вирізати
 copy = Копіювати
 paste = Вставити
