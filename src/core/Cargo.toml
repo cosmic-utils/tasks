@@ -1,5 +1,5 @@
 [package]
-name = "cosmic-tasks-core"
+name = "tasks-core"
 version = "0.1.0"
 edition = "2021"
 

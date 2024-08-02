@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Tasks
+GenericName=Task Manager
+Exec=tasks %F
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=dev.edfloreshz.Tasks
+Categories=Utility;
+Keywords=Tasks;Management,Todo,Project,Planner,Organizer,Reminder,Checklist,Task,To-do,List;

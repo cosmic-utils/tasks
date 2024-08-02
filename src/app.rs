@@ -5,6 +5,8 @@ use std::{env, process};
 use chrono::{Local, NaiveDate};
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::app::{message, Core, Message as CosmicMessage};
+use cosmic::cosmic_config::Update;
+use cosmic::cosmic_theme::ThemeMode;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::{
@@ -18,9 +20,9 @@ use cosmic::{
     app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt,
     Command, Element,
 };
-use cosmic_tasks_core::models::list::List;
-use cosmic_tasks_core::models::task::Task;
-use cosmic_tasks_core::service::{Provider, TaskService};
+use tasks_core::models::list::List;
+use tasks_core::models::task::Task;
+use tasks_core::service::{Provider, TaskService};
 
 use crate::app::config::{AppTheme, CONFIG_VERSION};
 use crate::app::key_bind::key_binds;
@@ -36,14 +38,14 @@ pub mod markdown;
 pub mod menu;
 pub mod settings;
 
-pub struct App {
+pub struct Tasks {
     core: Core,
     service: TaskService,
     nav_model: segmented_button::SingleSelectModel,
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
-    config: config::CosmicTasksConfig,
+    config: config::TasksConfig,
     app_themes: Vec<String>,
     context_page: ContextPage,
     key_binds: HashMap<KeyBind, Action>,
@@ -68,7 +70,7 @@ pub enum Message {
     Key(Modifiers, Key),
     Modifiers(Modifiers),
     AppTheme(usize),
-    SystemThemeModeChange(cosmic_theme::ThemeMode),
+    SystemThemeModeChange,
     OpenNewListDialog,
     OpenRenameListDialog,
     OpenDeleteListDialog,
@@ -112,14 +114,12 @@ pub enum DialogPage {
 #[derive(Clone, Debug)]
 pub struct Flags {
     pub config_handler: Option<cosmic_config::Config>,
-    pub config: config::CosmicTasksConfig,
+    pub config: config::TasksConfig,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Action {
     About,
-    ItemDown,
-    ItemUp,
     Settings,
     WindowClose,
     WindowNew,
@@ -131,11 +131,9 @@ pub enum Action {
 
 impl MenuAction for Action {
     type Message = Message;
-    fn message(&self, _entity_opt: Option<Entity>) -> Self::Message {
+    fn message(&self) -> Self::Message {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
-            Action::ItemDown => Message::Content(content::Message::ItemDown),
-            Action::ItemUp => Message::Content(content::Message::ItemUp),
             Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
             Action::WindowClose => Message::WindowClose,
             Action::WindowNew => Message::WindowNew,
@@ -157,38 +155,40 @@ pub enum NavMenuAction {
 impl MenuAction for NavMenuAction {
     type Message = cosmic::app::Message<Message>;
 
-    fn message(&self, _entity: Option<Entity>) -> Self::Message {
+    fn message(&self) -> Self::Message {
         cosmic::app::Message::App(Message::NavMenuAction(*self))
     }
 }
 
-impl App {
+impl Tasks {
     fn update_config(&mut self) -> Command<CosmicMessage<Message>> {
         app::command::set_theme(self.config.app_theme.theme())
     }
 
     fn about(&self) -> Element<Message> {
         let spacing = theme::active().cosmic().spacing;
-        let repository = "https://github.com/edfloreshz/cosmic-tasks";
+        let repository = "https://github.com/edfloreshz/tasks";
         let hash = env!("VERGEN_GIT_SHA");
         let short_hash: String = hash.chars().take(7).collect();
         let date = env!("VERGEN_GIT_COMMIT_DATE");
         widget::column::with_children(vec![
             widget::svg(widget::svg::Handle::from_memory(
-                &include_bytes!(
-                    "../res/icons/hicolor/128x128/apps/com.system76.CosmicTasks.svg"
-                )[..],
+                &include_bytes!("../res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg")[..],
             ))
-                .into(),
-            widget::text::title3(fl!("cosmic-tasks")).into(),
+            .into(),
+            widget::text::title3(fl!("tasks")).into(),
             widget::button::link(repository)
                 .on_press(Message::LaunchUrl(repository.to_string()))
                 .padding(spacing.space_none)
                 .into(),
-            widget::button::link(fl!("git-description", hash = short_hash.as_str(), date = date))
-                .on_press(Message::LaunchUrl(format!("{}/commits/{}", repository, hash)))
-                .padding(spacing.space_none)
-                .into(),
+            widget::button::link(fl!(
+                "git-description",
+                hash = short_hash.as_str(),
+                date = date
+            ))
+            .on_press(Message::LaunchUrl(format!("{repository}/commits/{hash}")))
+            .padding(spacing.space_none)
+            .into(),
         ])
         .align_items(Alignment::Center)
         .spacing(spacing.space_xxs)
@@ -214,7 +214,7 @@ impl App {
         .into()
     }
 
-    fn create_nav_item(&mut self, list: List) -> EntityMut<SingleSelect> {
+    fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
         self.nav_model
             .insert()
             .text(format!(
@@ -228,11 +228,11 @@ impl App {
     }
 }
 
-impl Application for App {
+impl Application for Tasks {
     type Executor = executor::Default;
     type Flags = Flags;
     type Message = Message;
-    const APP_ID: &'static str = "com.system76.CosmicTasks";
+    const APP_ID: &'static str = "dev.edfloreshz.Tasks";
 
     fn core(&self) -> &Core {
         &self.core
@@ -246,7 +246,7 @@ impl Application for App {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
-        let app = App {
+        let app = Tasks {
             core,
             service: service.clone(),
             nav_model,
@@ -282,10 +282,7 @@ impl Application for App {
     }
 
     fn dialog(&self) -> Option<Element<Message>> {
-        let dialog_page = match self.dialog_pages.front() {
-            Some(some) => some,
-            None => return None,
-        };
+        let dialog_page = self.dialog_pages.front()?;
 
         let spacing = theme::active().cosmic().spacing;
 
@@ -365,7 +362,7 @@ impl Application for App {
                     .control(
                         widget::container(scrollable(widget::row::with_children(vec![
                             widget::flex_row(icon_buttons).into(),
-                            horizontal_space(Length::Fixed(spacing.space_s as f32)).into(),
+                            horizontal_space(Length::Fixed(f32::from(spacing.space_s))).into(),
                         ])))
                         .height(Length::Fixed(300.0)),
                     );
@@ -466,7 +463,7 @@ impl Application for App {
 
         if let Some(list) = location_opt {
             let message = Message::Content(content::Message::List(Some(list.clone())));
-            let window_title = format!("{} - {}", list.name, fl!("cosmic-tasks"));
+            let window_title = format!("{} - {}", list.name, fl!("tasks"));
             commands.push(self.set_window_title(window_title, self.main_window_id()));
             return self.update(message);
         }
@@ -494,7 +491,7 @@ impl Application for App {
                 Self::APP_ID.into(),
                 CONFIG_VERSION,
             )
-            .map(|update| {
+            .map(|update: Update<ThemeMode>| {
                 if !update.errors.is_empty() {
                     log::info!(
                         "errors loading config {:?}: {:?}",
@@ -502,14 +499,14 @@ impl Application for App {
                         update.errors
                     );
                 }
-                Message::SystemThemeModeChange(update.config)
+                Message::SystemThemeModeChange
             }),
             cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
                 TypeId::of::<ThemeSubscription>(),
                 cosmic_theme::THEME_MODE_ID.into(),
                 cosmic_theme::ThemeMode::version(),
             )
-            .map(|update| {
+            .map(|update: Update<ThemeMode>| {
                 if !update.errors.is_empty() {
                     log::info!(
                         "errors loading theme mode {:?}: {:?}",
@@ -517,7 +514,7 @@ impl Application for App {
                         update.errors
                     );
                 }
-                Message::SystemThemeModeChange(update.config)
+                Message::SystemThemeModeChange
             }),
         ];
 
@@ -597,8 +594,7 @@ impl Application for App {
                             let command = Command::perform(
                                 todo::update_task(task, self.service.clone().clone()),
                                 |result| match result {
-                                    Ok(_) => message::none(),
-                                    Err(_) => message::none(),
+                                    Ok(()) | Err(_) => message::none(),
                                 },
                             );
                             commands.push(command);
@@ -613,8 +609,7 @@ impl Application for App {
                                         self.service.clone().clone(),
                                     ),
                                     |result| match result {
-                                        Ok(_) => message::none(),
-                                        Err(_) => message::none(),
+                                        Ok(()) | Err(_) => message::none(),
                                     },
                                 );
                                 commands.push(command);
@@ -624,8 +619,7 @@ impl Application for App {
                             let command = Command::perform(
                                 todo::create_task(task, self.service.clone()),
                                 |result| match result {
-                                    Ok(_) => message::none(),
-                                    Err(_) => message::none(),
+                                    Ok(()) | Err(_) => message::none(),
                                 },
                             );
                             commands.push(command);
@@ -658,17 +652,17 @@ impl Application for App {
             Message::NavMenuAction(action) => match action {
                 NavMenuAction::Rename(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenRenameListDialog))
+                        commands.push(self.update(Message::OpenRenameListDialog));
                     }
                 }
                 NavMenuAction::SetIcon(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenIconDialog))
+                        commands.push(self.update(Message::OpenIconDialog));
                     }
                 }
                 NavMenuAction::Delete(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenDeleteListDialog))
+                        commands.push(self.update(Message::OpenDeleteListDialog));
                     }
                 }
             },
@@ -686,13 +680,13 @@ impl Application for App {
             }
             Message::WindowNew => match env::current_exe() {
                 Ok(exe) => match process::Command::new(&exe).spawn() {
-                    Ok(_child) => {}
+                    Ok(_) => {}
                     Err(err) => {
-                        eprintln!("failed to execute {:?}: {}", exe, err);
+                        eprintln!("failed to execute {exe:?}: {err}");
                     }
                 },
                 Err(err) => {
-                    eprintln!("failed to get current executable path: {}", err);
+                    eprintln!("failed to get current executable path: {err}");
                 }
             },
             Message::LaunchUrl(url) => match open::that_detached(&url) {
@@ -710,7 +704,7 @@ impl Application for App {
                 config_set!(app_theme, app_theme);
                 return self.update_config();
             }
-            Message::SystemThemeModeChange(_) => {
+            Message::SystemThemeModeChange => {
                 return self.update_config();
             }
             Message::FetchLists => {
@@ -724,7 +718,7 @@ impl Application for App {
             }
             Message::PopulateLists(lists) => {
                 for list in lists {
-                    self.create_nav_item(list);
+                    self.create_nav_item(&list);
                 }
                 let Some(entity) = self.nav_model.iter().next() else {
                     return Command::none();
@@ -734,9 +728,9 @@ impl Application for App {
                 commands.push(command);
             }
             Message::Key(modifiers, key) => {
-                for (key_bind, action) in self.key_binds.iter() {
+                for (key_bind, action) in &self.key_binds {
                     if key_bind.matches(modifiers, &key) {
-                        return self.update(action.message(None));
+                        return self.update(action.message());
                     }
                 }
             }
@@ -744,7 +738,7 @@ impl Application for App {
                 self.modifiers = modifiers;
             }
             Message::AddList(list) => {
-                self.create_nav_item(list);
+                self.create_nav_item(&list);
                 let Some(entity) = self.nav_model.iter().last() else {
                     return Command::none();
                 };
@@ -756,8 +750,7 @@ impl Application for App {
                     let command = Command::perform(
                         todo::delete_list(list.id().clone(), self.service.clone()),
                         |result| match result {
-                            Ok(_) => message::none(),
-                            Err(_) => message::none(),
+                            Ok(()) | Err(_) => message::none(),
                         },
                     );
 
@@ -769,7 +762,7 @@ impl Application for App {
             }
             Message::Export(tasks) => {
                 if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
-                    let exported_markdown = todo::export_list(list.clone(), tasks);
+                    let exported_markdown = todo::export_list(list, &tasks);
                     commands.push(self.update(Message::OpenExportDialog(exported_markdown)));
                 }
             }
@@ -830,7 +823,7 @@ impl Application for App {
                             let entity = self.nav_model.active();
                             self.nav_model.text_set(entity, name.clone());
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.name = name.clone();
+                                list.name.clone_from(&name);
                                 let command = Command::perform(
                                     todo::update_list(list.clone(), self.service.clone()),
                                     |_| message::none(),

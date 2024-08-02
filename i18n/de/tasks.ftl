@@ -1,4 +1,4 @@
-cosmic-tasks = COSMIC Tasks
+tasks = Tasks
 trash = Papierkorb
 about = Über
 
@@ -86,4 +86,4 @@ delete = Löschen
 ## View
 view = Ansicht
 menu-settings = Einstellungen...
-menu-about = Über COSMIC Tasks...
+menu-about = Über Tasks...

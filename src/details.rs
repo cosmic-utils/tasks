@@ -5,16 +5,15 @@ use cosmic::iced_widget::row;
 use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::{theme, widget, Element};
-use cosmic_tasks_core::models::priority::Priority;
-use cosmic_tasks_core::models::status::Status;
-use cosmic_tasks_core::models::task::Task;
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
+use tasks_core::models::priority::Priority;
+use tasks_core::models::status::Status;
+use tasks_core::models::task::Task;
 
 use crate::fl;
 
 pub struct Details {
     pub task: Option<Task>,
-    pub is_editable: bool,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
     pub subtasks: SlotMap<DefaultKey, Task>,
@@ -69,7 +68,6 @@ impl Details {
         Self {
             task: None,
             priority_model,
-            is_editable: false,
             subtask_input: String::new(),
             subtasks: SlotMap::new(),
             editing: SecondaryMap::new(),
@@ -82,12 +80,12 @@ impl Details {
         match message {
             Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
-                    task.title = title.clone();
+                    task.title.clone_from(&title);
                 }
             }
             Message::SetNotes(notes) => {
                 if let Some(ref mut task) = &mut self.task {
-                    task.notes = notes.clone();
+                    task.notes.clone_from(&notes);
                 }
             }
             Message::Favorite(favorite) => {
@@ -117,7 +115,7 @@ impl Details {
             Message::SetSubTaskTitle(id, title) => {
                 let task = self.subtasks.get_mut(id);
                 if let Some(task) = task {
-                    task.title = title.clone();
+                    task.title.clone_from(&title);
                 }
             }
             Message::CompleteSubTask(id, completed) => {

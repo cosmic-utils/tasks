@@ -21,10 +21,6 @@ pub fn key_binds() -> HashMap<KeyBind, Action> {
         }};
     }
 
-    bind!([], Key::Named(Named::ArrowDown), ItemDown);
-    bind!([], Key::Named(Named::ArrowUp), ItemUp);
-    bind!([Shift], Key::Named(Named::ArrowDown), ItemDown);
-    bind!([Shift], Key::Named(Named::ArrowUp), ItemUp);
     bind!([Ctrl], Key::Character("n".into()), NewList);
     bind!([], Key::Named(Named::Delete), DeleteList);
     bind!([], Key::Named(Named::Enter), RenameList);

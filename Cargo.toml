@@ -1,5 +1,5 @@
 [package]
-name = "cosmic-tasks"
+name = "tasks"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,7 +19,7 @@ open = "5.0.2"
 dirs = "5.0.1"
 chrono = "0.4.35"
 tokio = "1"
-cosmic-tasks-core = { path = "src/core" }
+tasks-core = { path = "src/core" }
 tracing = "0.1.40"
 cli-clipboard = "0.4.0"
 slotmap = "1.0.7"
@@ -28,7 +28,7 @@ emojis = "0.6.1"
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
-features = ["multi-window", "tokio", "winit", "wgpu"]
+features = ["multi-window", "tokio", "winit", "wgpu", "dbus-config"]
 
 [dependencies.smol_str]
 version = "0.2.1"

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.edfloreshz.Tasks</id>
+  <developer id="dev.edfloreshz">
+    <name>Eduardo Flores</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <project_group>COSMIC</project_group>
+  <content_rating type="oars-1.1" />
+  <update_contact>edfloreshz@proton.me</update_contact>
+  <url type="homepage">https://github.com/edfloreshz/tasks</url>
+  <url type="bugtracker">https://github.com/edfloreshz/tasks</url>
+  <name>Tasks</name>
+  <summary>Get things done</summary>
+  <description>
+    <p>A simple task management app, reaching across the cosmos to help you get things done</p>
+    <ul>
+        <li>Exceptional performance and responsiveness.</li>
+        <li>Effortless keyboard shortcut support.</li>
+        <li>Expressive emoji integration.</li>
+    </ul>
+  </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#eaeaff</color>
+    <color type="primary" scheme_preference="dark">#280c4b</color>
+  </branding>
+  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
+  <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
+  <releases>
+    <release version="0.1.0" date="2024-07-02">
+        <description>
+            <p>Initial release! 🎉</p>
+            <ul>
+                <li>Organize tasks into lists</li>
+                <li>Rest your eyes with dark mode</li>
+                <li>Manage tasks with ease using keyboard shortcuts</li>
+                <li>Export tasks to Markdown</li>
+            </ul>
+        </description>
+    </release>
+  </releases>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png</image>
+      <caption>Light mode</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png</image>
+      <caption>Dark mode</caption>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <id>dev.edfloreshz.Tasks.desktop</id>
+    <binary>tasks</binary>
+  </provides>
+</component>

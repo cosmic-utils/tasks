@@ -1,4 +1,4 @@
-cosmic-tasks = COSMIC Zadaci
+tasks = COSMIC Zadaci
 trash = Otpad
 about = O programu
 

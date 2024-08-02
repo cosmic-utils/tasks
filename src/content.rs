@@ -3,10 +3,10 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{theme, widget, Apply, Element};
-use cosmic_tasks_core::models::list::List;
-use cosmic_tasks_core::models::status::Status;
-use cosmic_tasks_core::models::task::Task;
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
+use tasks_core::models::list::List;
+use tasks_core::models::status::Status;
+use tasks_core::models::task::Task;
 
 use crate::fl;
 
@@ -26,8 +26,6 @@ pub enum Message {
     EditMode(DefaultKey, bool),
     Export(Vec<Task>),
     Input(String),
-    ItemDown,
-    ItemUp,
     List(Option<List>),
     Select(Task),
     SetItems(Vec<Task>),
@@ -188,13 +186,11 @@ impl Content {
         let mut commands = Vec::new();
         match message {
             Message::List(list) => {
-                self.list = list.clone();
+                self.list.clone_from(&list);
                 if let Some(list) = list {
                     commands.push(Command::GetTasks(list.id().clone()));
                 }
             }
-            Message::ItemDown => {}
-            Message::ItemUp => {}
             Message::TitleUpdate(id, title) => {
                 if let Some(task) = self.tasks.get_mut(id) {
                     task.title = title;
@@ -223,10 +219,10 @@ impl Content {
             }
             Message::SetItems(tasks) => {
                 self.tasks.clear();
-                tasks.into_iter().for_each(|task| {
+                for task in tasks {
                     let id = self.tasks.insert(task);
                     self.task_input_ids.insert(id, widget::Id::unique());
-                });
+                }
             }
             Message::Select(task) => {
                 commands.push(Command::DisplayTask(task));
