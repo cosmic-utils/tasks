@@ -1,14 +1,9 @@
-// Copyright 2023 System76 <info@system76.com>
-// SPDX-License-Identifier: GPL-3.0-only
-
-use crate::app::Tasks;
 mod app;
 mod content;
 mod details;
 mod todo;
 
-pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main() -> cosmic::iced::Result {
     let (settings, flags) = app::settings::init();
-    cosmic::app::run::<Tasks>(settings, flags)?;
-    Ok(())
+    cosmic::app::run::<app::Tasks>(settings, flags)
 }
