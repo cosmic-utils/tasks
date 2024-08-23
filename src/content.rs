@@ -178,7 +178,7 @@ impl Content {
         .spacing(spacing.space_xxs)
         .align_items(Alignment::Center)
         .apply(widget::container)
-        .style(cosmic::style::Container::List)
+        .style(cosmic::style::Container::ContextDrawer)
         .into()
     }
 
