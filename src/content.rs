@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use crate::app::icon_cache::IconCache;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
+use cosmic::widget::menu::Action;
 use cosmic::{theme, widget, Apply, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 use tasks_core::models::list::List;
@@ -32,6 +35,7 @@ pub enum Message {
     TitleSubmit(DefaultKey),
     TitleUpdate(DefaultKey, String),
     UpdateTask(Task),
+    TaskAction(TaskAction),
 }
 
 pub enum Command {
@@ -42,6 +46,20 @@ pub enum Command {
     Delete(String),
     CreateTask(Task),
     Export(Vec<Task>),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum TaskAction {
+    Select(DefaultKey),
+    Delete(DefaultKey),
+}
+
+impl Action for TaskAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        Message::TaskAction(self.clone())
+    }
 }
 
 impl Content {
@@ -92,26 +110,31 @@ impl Content {
                     Message::Complete(id, value)
                 });
 
-            let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
+            let details_button = widget::button(IconCache::get("view-more-symbolic", 18))
                 .padding(spacing.space_xxs)
-                .style(theme::Button::Destructive)
-                .on_press(Message::Delete(id));
-
-            let details_button = widget::button(IconCache::get("info-outline-symbolic", 18))
-                .padding(spacing.space_xxs)
-                .style(theme::Button::Standard)
+                .style(theme::Button::Text)
                 .on_press(Message::Select(item.clone()));
+
+            let (completed, total) = item.sub_tasks.iter().fold((0, 0), |acc, subtask| {
+                if subtask.status == Status::Completed {
+                    (acc.0 + 1, acc.1 + 1)
+                } else {
+                    (acc.0, acc.1 + 1)
+                }
+            });
+
+            let subtask_count =
+                widget::text(format!("{}/{}", completed, total)).style(cosmic::style::Text::Accent);
 
             let task_item_text = widget::editable_input(
                 "",
                 &item.title,
-                *self.editing.get(id).unwrap_or(&false),
+                self.editing.get(id).is_some(),
                 move |editing| Message::EditMode(id, editing),
             )
             .id(self.task_input_ids[id].clone())
             .on_submit(Message::TitleSubmit(id))
-            .on_input(move |text| Message::TitleUpdate(id, text))
-            .width(Length::Fill);
+            .on_input(move |text| Message::TitleUpdate(id, text));
 
             let row = widget::row::with_capacity(4)
                 .align_items(Alignment::Center)
@@ -119,8 +142,19 @@ impl Content {
                 .padding([spacing.space_xxxs, spacing.space_xxs])
                 .push(item_checkbox)
                 .push(task_item_text)
-                .push(details_button)
-                .push(delete_button);
+                .push(subtask_count)
+                .push(details_button);
+
+            let row = widget::context_menu(
+                widget::container(row),
+                Some(widget::menu::items(
+                    &HashMap::new(),
+                    vec![
+                        widget::menu::Item::Button(fl!("edit"), TaskAction::Select(id)),
+                        widget::menu::Item::Button(fl!("delete"), TaskAction::Delete(id)),
+                    ],
+                )),
+            );
 
             items = items.add(row);
         }
@@ -263,6 +297,20 @@ impl Content {
             Message::Export(tasks) => {
                 commands.push(Command::Export(tasks));
             }
+            Message::TaskAction(action) => match action {
+                TaskAction::Select(key) => {
+                    if let Some(task) = self.tasks.get(key) {
+                        for command in self.update(Message::Select(task.clone())) {
+                            commands.push(command);
+                        }
+                    }
+                }
+                TaskAction::Delete(key) => {
+                    for command in self.update(Message::Delete(key)) {
+                        commands.push(command);
+                    }
+                }
+            },
         }
         commands
     }
