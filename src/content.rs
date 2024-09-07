@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::app::icon_cache::IconCache;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
-use cosmic::iced_widget::row;
 use cosmic::widget::menu::Action;
 use cosmic::{theme, widget, Apply, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
@@ -98,9 +97,8 @@ impl Content {
             return self.empty(list);
         }
 
-        let mut items = widget::list::list_column()
-            .style(theme::Container::ContextDrawer)
-            .spacing(spacing.space_xxxs)
+        let mut items = widget::column()
+            .spacing(spacing.space_xs)
             .padding([spacing.space_none, spacing.space_xxs]);
 
         for (id, item) in &self.tasks {
@@ -128,21 +126,24 @@ impl Content {
             let task_item_text = widget::editable_input(
                 "",
                 &item.title,
-                self.editing.get(id).is_some(),
+                *self.editing.get(id).unwrap_or(&false),
                 move |editing| Message::EditMode(id, editing),
             )
+            .trailing_icon(widget::column().into())
             .id(self.task_input_ids[id].clone())
             .on_submit(Message::TitleSubmit(id))
             .on_input(move |text| Message::TitleUpdate(id, text));
 
             let row = widget::row::with_capacity(4)
                 .align_items(Alignment::Center)
-                .spacing(spacing.space_xxs)
-                .padding([spacing.space_xxxs, spacing.space_xxs])
+                .spacing(spacing.space_xxxs)
+                .padding([spacing.space_xs, spacing.space_s])
                 .push(item_checkbox)
                 .push(task_item_text)
                 .push(subtask_count)
-                .push(details_button);
+                .push(details_button)
+                .apply(widget::container)
+                .style(theme::Container::ContextDrawer);
 
             let row = widget::context_menu(
                 row,
@@ -155,7 +156,7 @@ impl Content {
                 )),
             );
 
-            items = items.add(row);
+            items = items.push(row);
         }
 
         widget::column::with_capacity(2)
@@ -195,18 +196,11 @@ impl Content {
 
     pub fn new_task_view(&self) -> Element<Message> {
         let spacing = theme::active().cosmic().spacing;
-        row(vec![
-            widget::text_input(fl!("add-new-task"), &self.input)
-                .on_input(Message::Input)
-                .on_submit(Message::AddTask)
-                .width(Length::Fill)
-                .into(),
-            widget::button(IconCache::get("mail-send-symbolic", 18))
-                .padding(spacing.space_xxs)
-                .style(theme::Button::Suggested)
-                .on_press(Message::AddTask)
-                .into(),
-        ])
+        widget::row::with_children(vec![widget::text_input(fl!("add-new-task"), &self.input)
+            .on_input(Message::Input)
+            .on_submit(Message::AddTask)
+            .width(Length::Fill)
+            .into()])
         .padding(spacing.space_xxs)
         .spacing(spacing.space_xxs)
         .align_items(Alignment::Center)
@@ -232,7 +226,7 @@ impl Content {
             Message::TitleSubmit(id) => {
                 if let Some(task) = self.tasks.get(id) {
                     commands.push(Command::UpdateTask(task.clone()));
-                    self.editing.insert(id, false);
+                    self.editing.remove(id);
                 }
             }
             Message::Delete(id) => {
