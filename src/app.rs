@@ -149,6 +149,7 @@ impl MenuAction for Action {
 pub enum NavMenuAction {
     Rename(segmented_button::Entity),
     SetIcon(segmented_button::Entity),
+    Export(segmented_button::Entity),
     Delete(segmented_button::Entity),
 }
 
@@ -437,6 +438,7 @@ impl Application for Tasks {
             vec![
                 cosmic::widget::menu::Item::Button(fl!("rename"), NavMenuAction::Rename(id)),
                 cosmic::widget::menu::Item::Button(fl!("icon"), NavMenuAction::SetIcon(id)),
+                cosmic::widget::menu::Item::Button(fl!("export"), NavMenuAction::Export(id)),
                 cosmic::widget::menu::Item::Button(fl!("delete"), NavMenuAction::Delete(id)),
             ],
         ))
@@ -624,9 +626,6 @@ impl Application for Tasks {
                             );
                             commands.push(command);
                         }
-                        content::Command::Export(tasks) => {
-                            commands.push(self.update(Message::Export(tasks)));
-                        }
                     }
                 }
             }
@@ -663,6 +662,17 @@ impl Application for Tasks {
                 NavMenuAction::Delete(entity) => {
                     if self.nav_model.data::<List>(entity).is_some() {
                         commands.push(self.update(Message::OpenDeleteListDialog));
+                    }
+                }
+                NavMenuAction::Export(entity) => {
+                    if let Some(list) = self.nav_model.data::<List>(entity) {
+                        commands.push(Command::perform(
+                            todo::fetch_tasks(list.id().clone(), self.service.clone()),
+                            |result| match result {
+                                Ok(data) => message::app(Message::Export(data)),
+                                Err(_) => message::none(),
+                            },
+                        ));
                     }
                 }
             },

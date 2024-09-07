@@ -27,7 +27,6 @@ pub enum Message {
     Complete(DefaultKey, bool),
     Delete(DefaultKey),
     EditMode(DefaultKey, bool),
-    Export(Vec<Task>),
     Input(String),
     List(Option<List>),
     Select(Task),
@@ -36,6 +35,7 @@ pub enum Message {
     TitleUpdate(DefaultKey, String),
     UpdateTask(Task),
     TaskAction(TaskAction),
+    Clean,
 }
 
 pub enum Command {
@@ -45,7 +45,6 @@ pub enum Command {
     UpdateTask(Task),
     Delete(String),
     CreateTask(Task),
-    Export(Vec<Task>),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -75,10 +74,10 @@ impl Content {
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
-        let export_button = widget::button(IconCache::get("share-symbolic", 18))
-            .style(theme::Button::Suggested)
+        let export_button = widget::button(IconCache::get("larger-brush-symbolic", 18))
+            .style(theme::Button::Text)
             .padding(spacing.space_xxs)
-            .on_press(Message::Export(self.tasks.values().cloned().collect()));
+            .on_press(Message::Clean);
         let default_icon = emojis::get_by_shortcode("pencil").unwrap().to_string();
         let icon = list.icon.clone().unwrap_or(default_icon);
 
@@ -146,7 +145,7 @@ impl Content {
                 .push(details_button);
 
             let row = widget::context_menu(
-                widget::container(row),
+                row,
                 Some(widget::menu::items(
                     &HashMap::new(),
                     vec![
@@ -294,9 +293,6 @@ impl Content {
                     commands.push(Command::UpdateTask(task.clone()));
                 }
             }
-            Message::Export(tasks) => {
-                commands.push(Command::Export(tasks));
-            }
             Message::TaskAction(action) => match action {
                 TaskAction::Select(key) => {
                     if let Some(task) = self.tasks.get(key) {
@@ -311,6 +307,7 @@ impl Content {
                     }
                 }
             },
+            Message::Clean => todo!("Clean up task list"),
         }
         commands
     }
