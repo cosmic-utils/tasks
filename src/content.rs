@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::app::icon_cache::IconCache;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
+use cosmic::prelude::CollectionWidget;
 use cosmic::widget::menu::Action;
 use cosmic::{theme, widget, Apply, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
@@ -15,6 +16,7 @@ use crate::fl;
 pub struct Content {
     list: Option<List>,
     tasks: SlotMap<DefaultKey, Task>,
+    sub_tasks: SecondaryMap<DefaultKey, SlotMap<DefaultKey, Task>>,
     editing: SecondaryMap<DefaultKey, bool>,
     task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     input: String,
@@ -30,11 +32,15 @@ pub enum Message {
     List(Option<List>),
     Select(Task),
     SetItems(Vec<Task>),
-    TitleSubmit(DefaultKey),
-    TitleUpdate(DefaultKey, String),
+    TaskTitleSubmit(DefaultKey),
+    TaskTitleUpdate(DefaultKey, String),
+    SubTaskTitleSubmit(DefaultKey, DefaultKey),
+    SubTaskTitleUpdate(DefaultKey, DefaultKey, String),
     UpdateTask(Task),
+    UpdateSubTask(DefaultKey, DefaultKey, Task),
     TaskAction(TaskAction),
     Clean,
+    Expand(DefaultKey),
 }
 
 pub enum Command {
@@ -65,6 +71,7 @@ impl Content {
         Self {
             list: None,
             tasks: SlotMap::new(),
+            sub_tasks: SecondaryMap::new(),
             editing: SecondaryMap::new(),
             task_input_ids: SecondaryMap::new(),
             input: String::new(),
@@ -90,6 +97,137 @@ impl Content {
             .into()
     }
 
+    pub fn task_view<'a>(&'a self, id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
+        let spacing = theme::active().cosmic().spacing;
+
+        let item_checkbox = widget::checkbox("", task.status == Status::Completed, move |value| {
+            Message::Complete(id, value)
+        });
+
+        let not_empty = !task.sub_tasks.is_empty();
+        let icon = if task.expanded {
+            "go-up-symbolic"
+        } else {
+            "go-down-symbolic"
+        };
+        let expand_button = not_empty.then(|| {
+            widget::button(IconCache::get(icon, 18))
+                .padding(spacing.space_xxs)
+                .style(theme::Button::Text)
+                .on_press(Message::Expand(id))
+        });
+
+        let (completed, total) = task.sub_tasks.iter().fold((0, 0), |acc, subtask| {
+            if subtask.status == Status::Completed {
+                (acc.0 + 1, acc.1 + 1)
+            } else {
+                (acc.0, acc.1 + 1)
+            }
+        });
+
+        let subtask_count =
+            widget::text(format!("{}/{}", completed, total)).style(cosmic::style::Text::Accent);
+
+        let task_item_text = widget::editable_input(
+            "",
+            &task.title,
+            *self.editing.get(id).unwrap_or(&false),
+            move |editing| Message::EditMode(id, editing),
+        )
+        .trailing_icon(widget::column().into())
+        .id(self.task_input_ids[id].clone())
+        .on_submit(Message::TaskTitleSubmit(id))
+        .on_input(move |text| Message::TaskTitleUpdate(id, text));
+
+        widget::context_menu(
+            widget::row::with_capacity(4)
+                .align_items(Alignment::Center)
+                .spacing(spacing.space_xxxs)
+                .padding([spacing.space_xxs, spacing.space_s])
+                .push(item_checkbox)
+                .push(task_item_text)
+                .push(subtask_count)
+                .push_maybe(expand_button),
+            Some(widget::menu::items(
+                &HashMap::new(),
+                vec![
+                    widget::menu::Item::Button(fl!("edit"), TaskAction::Select(id)),
+                    widget::menu::Item::Button(fl!("delete"), TaskAction::Delete(id)),
+                ],
+            )),
+        )
+        .into()
+    }
+
+    pub fn sub_task_view<'a>(
+        &'a self,
+        id: DefaultKey,
+        expanded: bool,
+    ) -> Option<Element<'a, Message>> {
+        let spacing = theme::active().cosmic().spacing;
+
+        let Some(sub_tasks) = self.sub_tasks.get(id) else {
+            return None;
+        };
+
+        let sub_tasks: Vec<Element<'a, Message>> = sub_tasks
+            .iter()
+            .map(|(sub_id, sub_task)| {
+                let subtask_checkbox =
+                    widget::checkbox("", sub_task.status == Status::Completed, move |value| {
+                        let mut subtask = sub_task.clone();
+                        subtask.status = if value {
+                            Status::Completed
+                        } else {
+                            Status::NotStarted
+                        };
+                        Message::UpdateSubTask(id, sub_id, subtask)
+                    });
+
+                let subtask_text = widget::editable_input(
+                    "",
+                    &sub_task.title,
+                    *self.editing.get(sub_id).unwrap_or(&false),
+                    move |editing| Message::EditMode(sub_id, editing),
+                )
+                .trailing_icon(widget::column().into())
+                .id(self.task_input_ids[id].clone())
+                .on_submit(Message::SubTaskTitleSubmit(id, sub_id))
+                .on_input(move |text| Message::SubTaskTitleUpdate(id, sub_id, text));
+
+                widget::context_menu(
+                    widget::row()
+                        .align_items(Alignment::Center)
+                        .spacing(spacing.space_xxxs)
+                        .padding([spacing.space_xxs, spacing.space_s])
+                        .push(subtask_checkbox)
+                        .push(subtask_text)
+                        .apply(widget::container)
+                        .style(theme::Container::Card),
+                    Some(widget::menu::items(
+                        &HashMap::new(),
+                        vec![widget::menu::Item::Button(
+                            fl!("delete"),
+                            TaskAction::Delete(id),
+                        )],
+                    )),
+                )
+                .into()
+            })
+            .collect();
+
+        if !sub_tasks.is_empty() && expanded {
+            Some(
+                widget::column::with_children(sub_tasks)
+                    .spacing(spacing.space_xxs)
+                    .padding(spacing.space_xs)
+                    .into(),
+            )
+        } else {
+            None
+        }
+    }
+
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -97,67 +235,22 @@ impl Content {
             return self.empty(list);
         }
 
-        let mut items = widget::column()
+        let items = self
+            .tasks
+            .iter()
+            .map(|(id, task)| {
+                widget::column()
+                    .push(self.task_view(id, task))
+                    .push_maybe(self.sub_task_view(id, task.expanded))
+                    .apply(widget::container)
+                    .style(theme::Container::ContextDrawer)
+                    .into()
+            })
+            .collect();
+
+        let items = widget::column::with_children(items)
             .spacing(spacing.space_xs)
             .padding([spacing.space_none, spacing.space_xxs]);
-
-        for (id, item) in &self.tasks {
-            let item_checkbox =
-                widget::checkbox("", item.status == Status::Completed, move |value| {
-                    Message::Complete(id, value)
-                });
-
-            let details_button = widget::button(IconCache::get("view-more-symbolic", 18))
-                .padding(spacing.space_xxs)
-                .style(theme::Button::Text)
-                .on_press(Message::Select(item.clone()));
-
-            let (completed, total) = item.sub_tasks.iter().fold((0, 0), |acc, subtask| {
-                if subtask.status == Status::Completed {
-                    (acc.0 + 1, acc.1 + 1)
-                } else {
-                    (acc.0, acc.1 + 1)
-                }
-            });
-
-            let subtask_count =
-                widget::text(format!("{}/{}", completed, total)).style(cosmic::style::Text::Accent);
-
-            let task_item_text = widget::editable_input(
-                "",
-                &item.title,
-                *self.editing.get(id).unwrap_or(&false),
-                move |editing| Message::EditMode(id, editing),
-            )
-            .trailing_icon(widget::column().into())
-            .id(self.task_input_ids[id].clone())
-            .on_submit(Message::TitleSubmit(id))
-            .on_input(move |text| Message::TitleUpdate(id, text));
-
-            let row = widget::row::with_capacity(4)
-                .align_items(Alignment::Center)
-                .spacing(spacing.space_xxxs)
-                .padding([spacing.space_xs, spacing.space_s])
-                .push(item_checkbox)
-                .push(task_item_text)
-                .push(subtask_count)
-                .push(details_button)
-                .apply(widget::container)
-                .style(theme::Container::ContextDrawer);
-
-            let row = widget::context_menu(
-                row,
-                Some(widget::menu::items(
-                    &HashMap::new(),
-                    vec![
-                        widget::menu::Item::Button(fl!("edit"), TaskAction::Select(id)),
-                        widget::menu::Item::Button(fl!("delete"), TaskAction::Delete(id)),
-                    ],
-                )),
-            );
-
-            items = items.push(row);
-        }
 
         widget::column::with_capacity(2)
             .spacing(spacing.space_xxs)
@@ -212,21 +305,50 @@ impl Content {
     pub fn update(&mut self, message: Message) -> Vec<Command> {
         let mut commands = Vec::new();
         match message {
+            Message::Expand(id) => {
+                if let Some(task) = self.tasks.get_mut(id) {
+                    task.expanded = !task.expanded;
+                    commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
             Message::List(list) => {
                 self.list.clone_from(&list);
                 if let Some(list) = list {
                     commands.push(Command::GetTasks(list.id().clone()));
                 }
             }
-            Message::TitleUpdate(id, title) => {
+            Message::TaskTitleUpdate(id, title) => {
                 if let Some(task) = self.tasks.get_mut(id) {
                     task.title = title;
                 }
             }
-            Message::TitleSubmit(id) => {
+            Message::TaskTitleSubmit(id) => {
                 if let Some(task) = self.tasks.get(id) {
                     commands.push(Command::UpdateTask(task.clone()));
                     self.editing.remove(id);
+                }
+            }
+            Message::SubTaskTitleUpdate(id, sub_id, title) => {
+                if let Some(sm) = self.sub_tasks.get_mut(id) {
+                    if let Some(sub_task) = sm.get_mut(sub_id) {
+                        sub_task.title = title;
+                    }
+                }
+            }
+            Message::SubTaskTitleSubmit(id, sub_id) => {
+                if let Some(slotmap) = self.sub_tasks.get(id) {
+                    if let Some(sub_task) = slotmap.get(sub_id) {
+                        let task = self.tasks.get_mut(id);
+                        if let Some(task) = task {
+                            let sub_task =
+                                task.sub_tasks.iter_mut().find(|t| t.id() == sub_task.id());
+                            if let Some(sub_task) = sub_task {
+                                *sub_task = sub_task.clone();
+                                commands.push(Command::UpdateTask(task.clone()));
+                                self.editing.remove(sub_id);
+                            }
+                        }
+                    }
                 }
             }
             Message::Delete(id) => {
@@ -246,9 +368,19 @@ impl Content {
             }
             Message::SetItems(tasks) => {
                 self.tasks.clear();
+                self.task_input_ids.clear();
+                self.editing.clear();
                 for task in tasks {
-                    let id = self.tasks.insert(task);
+                    let id = self.tasks.insert(task.clone());
                     self.task_input_ids.insert(id, widget::Id::unique());
+
+                    let mut sub_tasks = SlotMap::new();
+                    for subtask in task.sub_tasks {
+                        let sub_task_id = sub_tasks.insert(subtask);
+                        self.task_input_ids
+                            .insert(sub_task_id, widget::Id::unique());
+                    }
+                    self.sub_tasks.insert(id, sub_tasks);
                 }
             }
             Message::Select(task) => {
@@ -285,6 +417,25 @@ impl Content {
                 if let Some(task) = task {
                     *task = updated_task.clone();
                     commands.push(Command::UpdateTask(task.clone()));
+                }
+            }
+            Message::UpdateSubTask(id, sub_id, updated_subtask) => {
+                let task = self.tasks.get_mut(id);
+                if let Some(task) = task {
+                    let sub_task = task
+                        .sub_tasks
+                        .iter_mut()
+                        .find(|t| t.id() == updated_subtask.id());
+                    if let Some(sub_task) = sub_task {
+                        *sub_task = updated_subtask.clone();
+                        commands.push(Command::UpdateTask(task.clone()));
+                        if let Some(sm) = self.sub_tasks.get_mut(id) {
+                            let sub_task = sm.get_mut(sub_id);
+                            if let Some(sub_task) = sub_task {
+                                *sub_task = updated_subtask.clone();
+                            }
+                        };
+                    }
                 }
             }
             Message::TaskAction(action) => match action {

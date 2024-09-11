@@ -116,6 +116,7 @@ async fn get_tasks(database_path: &PathBuf) -> Result<Vec<Task>, Box<dyn std::er
                 .map(|ndt| ndt.and_utc())
                 .ok(),
             recurrence: Recurrence::from_string(row.get(16)),
+            expanded: false,
         })
         .fetch_all(&mut conn)
         .await?;

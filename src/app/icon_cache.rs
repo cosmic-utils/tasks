@@ -53,6 +53,8 @@ impl IconCache {
         bundle!("view-more-symbolic", 18);
         bundle!("mail-send-symbolic", 18);
         bundle!("applications-office-symbolic", 18);
+        bundle!("go-down-symbolic", 18);
+        bundle!("go-up-symbolic", 18);
 
         bundle!("flag-filled-symbolic", 16);
         bundle!("flag-outline-thick-symbolic", 16);

@@ -568,7 +568,10 @@ impl Application for Tasks {
                                     Ok(data) => message::app(Message::Content(
                                         content::Message::SetItems(data),
                                     )),
-                                    Err(_) => message::none(),
+                                    Err(err) => {
+                                        log::error!("{err}");
+                                        message::none()
+                                    }
                                 },
                             ));
                         }
@@ -596,7 +599,11 @@ impl Application for Tasks {
                             let command = Command::perform(
                                 todo::update_task(task, self.service.clone().clone()),
                                 |result| match result {
-                                    Ok(()) | Err(_) => message::none(),
+                                    Ok(()) => message::none(),
+                                    Err(err) => {
+                                        log::error!("{err}");
+                                        message::none()
+                                    }
                                 },
                             );
                             commands.push(command);
@@ -611,7 +618,11 @@ impl Application for Tasks {
                                         self.service.clone().clone(),
                                     ),
                                     |result| match result {
-                                        Ok(()) | Err(_) => message::none(),
+                                        Ok(()) => message::none(),
+                                        Err(err) => {
+                                            log::error!("{err}");
+                                            message::none()
+                                        }
                                     },
                                 );
                                 commands.push(command);
@@ -621,7 +632,11 @@ impl Application for Tasks {
                             let command = Command::perform(
                                 todo::create_task(task, self.service.clone()),
                                 |result| match result {
-                                    Ok(()) | Err(_) => message::none(),
+                                    Ok(()) => message::none(),
+                                    Err(err) => {
+                                        log::error!("{err}");
+                                        message::none()
+                                    }
                                 },
                             );
                             commands.push(command);
@@ -670,7 +685,10 @@ impl Application for Tasks {
                             todo::fetch_tasks(list.id().clone(), self.service.clone()),
                             |result| match result {
                                 Ok(data) => message::app(Message::Export(data)),
-                                Err(_) => message::none(),
+                                Err(err) => {
+                                    log::error!("{err}");
+                                    message::none()
+                                }
                             },
                         ));
                     }
@@ -722,7 +740,10 @@ impl Application for Tasks {
                     todo::fetch_lists(self.service.clone()),
                     |result| match result {
                         Ok(data) => message::app(Message::PopulateLists(data)),
-                        Err(_) => message::none(),
+                        Err(err) => {
+                            log::error!("{err}");
+                            message::none()
+                        }
                     },
                 ));
             }
@@ -760,7 +781,11 @@ impl Application for Tasks {
                     let command = Command::perform(
                         todo::delete_list(list.id().clone(), self.service.clone()),
                         |result| match result {
-                            Ok(()) | Err(_) => message::none(),
+                            Ok(()) => message::none(),
+                            Err(err) => {
+                                log::error!("{err}");
+                                message::none()
+                            }
                         },
                     );
 
@@ -825,7 +850,10 @@ impl Application for Tasks {
                                 todo::create_list(list, self.service.clone()),
                                 |result| match result {
                                     Ok(list) => message::app(Message::AddList(list)),
-                                    Err(_) => message::none(),
+                                    Err(err) => {
+                                        log::error!("{err}");
+                                        message::none()
+                                    }
                                 },
                             ));
                         }

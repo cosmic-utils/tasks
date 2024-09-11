@@ -9,7 +9,7 @@ use super::{priority::Priority, recurrence::Recurrence, status::Status};
     Clone, Default, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Getters,
 )]
 pub struct Task {
-    pub(crate) id: String,
+    pub id: String,
     pub parent: String,
     pub title: String,
     pub favorite: bool,
@@ -26,6 +26,7 @@ pub struct Task {
     pub(crate) deletion_date: Option<DateTime<Utc>>,
     pub(crate) created_date_time: DateTime<Utc>,
     pub(crate) last_modified_date_time: DateTime<Utc>,
+    pub expanded: bool,
 }
 
 impl Task {
@@ -49,6 +50,7 @@ impl Task {
             recurrence: Default::default(),
             created_date_time: now,
             last_modified_date_time: now,
+            expanded: false,
         }
     }
 }
