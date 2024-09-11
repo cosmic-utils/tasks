@@ -62,7 +62,7 @@ impl Action for TaskAction {
     type Message = Message;
 
     fn message(&self) -> Self::Message {
-        Message::TaskAction(self.clone())
+        Message::TaskAction(*self)
     }
 }
 
@@ -166,11 +166,9 @@ impl Content {
     ) -> Option<Element<'a, Message>> {
         let spacing = theme::active().cosmic().spacing;
 
-        let Some(sub_tasks) = self.sub_tasks.get(id) else {
-            return None;
-        };
-
-        let sub_tasks: Vec<Element<'a, Message>> = sub_tasks
+        let sub_tasks: Vec<Element<'a, Message>> = self
+            .sub_tasks
+            .get(id)?
             .iter()
             .map(|(sub_id, sub_task)| {
                 let subtask_checkbox =
