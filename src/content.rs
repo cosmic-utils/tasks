@@ -26,7 +26,7 @@ pub struct Content {
 pub enum Message {
     AddTask,
     Complete(DefaultKey, bool),
-    Delete(DefaultKey),
+    Delete(DefaultKey, Option<DefaultKey>),
     EditMode(DefaultKey, bool),
     Input(String),
     List(Option<List>),
@@ -55,7 +55,7 @@ pub enum Command {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TaskAction {
     Select(DefaultKey),
-    Delete(DefaultKey),
+    Delete(DefaultKey, Option<DefaultKey>),
 }
 
 impl Action for TaskAction {
@@ -152,7 +152,7 @@ impl Content {
                 &HashMap::new(),
                 vec![
                     widget::menu::Item::Button(fl!("edit"), TaskAction::Select(id)),
-                    widget::menu::Item::Button(fl!("delete"), TaskAction::Delete(id)),
+                    widget::menu::Item::Button(fl!("delete"), TaskAction::Delete(id, None)),
                 ],
             )),
         )
@@ -208,7 +208,7 @@ impl Content {
                         &HashMap::new(),
                         vec![widget::menu::Item::Button(
                             fl!("delete"),
-                            TaskAction::Delete(id),
+                            TaskAction::Delete(id, Some(sub_id)),
                         )],
                     )),
                 )
@@ -351,9 +351,20 @@ impl Content {
                     }
                 }
             }
-            Message::Delete(id) => {
-                if let Some(task) = self.tasks.remove(id) {
-                    commands.push(Command::Delete(task.id().clone()));
+            Message::Delete(id, sub_id) => {
+                let Some(sub_id) = sub_id else {
+                    if let Some(task) = self.tasks.remove(id) {
+                        commands.push(Command::Delete(task.id().clone()));
+                    }
+                    return commands;
+                };
+                if let (Some(task), Some(slotmap)) =
+                    (self.tasks.get_mut(id), self.sub_tasks.get_mut(id))
+                {
+                    if let Some(subtask) = slotmap.remove(sub_id) {
+                        task.sub_tasks.retain(|t| t.id() != subtask.id());
+                        commands.push(Command::UpdateTask(task.clone()));
+                    }
                 }
             }
             Message::EditMode(id, editing) => {
@@ -446,8 +457,8 @@ impl Content {
                         }
                     }
                 }
-                TaskAction::Delete(key) => {
-                    for command in self.update(Message::Delete(key)) {
+                TaskAction::Delete(id, sub_id) => {
+                    for command in self.update(Message::Delete(id, sub_id)) {
                         commands.push(command);
                     }
                 }
