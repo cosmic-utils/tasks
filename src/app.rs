@@ -203,7 +203,8 @@ impl Tasks {
             AppTheme::Light => 2,
             AppTheme::System => 0,
         };
-        widget::settings::view_column(vec![widget::settings::view_section(fl!("appearance"))
+        widget::settings::view_column(vec![widget::settings::section()
+            .title(fl!("appearance"))
             .add(
                 widget::settings::item::builder(fl!("theme")).control(widget::dropdown(
                     &self.app_themes,
@@ -340,7 +341,7 @@ impl Application for Tasks {
             DialogPage::Icon(icon) => {
                 let icon_buttons: Vec<Element<_>> = emojis::iter()
                     .map(|emoji| {
-                        widget::button(
+                        widget::button::custom(
                             widget::container(widget::text(emoji.to_string()))
                                 .width(spacing.space_l)
                                 .height(spacing.space_l)

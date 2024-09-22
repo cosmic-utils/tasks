@@ -171,7 +171,7 @@ impl Details {
         let spacing = cosmic::theme::active().cosmic().spacing;
 
         let Some(task) = self.task.as_ref() else {
-            return widget::settings::view_section(fl!("details")).into();
+            return widget::settings::section().title(fl!("details")).into();
         };
 
         let sub_tasks: Vec<Row<Message>> = self
@@ -196,16 +196,17 @@ impl Details {
                 .on_submit(Message::SubTaskEditDone)
                 .into();
 
-                let delete_button = widget::button(IconCache::get("cross-small-symbolic", 18))
-                    .style(widget::button::Style::Text)
-                    .on_press(Message::DeleteSubTask(id))
-                    .into();
+                let delete_button =
+                    widget::button::custom(IconCache::get("cross-small-symbolic", 18))
+                        .style(widget::button::Style::Text)
+                        .on_press(Message::DeleteSubTask(id))
+                        .into();
 
                 widget::settings::item_row(vec![item_checkbox, sub_task_item, delete_button])
             })
             .collect();
 
-        let mut sub_tasks_section = widget::settings::view_section(fl!("sub-tasks"));
+        let mut sub_tasks_section = widget::settings::section().title(fl!("sub-tasks"));
         for sub_task in sub_tasks {
             sub_tasks_section = sub_tasks_section.add(sub_task);
         }
@@ -219,7 +220,8 @@ impl Details {
             ]),
         );
 
-        let details = widget::settings::view_section(fl!("details"))
+        let details = widget::settings::section()
+            .title(fl!("details"))
             .add(
                 widget::settings::item_row(vec![widget::text_input(fl!("title"), &task.title)
                     .label("Title")

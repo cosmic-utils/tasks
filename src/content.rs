@@ -80,7 +80,7 @@ impl Content {
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
-        let export_button = widget::button(IconCache::get("larger-brush-symbolic", 18))
+        let export_button = widget::button::custom(IconCache::get("larger-brush-symbolic", 18))
             .style(theme::Button::Text)
             .padding(spacing.space_xxs)
             .on_press(Message::Clean);
@@ -111,7 +111,7 @@ impl Content {
             "go-down-symbolic"
         };
         let expand_button = not_empty.then(|| {
-            widget::button(IconCache::get(icon, 18))
+            widget::button::custom(IconCache::get(icon, 18))
                 .padding(spacing.space_xxs)
                 .style(theme::Button::Text)
                 .on_press(Message::Expand(id))
