@@ -50,6 +50,10 @@
       <caption>Dark mode</caption>
     </screenshot>
   </screenshots>
+  <categories>
+    <category>Utility</category>
+    <category>COSMIC</category>
+  </categories>
   <provides>
     <id>dev.edfloreshz.Tasks.desktop</id>
     <binary>tasks</binary>
