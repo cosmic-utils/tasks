@@ -52,10 +52,9 @@
   </screenshots>
   <categories>
     <category>Utility</category>
-    <category>COSMIC</category>
   </categories>
   <provides>
-    <id>dev.edfloreshz.Tasks.desktop</id>
+    <id>com.system76.CosmicApplication</id>
     <binary>tasks</binary>
   </provides>
 </component>
