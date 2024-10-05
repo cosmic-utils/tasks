@@ -57,7 +57,7 @@ impl Content {
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
-        let export_button = widget::button(IconCache::get("share-symbolic", 18))
+        let export_button = widget::button::icon(IconCache::get_handle("share-symbolic", 18))
             .style(theme::Button::Suggested)
             .padding(spacing.space_xxs)
             .on_press(Message::Export(self.tasks.values().cloned().collect()));
@@ -92,15 +92,17 @@ impl Content {
                     Message::Complete(id, value)
                 });
 
-            let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
-                .padding(spacing.space_xxs)
-                .style(theme::Button::Destructive)
-                .on_press(Message::Delete(id));
+            let delete_button =
+                widget::button::icon(IconCache::get_handle("user-trash-full-symbolic", 18))
+                    .padding(spacing.space_xxs)
+                    .style(theme::Button::Destructive)
+                    .on_press(Message::Delete(id));
 
-            let details_button = widget::button(IconCache::get("info-outline-symbolic", 18))
-                .padding(spacing.space_xxs)
-                .style(theme::Button::Standard)
-                .on_press(Message::Select(item.clone()));
+            let details_button =
+                widget::button::icon(IconCache::get_handle("info-outline-symbolic", 18))
+                    .padding(spacing.space_xxs)
+                    .style(theme::Button::Standard)
+                    .on_press(Message::Select(item.clone()));
 
             let task_item_text = widget::editable_input(
                 "",
@@ -168,7 +170,7 @@ impl Content {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(IconCache::get("mail-send-symbolic", 18))
+            widget::button::icon(IconCache::get_handle("mail-send-symbolic", 18))
                 .padding(spacing.space_xxs)
                 .style(theme::Button::Suggested)
                 .on_press(Message::AddTask)

@@ -73,4 +73,13 @@ impl IconCache {
         let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
         icon_cache.get_icon(name, size)
     }
+
+    pub fn get_handle(name: &'static str, size: u16) -> icon::Handle {
+        let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
+        icon_cache
+            .cache
+            .entry(IconCacheKey { name, size })
+            .or_insert_with(|| icon::from_name(name).size(size).handle())
+            .clone()
+    }
 }

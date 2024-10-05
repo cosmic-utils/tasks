@@ -189,10 +189,11 @@ impl Details {
                 .on_input(move |title| Message::SetSubTaskTitle(id, title))
                 .on_submit(Message::SubTaskEditDone);
 
-                let delete_button = widget::button(IconCache::get("user-trash-full-symbolic", 18))
-                    .padding(spacing.space_xxs)
-                    .style(widget::button::Style::Destructive)
-                    .on_press(Message::DeleteSubTask(id));
+                let delete_button =
+                    widget::button::icon(IconCache::get_handle("user-trash-full-symbolic", 18))
+                        .padding(spacing.space_xxs)
+                        .style(widget::button::Style::Destructive)
+                        .on_press(Message::DeleteSubTask(id));
 
                 let row = widget::row::with_capacity(3)
                     .align_items(Alignment::Center)
@@ -208,7 +209,8 @@ impl Details {
             sub_tasks.push(self.sub_task_input());
 
             return widget::settings::view_column(vec![
-                widget::settings::view_section(fl!("details"))
+                widget::settings::section()
+                    .title(fl!("details"))
                     .add(
                         widget::column::with_children(vec![
                             widget::text::body(fl!("title")).into(),
@@ -263,14 +265,17 @@ impl Details {
                         .padding([0, 15, 0, 15]),
                     )
                     .into(),
-                widget::settings::view_section(fl!("sub-tasks"))
+                widget::settings::section()
+                    .title(fl!("sub-tasks"))
                     .add(widget::column::with_children(sub_tasks).spacing(spacing.space_xs))
                     .into(),
             ])
             .into();
         }
-        widget::settings::view_column(vec![widget::settings::view_section(fl!("details")).into()])
-            .into()
+        widget::settings::view_column(vec![widget::settings::section()
+            .title(fl!("details"))
+            .into()])
+        .into()
     }
 
     fn sub_task_input(&self) -> Element<Message> {
@@ -283,7 +288,7 @@ impl Details {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button(IconCache::get("mail-send-symbolic", 18))
+            widget::button::icon(IconCache::get_handle("mail-send-symbolic", 18))
                 .padding(spacing.space_xxs)
                 .on_press(Message::AddTask)
                 .into(),
