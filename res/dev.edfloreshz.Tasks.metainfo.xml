@@ -8,8 +8,13 @@
   <project_license>GPL-3.0-only</project_license>
   <content_rating type="oars-1.1" />
   <update_contact>edfloreshz@proton.me</update_contact>
-  <url type="homepage">https://github.com/edfloreshz/tasks</url>
-  <url type="bugtracker">https://github.com/edfloreshz/tasks</url>
+  <url type="homepage">https://tasks.edfloreshz.dev/</url>
+  <url type="bugtracker">https://github.com/cosmic-utils/tasks/issues</url>
+  <url type="vcs-browser">https://github.com/cosmic-utils/tasks</url>
+  <url type="donation">https://ko-fi.com/edfloreshz</url>
+  <url type="contact">https://edfloreshz.dev</url>
+  <url type="contribute">https://github.com/cosmic-utils/tasks</url>
+  <url type="translate">https://github.com/cosmic-utils/tasks/tree/main/i18n</url>
   <name>Tasks</name>
   <summary>Get things done</summary>
   <description>
@@ -52,6 +57,14 @@
   <categories>
     <category>Utility</category>
   </categories>
+  <requires>
+    <display_length compare="ge">360</display_length>
+    <internet>offline-only</internet>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
   <provides>
     <id>com.system76.CosmicApplication</id>
     <binary>tasks</binary>
