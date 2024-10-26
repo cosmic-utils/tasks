@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, Connection};
@@ -53,7 +54,7 @@ impl TaskService {
         }
     }
 
-    pub async fn migrate(app_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn migrate(app_id: &str) -> Result<(), Error> {
         if let Some(mut service) = TaskService::new(app_id, Provider::Computer).get_service() {
             let database_path = dirs::config_dir()
                 .unwrap()
@@ -80,7 +81,7 @@ impl TaskService {
 
 use sqlx::Row;
 
-async fn get_tasks(database_path: &PathBuf) -> Result<Vec<Task>, Box<dyn std::error::Error>> {
+async fn get_tasks(database_path: &PathBuf) -> Result<Vec<Task>, Error> {
     let mut conn = sqlx::SqliteConnection::connect(database_path.to_str().unwrap()).await?;
     let tasks = sqlx::query("SELECT * FROM tasks")
         .map(|row: SqliteRow| Task {
@@ -122,7 +123,7 @@ async fn get_tasks(database_path: &PathBuf) -> Result<Vec<Task>, Box<dyn std::er
     Ok(tasks)
 }
 
-async fn get_lists(database_path: &PathBuf) -> Result<Vec<List>, Box<dyn std::error::Error>> {
+async fn get_lists(database_path: &PathBuf) -> Result<Vec<List>, Error> {
     let mut conn = sqlx::SqliteConnection::connect(database_path.to_str().unwrap()).await?;
     let tasks = sqlx::query("SELECT * FROM lists")
         .map(|row: SqliteRow| List {

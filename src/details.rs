@@ -42,7 +42,7 @@ pub enum Command {
     Focus(widget::Id),
     UpdateTask(Task),
     OpenCalendarDialog,
-    Iced(cosmic::app::Command<super::app::Message>),
+    Iced(cosmic::app::Task<super::app::Message>),
 }
 
 impl Details {
@@ -174,10 +174,8 @@ impl Details {
         if let Some(task) = self.task.as_ref() {
             let mut sub_tasks: Vec<Element<Message>> = vec![];
             for (id, sub_task) in &self.subtasks {
-                let item_checkbox =
-                    widget::checkbox("", sub_task.status == Status::Completed, move |value| {
-                        Message::CompleteSubTask(id, value)
-                    });
+                let item_checkbox = widget::checkbox("", sub_task.status == Status::Completed)
+                    .on_toggle(move |value| Message::CompleteSubTask(id, value));
 
                 let sub_task_item = widget::editable_input(
                     fl!("title"),
@@ -192,11 +190,10 @@ impl Details {
                 let delete_button =
                     widget::button::icon(IconCache::get_handle("user-trash-full-symbolic", 18))
                         .padding(spacing.space_xxs)
-                        .style(widget::button::Style::Destructive)
                         .on_press(Message::DeleteSubTask(id));
 
                 let row = widget::row::with_capacity(3)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .padding([spacing.space_none, spacing.space_s])
                     .spacing(spacing.space_xs)
                     .push(item_checkbox)
@@ -222,11 +219,9 @@ impl Details {
                         .padding([0, 15, 0, 15]),
                     )
                     .add(
-                        widget::settings::item::builder(fl!("favorite")).control(widget::checkbox(
-                            "",
-                            task.favorite,
-                            Message::Favorite,
-                        )),
+                        widget::settings::item::builder(fl!("favorite")).control(
+                            widget::checkbox("", task.favorite).on_toggle(Message::Favorite),
+                        ),
                     )
                     .add(
                         widget::settings::item::builder(fl!("priority")).control(
@@ -295,7 +290,7 @@ impl Details {
         ])
         .padding([spacing.space_none, spacing.space_s])
         .spacing(spacing.space_xs)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .into()
     }
 }

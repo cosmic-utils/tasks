@@ -12,6 +12,8 @@ pub struct List {
     pub icon: Option<String>,
 }
 
+unsafe impl Send for List {}
+
 impl FromIterator<List> for List {
     fn from_iter<T: IntoIterator<Item = List>>(iter: T) -> Self {
         let mut list = Self::default();

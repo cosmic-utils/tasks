@@ -35,7 +35,7 @@ pub enum Message {
 }
 
 pub enum Command {
-    Iced(cosmic::app::Command<super::app::Message>),
+    Iced(cosmic::app::Task<super::app::Message>),
     GetTasks(String),
     DisplayTask(Task),
     UpdateTask(Task),
@@ -58,14 +58,14 @@ impl Content {
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
         let export_button = widget::button::icon(IconCache::get_handle("share-symbolic", 18))
-            .style(theme::Button::Suggested)
+            .class(cosmic::style::Button::Suggested)
             .padding(spacing.space_xxs)
             .on_press(Message::Export(self.tasks.values().cloned().collect()));
         let default_icon = emojis::get_by_shortcode("pencil").unwrap().to_string();
         let icon = list.icon.clone().unwrap_or(default_icon);
 
         widget::row::with_capacity(3)
-            .align_items(Alignment::Center)
+            .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
             .push(widget::text(icon).size(spacing.space_m))
@@ -87,21 +87,19 @@ impl Content {
             .padding([spacing.space_none, spacing.space_xxs]);
 
         for (id, item) in &self.tasks {
-            let item_checkbox =
-                widget::checkbox("", item.status == Status::Completed, move |value| {
-                    Message::Complete(id, value)
-                });
+            let item_checkbox = widget::checkbox("", item.status == Status::Completed)
+                .on_toggle(move |value| Message::Complete(id, value));
 
             let delete_button =
                 widget::button::icon(IconCache::get_handle("user-trash-full-symbolic", 18))
                     .padding(spacing.space_xxs)
-                    .style(theme::Button::Destructive)
+                    .class(cosmic::style::Button::Destructive)
                     .on_press(Message::Delete(id));
 
             let details_button =
                 widget::button::icon(IconCache::get_handle("info-outline-symbolic", 18))
                     .padding(spacing.space_xxs)
-                    .style(theme::Button::Standard)
+                    .class(cosmic::style::Button::Standard)
                     .on_press(Message::Select(item.clone()));
 
             let task_item_text = widget::editable_input(
@@ -116,7 +114,7 @@ impl Content {
             .width(Length::Fill);
 
             let row = widget::row::with_capacity(4)
-                .align_items(Alignment::Center)
+                .align_y(Alignment::Center)
                 .spacing(spacing.space_xxs)
                 .padding([spacing.space_xxxs, spacing.space_xxs])
                 .push(item_checkbox)
@@ -148,7 +146,7 @@ impl Content {
                 widget::text(fl!("no-tasks-suggestion")).into(),
             ])
             .spacing(10)
-            .align_items(Alignment::Center),
+            .align_x(Alignment::Center),
         )
         .align_y(Vertical::Center)
         .align_x(Horizontal::Center)
@@ -172,15 +170,15 @@ impl Content {
                 .into(),
             widget::button::icon(IconCache::get_handle("mail-send-symbolic", 18))
                 .padding(spacing.space_xxs)
-                .style(theme::Button::Suggested)
+                .class(cosmic::style::Button::Suggested)
                 .on_press(Message::AddTask)
                 .into(),
         ])
         .padding(spacing.space_xxs)
         .spacing(spacing.space_xxs)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .apply(widget::container)
-        .style(cosmic::style::Container::ContextDrawer)
+        .class(cosmic::style::Container::ContextDrawer)
         .into()
     }
 
@@ -280,7 +278,7 @@ impl Content {
                     widget::text(fl!("no-list-suggestion")).into(),
                 ])
                 .spacing(10)
-                .align_items(Alignment::Center),
+                .align_x(Alignment::Center),
             )
             .align_y(Vertical::Center)
             .align_x(Horizontal::Center)

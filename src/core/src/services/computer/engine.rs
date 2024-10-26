@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use crate::models::{list::List, task::Task};
+use crate::{
+    models::{list::List, task::Task},
+    Error, TasksError,
+};
 
 #[derive(Debug, Clone)]
 pub struct ComputerStorageEngine {
@@ -23,7 +26,7 @@ impl ComputerStorageEngine {
         Some(engine)
     }
 
-    pub fn tasks(&self, list_id: &str) -> anyhow::Result<Vec<Task>> {
+    pub fn tasks(&self, list_id: &str) -> Result<Vec<Task>, Error> {
         let mut tasks = vec![];
         let path = self.tasks_path().join(list_id);
         if !path.exists() {
@@ -39,7 +42,7 @@ impl ComputerStorageEngine {
         Ok(tasks)
     }
 
-    pub fn lists(&self) -> anyhow::Result<Vec<List>> {
+    pub fn lists(&self) -> Result<Vec<List>, Error> {
         let mut tasks = vec![];
         let path = self.lists_path();
         if !path.exists() {
@@ -55,7 +58,7 @@ impl ComputerStorageEngine {
         Ok(tasks)
     }
 
-    pub fn get_task(&self, list_id: &str, task_id: &str) -> anyhow::Result<Task> {
+    pub fn get_task(&self, list_id: &str, task_id: &str) -> Result<Task, Error> {
         let path = self
             .tasks_path()
             .join(list_id)
@@ -66,11 +69,11 @@ impl ComputerStorageEngine {
             let task = ron::from_str(&content)?;
             Ok(task)
         } else {
-            Err(anyhow::anyhow!("Task does not exist"))
+            Err(Error::Tasks(TasksError::TaskNotFound))
         }
     }
 
-    pub fn create_task(&self, task: Task) -> anyhow::Result<Task> {
+    pub fn create_task(&self, task: Task) -> Result<Task, Error> {
         let path = self
             .tasks_path()
             .join(&task.parent)
@@ -82,11 +85,11 @@ impl ComputerStorageEngine {
             std::fs::write(path, content)?;
             Ok(task)
         } else {
-            Err(anyhow::anyhow!("Task already exists"))
+            Err(Error::Tasks(TasksError::ExistingTask))
         }
     }
 
-    pub fn update_task(&self, task: Task) -> anyhow::Result<()> {
+    pub fn update_task(&self, task: Task) -> Result<(), Error> {
         let path = self
             .tasks_path()
             .join(&task.parent)
@@ -97,11 +100,11 @@ impl ComputerStorageEngine {
             std::fs::write(path, content)?;
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Task does not exist"))
+            Err(Error::Tasks(TasksError::TaskNotFound))
         }
     }
 
-    pub fn delete_task(&self, list_id: &str, task_id: &str) -> anyhow::Result<()> {
+    pub fn delete_task(&self, list_id: &str, task_id: &str) -> Result<(), Error> {
         let path = self
             .tasks_path()
             .join(list_id)
@@ -111,44 +114,44 @@ impl ComputerStorageEngine {
             std::fs::remove_file(path)?;
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Task does not exist"))
+            Err(Error::Tasks(TasksError::TaskNotFound))
         }
     }
 
-    pub fn get_list(&self, list_id: &str) -> anyhow::Result<List> {
+    pub fn get_list(&self, list_id: &str) -> Result<List, Error> {
         let path = self.lists_path().join(list_id).with_extension("ron");
         if path.exists() {
             let content = std::fs::read_to_string(path)?;
             let list = ron::from_str(&content)?;
             Ok(list)
         } else {
-            Err(anyhow::anyhow!("List does not exist"))
+            Err(Error::Tasks(TasksError::ListNotFound))
         }
     }
 
-    pub fn create_list(&self, list: List) -> anyhow::Result<List> {
+    pub fn create_list(&self, list: List) -> Result<List, Error> {
         let path = self.lists_path().join(&list.id).with_extension("ron");
         if !path.exists() {
             let content = ron::to_string(&list)?;
             std::fs::write(path, content).unwrap();
             Ok(list)
         } else {
-            Err(anyhow::anyhow!("List already exists"))
+            Err(Error::Tasks(TasksError::ExistingList))
         }
     }
 
-    pub fn update_list(&self, list: List) -> anyhow::Result<()> {
+    pub fn update_list(&self, list: List) -> Result<(), Error> {
         let path = self.lists_path().join(&list.id).with_extension("ron");
         if path.exists() {
             let content = ron::to_string(&list)?;
             std::fs::write(path, content)?;
             Ok(())
         } else {
-            Err(anyhow::anyhow!("List does not exist"))
+            Err(Error::Tasks(TasksError::ListNotFound))
         }
     }
 
-    pub fn delete_list(&self, list_id: &str) -> anyhow::Result<()> {
+    pub fn delete_list(&self, list_id: &str) -> Result<(), Error> {
         let path = self.lists_path().join(list_id).with_extension("ron");
         let tasks = self.tasks_path().join(list_id);
         if path.exists() {
@@ -156,7 +159,7 @@ impl ComputerStorageEngine {
             std::fs::remove_dir_all(tasks)?;
             Ok(())
         } else {
-            Err(anyhow::anyhow!("List does not exist"))
+            Err(Error::Tasks(TasksError::ListNotFound))
         }
     }
 

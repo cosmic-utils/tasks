@@ -18,7 +18,7 @@ use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
 use cosmic::widget::{horizontal_space, scrollable, segmented_button};
 use cosmic::{
     app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt,
-    Command, Element,
+    Element, Task as Command,
 };
 use tasks_core::models::list::List;
 use tasks_core::models::task::Task;
@@ -190,7 +190,7 @@ impl Tasks {
             .padding(spacing.space_none)
             .into(),
         ])
-        .align_items(Alignment::Center)
+        .align_x(Alignment::Center)
         .spacing(spacing.space_xxs)
         .width(Length::Fill)
         .into()
@@ -363,7 +363,7 @@ impl Application for Tasks {
                     .control(
                         widget::container(scrollable(widget::row::with_children(vec![
                             widget::flex_row(icon_buttons).into(),
-                            horizontal_space(Length::Fixed(f32::from(spacing.space_s))).into(),
+                            horizontal_space().into(),
                         ])))
                         .height(Length::Fixed(300.0)),
                     );
@@ -465,7 +465,9 @@ impl Application for Tasks {
         if let Some(list) = location_opt {
             let message = Message::Content(content::Message::List(Some(list.clone())));
             let window_title = format!("{} - {}", list.name, fl!("tasks"));
-            commands.push(self.set_window_title(window_title, self.main_window_id()));
+            if let Some(window_id) = self.core.main_window_id() {
+                commands.push(self.set_window_title(window_title, window_id));
+            }
             return self.update(message);
         }
 
@@ -477,11 +479,10 @@ impl Application for Tasks {
         struct ThemeSubscription;
 
         let mut subscriptions = vec![
-            event::listen_with(|event, status| match event {
-                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => match status {
-                    event::Status::Ignored => Some(Message::Key(modifiers, key)),
-                    event::Status::Captured => None,
-                },
+            event::listen_with(|event, _status, _window_id| match event {
+                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => {
+                    Some(Message::Key(modifiers, key))
+                }
                 Event::Keyboard(KeyEvent::ModifiersChanged(modifiers)) => {
                     Some(Message::Modifiers(modifiers))
                 }
@@ -677,7 +678,9 @@ impl Application for Tasks {
                 self.set_context_title(context_page.clone().title());
             }
             Message::WindowClose => {
-                return window::close(window::Id::MAIN);
+                if let Some(window_id) = self.core.main_window_id() {
+                    return window::close(window_id);
+                }
             }
             Message::WindowNew => match env::current_exe() {
                 Ok(exe) => match process::Command::new(&exe).spawn() {
