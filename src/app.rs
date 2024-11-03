@@ -247,7 +247,7 @@ impl Application for Tasks {
         core.nav_bar_toggle_condensed();
         let nav_model = segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
-        let app = Tasks {
+        let mut app = Tasks {
             core,
             service: service.clone(),
             nav_model,
@@ -263,9 +263,13 @@ impl Application for Tasks {
             dialog_text_input: widget::Id::unique(),
         };
 
-        let commands = vec![Command::perform(TaskService::migrate(Self::APP_ID), |_| {
+        let mut commands = vec![Command::perform(TaskService::migrate(Self::APP_ID), |_| {
             message::app(Message::FetchLists)
         })];
+
+        if let Some(id) = app.core.main_window_id() {
+            commands.push(app.set_window_title(fl!("tasks"), id));
+        }
 
         (app, Command::batch(commands))
     }
