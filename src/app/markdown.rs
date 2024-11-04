@@ -1,6 +1,6 @@
-use tasks_core::models::List;
-use tasks_core::models::Status;
-use tasks_core::models::Task;
+use crate::core::models::List;
+use crate::core::models::Status;
+use crate::core::models::Task;
 
 pub trait Markdown {
     fn markdown(&self) -> String;

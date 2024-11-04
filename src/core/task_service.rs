@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 
 use crate::{
-    models::{List, Task},
+    core::models::{List, Task},
     Error,
 };
 
 #[async_trait]
+#[allow(unused)]
 pub trait TasksProvider: Sync + Send {
     /// Reads a single task by its id.
     async fn get_task(&mut self, task_list_id: String, task_id: String) -> Result<Task, Error>;

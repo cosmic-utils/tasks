@@ -2,6 +2,9 @@ use std::any::TypeId;
 use std::collections::{HashMap, VecDeque};
 use std::{env, process};
 
+use crate::core::models::List;
+use crate::core::models::Task;
+use crate::core::service::{Provider, TaskService};
 use chrono::{Local, NaiveDate};
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::app::{message, Core, Message as CosmicMessage};
@@ -19,9 +22,6 @@ use cosmic::widget::{horizontal_space, scrollable, segmented_button};
 use cosmic::{
     app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Element,
 };
-use tasks_core::models::List;
-use tasks_core::models::Task;
-use tasks_core::service::{Provider, TaskService};
 
 use crate::app::config::{AppTheme, CONFIG_VERSION};
 use crate::app::key_bind::key_binds;

@@ -5149,8 +5149,11 @@ dependencies = [
 name = "tasks"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "cli-clipboard",
+ "derive-getters",
+ "derive_setters",
  "dirs",
  "emojis",
  "env_logger",
@@ -5158,38 +5161,23 @@ dependencies = [
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
+ "libset",
  "log",
  "once_cell",
  "open",
  "paste",
+ "ron",
  "rust-embed",
  "serde",
+ "serde_json",
  "slotmap",
  "smol_str",
- "tasks-core",
- "tokio",
- "tracing",
- "vergen",
-]
-
-[[package]]
-name = "tasks-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "derive-getters",
- "derive_setters",
- "dirs",
- "emojis",
- "libset",
- "ron",
- "serde",
- "serde_json",
  "sqlx",
  "thiserror",
+ "tokio",
  "tracing",
  "uuid",
+ "vergen",
 ]
 
 [[package]]

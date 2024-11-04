@@ -1,4 +1,5 @@
 use crate::app::icon_cache::IconCache;
+use crate::core::models::{self, Priority, Status};
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
@@ -6,7 +7,6 @@ use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::{segmented_button, text_editor};
 use cosmic::{theme, widget, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
-use tasks_core::models::{self, Priority, Status};
 
 use crate::fl;
 

@@ -1,7 +1,8 @@
 mod app;
 mod content;
+mod core;
 mod details;
-pub use tasks_core::Error;
+pub use core::Error;
 mod todo;
 
 pub fn main() -> cosmic::iced::Result {

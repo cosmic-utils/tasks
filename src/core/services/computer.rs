@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
 use crate::{
-    models::{List, Task},
-    task_service::TasksProvider,
+    core::models::{List, Task},
+    core::task_service::TasksProvider,
     Error,
 };
 

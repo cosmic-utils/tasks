@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, Connection};
 
 use crate::{
-    models::{List, Priority, Recurrence, Status, Task},
-    services::computer::ComputerStorage,
-    task_service::TasksProvider,
+    core::models::{List, Priority, Recurrence, Status, Task},
+    core::services::computer::ComputerStorage,
+    core::task_service::TasksProvider,
 };
 
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ pub enum Provider {
     #[default]
     Computer,
 }
-
+#[allow(unused)]
 impl TaskService {
     pub fn new(app_id: &str, provider: Provider) -> Self {
         Self {

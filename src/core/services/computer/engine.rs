@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
 use crate::{
-    models::{List, Task},
-    Error, TasksError,
+    core::models::{List, Task},
+    core::TasksError,
+    Error,
 };
 
 #[derive(Debug, Clone)]

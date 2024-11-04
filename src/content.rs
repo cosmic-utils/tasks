@@ -1,10 +1,10 @@
 use crate::app::icon_cache::IconCache;
+use crate::core::models::{self, List, Status};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{theme, widget, Apply, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
-use tasks_core::models::{self, List, Status};
 
 use crate::fl;
 
