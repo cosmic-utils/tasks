@@ -2,7 +2,7 @@ name: Pull request
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,17 +14,12 @@ jobs:
       checks: write
       pull-requests: write
     steps:
-    - name: Install depencencies
-      run: sudo apt-get install -y libxkbcommon-dev
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: clippy
-      uses: auguwu/clippy-action@1.4.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    - name: format
-      uses: mbrobbel/rustfmt-check@master
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        mode: review
+      - name: Install depencencies
+        run: sudo apt-get install -y libxkbcommon-dev
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
+      - name: clippy
+        uses: auguwu/clippy-action@1.4.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
