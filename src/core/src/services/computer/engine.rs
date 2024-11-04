@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    models::{list::List, task::Task},
+    models::{List, Task},
     Error, TasksError,
 };
 

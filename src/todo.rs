@@ -1,7 +1,7 @@
 use crate::app::markdown::Markdown;
 use crate::Error;
-use tasks_core::models::list::List;
-use tasks_core::models::task::Task;
+use tasks_core::models::List;
+use tasks_core::models::Task;
 use tasks_core::service::TaskService;
 use tasks_core::TasksError;
 

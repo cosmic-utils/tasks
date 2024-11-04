@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, Connection};
 
 use crate::{
-    models::{list::List, priority::Priority, recurrence::Recurrence, status::Status, task::Task},
+    models::{List, Priority, Recurrence, Status, Task},
     services::computer::ComputerStorage,
     task_service::TasksProvider,
 };

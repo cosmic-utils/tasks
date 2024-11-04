@@ -4,15 +4,13 @@ use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::iced_widget::row;
 use cosmic::{theme, widget, Apply, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
-use tasks_core::models::list::List;
-use tasks_core::models::status::Status;
-use tasks_core::models::task::Task;
+use tasks_core::models::{self, List, Status};
 
 use crate::fl;
 
 pub struct Content {
     list: Option<List>,
-    tasks: SlotMap<DefaultKey, Task>,
+    tasks: SlotMap<DefaultKey, models::Task>,
     editing: SecondaryMap<DefaultKey, bool>,
     task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     input: String,
@@ -24,24 +22,24 @@ pub enum Message {
     Complete(DefaultKey, bool),
     Delete(DefaultKey),
     EditMode(DefaultKey, bool),
-    Export(Vec<Task>),
+    Export(Vec<models::Task>),
     Input(String),
     List(Option<List>),
-    Select(Task),
-    SetItems(Vec<Task>),
+    Select(models::Task),
+    SetItems(Vec<models::Task>),
     TitleSubmit(DefaultKey),
     TitleUpdate(DefaultKey, String),
-    UpdateTask(Task),
+    UpdateTask(models::Task),
 }
 
-pub enum Command {
+pub enum Task {
     Iced(cosmic::app::Task<super::app::Message>),
     GetTasks(String),
-    DisplayTask(Task),
-    UpdateTask(Task),
+    DisplayTask(models::Task),
+    UpdateTask(models::Task),
     Delete(String),
-    CreateTask(Task),
-    Export(Vec<Task>),
+    CreateTask(models::Task),
+    Export(Vec<models::Task>),
 }
 
 impl Content {
@@ -182,13 +180,13 @@ impl Content {
         .into()
     }
 
-    pub fn update(&mut self, message: Message) -> Vec<Command> {
-        let mut commands = Vec::new();
+    pub fn update(&mut self, message: Message) -> Vec<Task> {
+        let mut tasks = Vec::new();
         match message {
             Message::List(list) => {
                 self.list.clone_from(&list);
                 if let Some(list) = list {
-                    commands.push(Command::GetTasks(list.id().clone()));
+                    tasks.push(Task::GetTasks(list.id().clone()));
                 }
             }
             Message::TitleUpdate(id, title) => {
@@ -198,23 +196,23 @@ impl Content {
             }
             Message::TitleSubmit(id) => {
                 if let Some(task) = self.tasks.get(id) {
-                    commands.push(Command::UpdateTask(task.clone()));
+                    tasks.push(Task::UpdateTask(task.clone()));
                     self.editing.insert(id, false);
                 }
             }
             Message::Delete(id) => {
                 if let Some(task) = self.tasks.remove(id) {
-                    commands.push(Command::Delete(task.id().clone()));
+                    tasks.push(Task::Delete(task.id().clone()));
                 }
             }
             Message::EditMode(id, editing) => {
                 self.editing.insert(id, editing);
                 if editing {
-                    commands.push(Command::Iced(widget::text_input::focus(
+                    tasks.push(Task::Iced(widget::text_input::focus(
                         self.task_input_ids[id].clone(),
                     )));
                 } else if let Some(task) = self.tasks.get(id) {
-                    commands.push(Command::UpdateTask(task.clone()));
+                    tasks.push(Task::UpdateTask(task.clone()));
                 }
             }
             Message::SetItems(tasks) => {
@@ -225,7 +223,7 @@ impl Content {
                 }
             }
             Message::Select(task) => {
-                commands.push(Command::DisplayTask(task));
+                tasks.push(Task::DisplayTask(task));
             }
             Message::Complete(id, complete) => {
                 let task = self.tasks.get_mut(id);
@@ -235,15 +233,15 @@ impl Content {
                     } else {
                         Status::NotStarted
                     };
-                    commands.push(Command::UpdateTask(task.clone()));
+                    tasks.push(Task::UpdateTask(task.clone()));
                 }
             }
             Message::Input(input) => self.input = input,
             Message::AddTask => {
                 if let Some(list) = &self.list {
                     if !self.input.is_empty() {
-                        let task = Task::new(self.input.clone(), list.id().clone());
-                        commands.push(Command::CreateTask(task.clone()));
+                        let task = models::Task::new(self.input.clone(), list.id().clone());
+                        tasks.push(Task::CreateTask(task.clone()));
                         let id = self.tasks.insert(task);
                         self.task_input_ids.insert(id, widget::Id::unique());
                         self.input.clear();
@@ -257,14 +255,14 @@ impl Content {
                     .find(|t| t.id() == updated_task.id());
                 if let Some(task) = task {
                     *task = updated_task.clone();
-                    commands.push(Command::UpdateTask(task.clone()));
+                    tasks.push(Task::UpdateTask(task.clone()));
                 }
             }
-            Message::Export(tasks) => {
-                commands.push(Command::Export(tasks));
+            Message::Export(exported_tasks) => {
+                tasks.push(Task::Export(exported_tasks));
             }
         }
-        commands
+        tasks
     }
 
     pub fn view(&self) -> Element<Message> {

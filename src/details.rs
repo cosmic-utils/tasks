@@ -6,17 +6,15 @@ use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::{theme, widget, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
-use tasks_core::models::priority::Priority;
-use tasks_core::models::status::Status;
-use tasks_core::models::task::Task;
+use tasks_core::models::{self, Priority, Status};
 
 use crate::fl;
 
 pub struct Details {
-    pub task: Option<Task>,
+    pub task: Option<models::Task>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub subtask_input: String,
-    pub subtasks: SlotMap<DefaultKey, Task>,
+    pub subtasks: SlotMap<DefaultKey, models::Task>,
     pub editing: SecondaryMap<DefaultKey, bool>,
     pub sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
 }
@@ -38,9 +36,9 @@ pub enum Message {
     SetDueDate(NaiveDate),
 }
 
-pub enum Command {
+pub enum Task {
     Focus(widget::Id),
-    UpdateTask(Task),
+    UpdateTask(models::Task),
     OpenCalendarDialog,
     Iced(cosmic::app::Task<super::app::Message>),
 }
@@ -75,8 +73,8 @@ impl Details {
         }
     }
 
-    pub fn update(&mut self, message: Message) -> Vec<Command> {
-        let mut commands = vec![];
+    pub fn update(&mut self, message: Message) -> Vec<Task> {
+        let mut tasks = vec![];
         match message {
             Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
@@ -96,11 +94,11 @@ impl Details {
             Message::EditMode(id, editing) => {
                 self.editing.insert(id, editing);
                 if editing {
-                    commands.push(Command::Iced(widget::text_input::focus(
+                    tasks.push(Task::Iced(widget::text_input::focus(
                         self.sub_task_input_ids[id].clone(),
                     )));
                 } else if let Some(task) = self.subtasks.get(id) {
-                    commands.push(Command::UpdateTask(task.clone()));
+                    tasks.push(Task::UpdateTask(task.clone()));
                 }
             }
             Message::PriorityActivate(entity) => {
@@ -132,7 +130,7 @@ impl Details {
                 self.subtasks.remove(id);
             }
             Message::SubTaskEditDone => {
-                commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
+                tasks.push(Task::Focus(widget::Id::new("new_sub_task_input")));
             }
             Message::SubTaskInput(text) => {
                 self.subtask_input = text;
@@ -140,17 +138,18 @@ impl Details {
             Message::AddTask => {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
-                        let sub_task = Task::new(self.subtask_input.clone(), task.id().clone());
+                        let sub_task =
+                            models::Task::new(self.subtask_input.clone(), task.id().clone());
                         task.sub_tasks.push(sub_task.clone());
                         let id = self.subtasks.insert(sub_task);
                         self.sub_task_input_ids.insert(id, widget::Id::unique());
                         self.subtask_input.clear();
-                        commands.push(Command::Focus(widget::Id::new("new_sub_task_input")));
+                        tasks.push(Task::Focus(widget::Id::new("new_sub_task_input")));
                     }
                 }
             }
             Message::OpenCalendarDialog => {
-                commands.push(Command::OpenCalendarDialog);
+                tasks.push(Task::OpenCalendarDialog);
             }
             Message::SetDueDate(date) => {
                 let tz = Utc::now().timezone();
@@ -162,10 +161,10 @@ impl Details {
 
         if let Some(task) = &mut self.task {
             task.sub_tasks = self.subtasks.values().cloned().collect();
-            commands.push(Command::UpdateTask(task.clone()));
+            tasks.push(Task::UpdateTask(task.clone()));
         }
 
-        commands
+        tasks
     }
 
     pub fn view(&self) -> Element<Message> {
