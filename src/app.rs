@@ -56,31 +56,41 @@ pub struct Tasks {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    Tasks(TasksAction),
     Content(content::Message),
     Details(details::Message),
+    Dialog(DialogAction),
     ToggleContextPage(ContextPage),
-    LaunchUrl(String),
-    FetchLists,
+    Application(ApplicationAction),
+}
+
+#[derive(Debug, Clone)]
+pub enum DialogAction {
+    Open(DialogPage),
+    Update(DialogPage),
+    Close,
+    Complete,
+}
+
+#[derive(Debug, Clone)]
+pub enum TasksAction {
     PopulateLists(Vec<List>),
+    Export(Vec<Task>),
+    AddList(List),
+    DeleteList,
+    FetchLists,
+}
+
+#[derive(Debug, Clone)]
+pub enum ApplicationAction {
+    LaunchUrl(String),
     WindowClose,
     WindowNew,
-    DialogCancel,
-    DialogComplete,
-    DialogUpdate(DialogPage),
     Key(Modifiers, Key),
     Modifiers(Modifiers),
     AppTheme(usize),
     SystemThemeModeChange,
-    OpenNewListDialog,
-    OpenRenameListDialog,
-    OpenDeleteListDialog,
-    OpenIconDialog,
-    OpenCalendarDialog,
-    OpenExportDialog(String),
-    AddList(List),
-    DeleteList,
     Focus(widget::Id),
-    Export(Vec<Task>),
     NavMenuAction(NavMenuAction),
 }
 
@@ -105,7 +115,7 @@ impl ContextPage {
 pub enum DialogPage {
     New(String),
     Icon(String),
-    Rename { to: String },
+    Rename(String),
     Delete,
     Calendar(NaiveDate),
     Export(String),
@@ -135,12 +145,14 @@ impl MenuAction for Action {
         match self {
             Action::About => Message::ToggleContextPage(ContextPage::About),
             Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
-            Action::WindowClose => Message::WindowClose,
-            Action::WindowNew => Message::WindowNew,
-            Action::NewList => Message::OpenNewListDialog,
-            Action::Icon => Message::OpenIconDialog,
-            Action::RenameList => Message::OpenRenameListDialog,
-            Action::DeleteList => Message::OpenDeleteListDialog,
+            Action::WindowClose => Message::Application(ApplicationAction::WindowClose),
+            Action::WindowNew => Message::Application(ApplicationAction::WindowNew),
+            Action::NewList => Message::Dialog(DialogAction::Open(DialogPage::New(String::new()))),
+            Action::Icon => Message::Dialog(DialogAction::Open(DialogPage::Icon(String::new()))),
+            Action::RenameList => {
+                Message::Dialog(DialogAction::Open(DialogPage::Rename(String::new())))
+            }
+            Action::DeleteList => Message::Dialog(DialogAction::Open(DialogPage::Delete)),
         }
     }
 }
@@ -156,7 +168,9 @@ impl MenuAction for NavMenuAction {
     type Message = cosmic::app::Message<Message>;
 
     fn message(&self) -> Self::Message {
-        cosmic::app::Message::App(Message::NavMenuAction(*self))
+        cosmic::app::Message::App(Message::Application(ApplicationAction::NavMenuAction(
+            *self,
+        )))
     }
 }
 
@@ -178,7 +192,9 @@ impl Tasks {
             .into(),
             widget::text::title3(fl!("tasks")).into(),
             widget::button::link(repository)
-                .on_press(Message::LaunchUrl(repository.to_string()))
+                .on_press(Message::Application(ApplicationAction::LaunchUrl(
+                    repository.to_string(),
+                )))
                 .padding(spacing.space_none)
                 .into(),
             widget::button::link(fl!(
@@ -186,7 +202,9 @@ impl Tasks {
                 hash = short_hash.as_str(),
                 date = date
             ))
-            .on_press(Message::LaunchUrl(format!("{repository}/commits/{hash}")))
+            .on_press(Message::Application(ApplicationAction::LaunchUrl(format!(
+                "{repository}/commits/{hash}"
+            ))))
             .padding(spacing.space_none)
             .into(),
         ])
@@ -208,7 +226,7 @@ impl Tasks {
                 widget::settings::item::builder(fl!("theme")).control(widget::dropdown(
                     &self.app_themes,
                     Some(app_theme_selected),
-                    Message::AppTheme,
+                    |index| Message::Application(ApplicationAction::AppTheme(index)),
                 )),
             )
             .into()])
@@ -264,7 +282,7 @@ impl Application for Tasks {
         };
 
         let mut commands = vec![Command::perform(TaskService::migrate(Self::APP_ID), |_| {
-            message::app(Message::FetchLists)
+            message::app(Message::Tasks(TasksAction::FetchLists))
         })];
 
         if let Some(id) = app.core.main_window_id() {
@@ -286,151 +304,8 @@ impl Application for Tasks {
         })
     }
 
-    fn dialog(&self) -> Option<Element<Message>> {
-        let dialog_page = self.dialog_pages.front()?;
-
-        let spacing = theme::active().cosmic().spacing;
-
-        let dialog = match dialog_page {
-            DialogPage::New(name) => widget::dialog(fl!("create-list"))
-                .primary_action(
-                    widget::button::suggested(fl!("save"))
-                        .on_press_maybe(Some(Message::DialogComplete)),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                )
-                .control(
-                    widget::column::with_children(vec![
-                        widget::text::body(fl!("list-name")).into(),
-                        widget::text_input("", name.as_str())
-                            .id(self.dialog_text_input.clone())
-                            .on_input(move |name| Message::DialogUpdate(DialogPage::New(name)))
-                            .on_submit(Message::DialogComplete)
-                            .into(),
-                    ])
-                    .spacing(spacing.space_xxs),
-                ),
-            DialogPage::Rename { to: name } => widget::dialog(fl!("rename-list"))
-                .primary_action(
-                    widget::button::suggested(fl!("save"))
-                        .on_press_maybe(Some(Message::DialogComplete)),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                )
-                .control(
-                    widget::column::with_children(vec![
-                        widget::text::body(fl!("list-name")).into(),
-                        widget::text_input("", name.as_str())
-                            .id(self.dialog_text_input.clone())
-                            .on_input(move |name| {
-                                Message::DialogUpdate(DialogPage::Rename { to: name })
-                            })
-                            .on_submit(Message::DialogComplete)
-                            .into(),
-                    ])
-                    .spacing(spacing.space_xxs),
-                ),
-            DialogPage::Delete => widget::dialog(fl!("delete-list"))
-                .body(fl!("delete-list-confirm"))
-                .primary_action(
-                    widget::button::suggested(fl!("ok"))
-                        .on_press_maybe(Some(Message::DialogComplete)),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                ),
-            DialogPage::Icon(icon) => {
-                let icon_buttons: Vec<Element<_>> = emojis::iter()
-                    .map(|emoji| {
-                        widget::button::custom(
-                            widget::container(widget::text(emoji.to_string()))
-                                .width(spacing.space_l)
-                                .height(spacing.space_l)
-                                .align_y(Vertical::Center)
-                                .align_x(Horizontal::Center),
-                        )
-                        .on_press(Message::DialogUpdate(DialogPage::Icon(emoji.to_string())))
-                        .into()
-                    })
-                    .collect();
-                let mut dialog = widget::dialog(fl!("icon-select"))
-                    .body(fl!("icon-select-body"))
-                    .primary_action(
-                        widget::button::suggested(fl!("ok"))
-                            .on_press_maybe(Some(Message::DialogComplete)),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                    )
-                    .control(
-                        widget::container(scrollable(widget::row::with_children(vec![
-                            widget::flex_row(icon_buttons).into(),
-                            horizontal_space().into(),
-                        ])))
-                        .height(Length::Fixed(300.0)),
-                    );
-
-                if !icon.is_empty() {
-                    dialog = dialog.icon(widget::container(
-                        widget::text(icon.as_str()).size(spacing.space_l),
-                    ));
-                }
-
-                dialog
-            }
-            DialogPage::Calendar(date) => {
-                let dialog = widget::dialog(fl!("select-date"))
-                    .primary_action(
-                        widget::button::suggested(fl!("ok"))
-                            .on_press_maybe(Some(Message::DialogComplete)),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                    )
-                    .control(
-                        widget::container(widget::calendar(date, |date| {
-                            Message::DialogUpdate(DialogPage::Calendar(date))
-                        }))
-                        .width(Length::Fill)
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center),
-                    );
-                dialog
-            }
-            DialogPage::Export(contents) => {
-                let dialog = widget::dialog(fl!("export"))
-                    .control(
-                        widget::container(scrollable(widget::text(contents)).width(Length::Fill))
-                            .height(Length::Fixed(200.0))
-                            .width(Length::Fill),
-                    )
-                    .primary_action(
-                        widget::button::suggested(fl!("copy"))
-                            .on_press_maybe(Some(Message::DialogComplete)),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel")).on_press(Message::DialogCancel),
-                    );
-
-                dialog
-            }
-        };
-
-        Some(dialog.into())
-    }
-
     fn header_start(&self) -> Vec<Element<Self::Message>> {
         vec![menu::menu_bar(&self.key_binds)]
-    }
-
-    fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![]
-    }
-
-    fn header_end(&self) -> Vec<Element<Self::Message>> {
-        vec![]
     }
 
     fn nav_context_menu(
@@ -476,57 +351,6 @@ impl Application for Tasks {
         }
 
         Command::batch(commands)
-    }
-
-    fn subscription(&self) -> Subscription<Self::Message> {
-        struct ConfigSubscription;
-        struct ThemeSubscription;
-
-        let mut subscriptions = vec![
-            event::listen_with(|event, _status, _window_id| match event {
-                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => {
-                    Some(Message::Key(modifiers, key))
-                }
-                Event::Keyboard(KeyEvent::ModifiersChanged(modifiers)) => {
-                    Some(Message::Modifiers(modifiers))
-                }
-                _ => None,
-            }),
-            cosmic_config::config_subscription(
-                TypeId::of::<ConfigSubscription>(),
-                Self::APP_ID.into(),
-                CONFIG_VERSION,
-            )
-            .map(|update: Update<ThemeMode>| {
-                if !update.errors.is_empty() {
-                    log::info!(
-                        "errors loading config {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
-                }
-                Message::SystemThemeModeChange
-            }),
-            cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
-                TypeId::of::<ThemeSubscription>(),
-                cosmic_theme::THEME_MODE_ID.into(),
-                cosmic_theme::ThemeMode::version(),
-            )
-            .map(|update: Update<ThemeMode>| {
-                if !update.errors.is_empty() {
-                    log::info!(
-                        "errors loading theme mode {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
-                }
-                Message::SystemThemeModeChange
-            }),
-        ];
-
-        subscriptions.push(self.content.subscription().map(Message::Content));
-
-        Subscription::batch(subscriptions)
     }
 
     fn update(&mut self, message: Self::Message) -> Command<CosmicMessage<Self::Message>> {
@@ -606,8 +430,7 @@ impl Application for Tasks {
                             commands.push(command);
                         }
                         content::Command::Delete(id) => {
-                            if let Some(list) = self.nav_model.data::<List>(self.nav_model.active())
-                            {
+                            if let Some(list) = self.nav_model.active_data::<List>() {
                                 let command = Command::perform(
                                     todo::delete_task(
                                         list.id().clone(),
@@ -631,7 +454,7 @@ impl Application for Tasks {
                             commands.push(command);
                         }
                         content::Command::Export(tasks) => {
-                            commands.push(self.update(Message::Export(tasks)));
+                            commands.push(self.update(Message::Tasks(TasksAction::Export(tasks))));
                         }
                     }
                 }
@@ -646,32 +469,19 @@ impl Application for Tasks {
                             )));
                         }
                         details::Command::OpenCalendarDialog => {
-                            commands.push(self.update(Message::OpenCalendarDialog));
+                            commands.push(self.update(Message::Dialog(DialogAction::Open(
+                                DialogPage::Calendar(Local::now().date_naive()),
+                            ))));
                         }
                         details::Command::Focus(id) => {
-                            commands.push(self.update(Message::Focus(id)));
+                            commands.push(
+                                self.update(Message::Application(ApplicationAction::Focus(id))),
+                            );
                         }
                         details::Command::Iced(command) => return command,
                     }
                 }
             }
-            Message::NavMenuAction(action) => match action {
-                NavMenuAction::Rename(entity) => {
-                    if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenRenameListDialog));
-                    }
-                }
-                NavMenuAction::SetIcon(entity) => {
-                    if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenIconDialog));
-                    }
-                }
-                NavMenuAction::Delete(entity) => {
-                    if self.nav_model.data::<List>(entity).is_some() {
-                        commands.push(self.update(Message::OpenDeleteListDialog));
-                    }
-                }
-            },
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
                     self.core.window.show_context = !self.core.window.show_context;
@@ -681,208 +491,423 @@ impl Application for Tasks {
                 }
                 self.set_context_title(context_page.clone().title());
             }
-            Message::WindowClose => {
-                if let Some(window_id) = self.core.main_window_id() {
-                    return window::close(window_id);
-                }
-            }
-            Message::WindowNew => match env::current_exe() {
-                Ok(exe) => match process::Command::new(&exe).spawn() {
-                    Ok(_) => {}
-                    Err(err) => {
-                        eprintln!("failed to execute {exe:?}: {err}");
-                    }
-                },
-                Err(err) => {
-                    eprintln!("failed to get current executable path: {err}");
-                }
-            },
-            Message::LaunchUrl(url) => match open::that_detached(&url) {
-                Ok(()) => {}
-                Err(err) => {
-                    log::warn!("failed to open {:?}: {}", url, err);
-                }
-            },
-            Message::AppTheme(index) => {
-                let app_theme = match index {
-                    1 => AppTheme::Dark,
-                    2 => AppTheme::Light,
-                    _ => AppTheme::System,
-                };
-                config_set!(app_theme, app_theme);
-                return self.update_config();
-            }
-            Message::SystemThemeModeChange => {
-                return self.update_config();
-            }
-            Message::FetchLists => {
-                commands.push(Command::perform(
-                    todo::fetch_lists(self.service.clone()),
-                    |result| match result {
-                        Ok(data) => message::app(Message::PopulateLists(data)),
-                        Err(_) => message::none(),
-                    },
-                ));
-            }
-            Message::PopulateLists(lists) => {
-                for list in lists {
-                    self.create_nav_item(&list);
-                }
-                let Some(entity) = self.nav_model.iter().next() else {
-                    return Command::none();
-                };
-                self.nav_model.activate(entity);
-                let command = self.on_nav_select(entity);
-                commands.push(command);
-            }
-            Message::Key(modifiers, key) => {
-                for (key_bind, action) in &self.key_binds {
-                    if key_bind.matches(modifiers, &key) {
-                        return self.update(action.message());
-                    }
-                }
-            }
-            Message::Modifiers(modifiers) => {
-                self.modifiers = modifiers;
-            }
-            Message::AddList(list) => {
-                self.create_nav_item(&list);
-                let Some(entity) = self.nav_model.iter().last() else {
-                    return Command::none();
-                };
-                let command = self.on_nav_select(entity);
-                commands.push(command);
-            }
-            Message::DeleteList => {
-                if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
-                    let command = Command::perform(
-                        todo::delete_list(list.id().clone(), self.service.clone()),
-                        |result| match result {
-                            Ok(()) | Err(_) => message::none(),
-                        },
-                    );
-
-                    commands.push(self.update(Message::Content(content::Message::List(None))));
-
-                    commands.push(command);
-                }
-                self.nav_model.remove(self.nav_model.active());
-            }
-            Message::Export(tasks) => {
-                if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
-                    let exported_markdown = todo::export_list(list, &tasks);
-                    commands.push(self.update(Message::OpenExportDialog(exported_markdown)));
-                }
-            }
-            Message::OpenNewListDialog => {
-                self.dialog_pages.push_back(DialogPage::New(String::new()));
-                return widget::text_input::focus(self.dialog_text_input.clone());
-            }
-            Message::OpenRenameListDialog => {
-                if let Some(list) = self.nav_model.data::<List>(self.nav_model.active()) {
-                    self.dialog_pages.push_back(DialogPage::Rename {
-                        to: list.name.clone(),
-                    });
-                    return widget::text_input::focus(self.dialog_text_input.clone());
-                }
-            }
-            Message::OpenDeleteListDialog => {
-                if self
-                    .nav_model
-                    .data::<List>(self.nav_model.active())
-                    .is_some()
-                {
-                    self.dialog_pages.push_back(DialogPage::Delete);
-                }
-            }
-            Message::OpenIconDialog => {
-                if self
-                    .nav_model
-                    .data::<List>(self.nav_model.active())
-                    .is_some()
-                {
-                    self.dialog_pages.push_back(DialogPage::Icon(String::new()));
-                }
-            }
-            Message::OpenCalendarDialog => {
-                self.dialog_pages
-                    .push_back(DialogPage::Calendar(Local::now().date_naive()));
-            }
-            Message::OpenExportDialog(content) => {
-                self.dialog_pages.push_back(DialogPage::Export(content));
-            }
-            Message::DialogCancel => {
-                self.dialog_pages.pop_front();
-            }
-            Message::DialogComplete => {
-                if let Some(dialog_page) = self.dialog_pages.pop_front() {
-                    match dialog_page {
-                        DialogPage::New(name) => {
-                            let list = List::new(&name);
-                            commands.push(Command::perform(
-                                todo::create_list(list, self.service.clone()),
-                                |result| match result {
-                                    Ok(list) => message::app(Message::AddList(list)),
-                                    Err(_) => message::none(),
-                                },
-                            ));
+            Message::Dialog(dialog_action) => match dialog_action {
+                DialogAction::Open(page) => {
+                    match page {
+                        DialogPage::Icon(icon) => {
+                            if self.nav_model.active_data::<List>().is_some() {
+                                self.dialog_pages.push_back(DialogPage::Icon(icon));
+                            }
                         }
-                        DialogPage::Rename { to: name } => {
-                            let entity = self.nav_model.active();
-                            self.nav_model.text_set(entity, name.clone());
-                            if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.name.clone_from(&name);
-                                let command = Command::perform(
-                                    todo::update_list(list.clone(), self.service.clone()),
-                                    |_| message::none(),
-                                );
-                                commands.push(command);
+                        DialogPage::Rename(_) => {
+                            if let Some(list) = self.nav_model.active_data::<List>() {
+                                self.dialog_pages
+                                    .push_back(DialogPage::Rename(list.name.clone()));
                             }
                         }
                         DialogPage::Delete => {
-                            commands.push(self.update(Message::DeleteList));
+                            if self.nav_model.active_data::<List>().is_some() {
+                                self.dialog_pages.push_back(DialogPage::Delete);
+                            }
                         }
-                        DialogPage::Icon(icon) => {
-                            if let Some(list) = self.nav_model.active_data::<List>() {
+                        page => self.dialog_pages.push_back(page),
+                    }
+                    commands.push(self.update(Message::Application(ApplicationAction::Focus(
+                        self.dialog_text_input.clone(),
+                    ))));
+                }
+                DialogAction::Update(dialog_page) => {
+                    self.dialog_pages[0] = dialog_page;
+                }
+                DialogAction::Close => {
+                    self.dialog_pages.pop_front();
+                }
+                DialogAction::Complete => {
+                    if let Some(dialog_page) = self.dialog_pages.pop_front() {
+                        match dialog_page {
+                            DialogPage::New(name) => {
+                                let list = List::new(&name);
+                                commands.push(Command::perform(
+                                    todo::create_list(list, self.service.clone()),
+                                    |result| match result {
+                                        Ok(list) => {
+                                            message::app(Message::Tasks(TasksAction::AddList(list)))
+                                        }
+                                        Err(_) => message::none(),
+                                    },
+                                ));
+                            }
+                            DialogPage::Rename(name) => {
                                 let entity = self.nav_model.active();
-                                let title = format!("{} {}", icon.clone(), list.name.clone());
-                                self.nav_model.text_set(entity, title);
+                                self.nav_model.text_set(entity, name.clone());
+                                if let Some(list) = self.nav_model.active_data_mut::<List>() {
+                                    list.name.clone_from(&name);
+                                    let command = Command::perform(
+                                        todo::update_list(list.clone(), self.service.clone()),
+                                        |_| message::none(),
+                                    );
+                                    commands.push(command);
+                                }
                             }
-                            if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.icon = Some(icon);
-                                let command = Command::perform(
-                                    todo::update_list(list.clone(), self.service.clone()),
-                                    |_| message::none(),
-                                );
-                                commands.push(command);
+                            DialogPage::Delete => {
+                                commands.push(self.update(Message::Tasks(TasksAction::DeleteList)));
                             }
-                        }
-                        DialogPage::Calendar(date) => {
-                            self.details.update(details::Message::SetDueDate(date));
-                        }
-                        DialogPage::Export(content) => {
-                            let mut clipboard = ClipboardContext::new().unwrap();
-                            clipboard.set_contents(content).unwrap();
+                            DialogPage::Icon(icon) => {
+                                if let Some(list) = self.nav_model.active_data::<List>() {
+                                    let entity = self.nav_model.active();
+                                    let title = format!("{} {}", icon.clone(), list.name.clone());
+                                    self.nav_model.text_set(entity, title);
+                                }
+                                if let Some(list) = self.nav_model.active_data_mut::<List>() {
+                                    list.icon = Some(icon);
+                                    let command = Command::perform(
+                                        todo::update_list(list.clone(), self.service.clone()),
+                                        |_| message::none(),
+                                    );
+                                    commands.push(command);
+                                }
+                            }
+                            DialogPage::Calendar(date) => {
+                                self.details.update(details::Message::SetDueDate(date));
+                            }
+                            DialogPage::Export(content) => {
+                                let mut clipboard = ClipboardContext::new().unwrap();
+                                clipboard.set_contents(content).unwrap();
+                            }
                         }
                     }
                 }
+            },
+            Message::Tasks(tasks_action) => match tasks_action {
+                TasksAction::FetchLists => {
+                    commands.push(Command::perform(
+                        todo::fetch_lists(self.service.clone()),
+                        |result| match result {
+                            Ok(data) => {
+                                message::app(Message::Tasks(TasksAction::PopulateLists(data)))
+                            }
+                            Err(_) => message::none(),
+                        },
+                    ));
+                }
+                TasksAction::PopulateLists(lists) => {
+                    for list in lists {
+                        self.create_nav_item(&list);
+                    }
+                    let Some(entity) = self.nav_model.iter().next() else {
+                        return Command::none();
+                    };
+                    self.nav_model.activate(entity);
+                    let command = self.on_nav_select(entity);
+                    commands.push(command);
+                }
+                TasksAction::AddList(list) => {
+                    self.create_nav_item(&list);
+                    let Some(entity) = self.nav_model.iter().last() else {
+                        return Command::none();
+                    };
+                    let command = self.on_nav_select(entity);
+                    commands.push(command);
+                }
+                TasksAction::DeleteList => {
+                    if let Some(list) = self.nav_model.active_data::<List>() {
+                        let command = Command::perform(
+                            todo::delete_list(list.id().clone(), self.service.clone()),
+                            |result| match result {
+                                Ok(()) | Err(_) => message::none(),
+                            },
+                        );
+
+                        commands.push(self.update(Message::Content(content::Message::List(None))));
+
+                        commands.push(command);
+                    }
+                    self.nav_model.remove(self.nav_model.active());
+                }
+                TasksAction::Export(tasks) => {
+                    if let Some(list) = self.nav_model.active_data() {
+                        let exported_markdown = todo::export_list(list, &tasks);
+                        commands.push(self.update(Message::Dialog(DialogAction::Open(
+                            DialogPage::Export(exported_markdown),
+                        ))));
+                    }
+                }
+            },
+            Message::Application(application_action) => {
+                match application_action {
+                    ApplicationAction::WindowClose => {
+                        if let Some(window_id) = self.core.main_window_id() {
+                            return window::close(window_id);
+                        }
+                    }
+                    ApplicationAction::WindowNew => match env::current_exe() {
+                        Ok(exe) => match process::Command::new(&exe).spawn() {
+                            Ok(_) => {}
+                            Err(err) => {
+                                eprintln!("failed to execute {exe:?}: {err}");
+                            }
+                        },
+                        Err(err) => {
+                            eprintln!("failed to get current executable path: {err}");
+                        }
+                    },
+                    ApplicationAction::LaunchUrl(url) => match open::that_detached(&url) {
+                        Ok(()) => {}
+                        Err(err) => {
+                            log::warn!("failed to open {:?}: {}", url, err);
+                        }
+                    },
+                    ApplicationAction::AppTheme(index) => {
+                        let app_theme = match index {
+                            1 => AppTheme::Dark,
+                            2 => AppTheme::Light,
+                            _ => AppTheme::System,
+                        };
+                        config_set!(app_theme, app_theme);
+                        return self.update_config();
+                    }
+                    ApplicationAction::SystemThemeModeChange => {
+                        return self.update_config();
+                    }
+                    ApplicationAction::Key(modifiers, key) => {
+                        for (key_bind, action) in &self.key_binds {
+                            if key_bind.matches(modifiers, &key) {
+                                return self.update(action.message());
+                            }
+                        }
+                    }
+                    ApplicationAction::Modifiers(modifiers) => {
+                        self.modifiers = modifiers;
+                    }
+                    ApplicationAction::Focus(id) => commands.push(widget::text_input::focus(id)),
+                    ApplicationAction::NavMenuAction(nav_menu_action) => match nav_menu_action {
+                        NavMenuAction::Rename(entity) => {
+                            if self.nav_model.data::<List>(entity).is_some() {
+                                commands.push(self.update(Message::Dialog(DialogAction::Open(
+                                    DialogPage::Rename(String::new()),
+                                ))));
+                            }
+                        }
+                        NavMenuAction::SetIcon(entity) => {
+                            if self.nav_model.data::<List>(entity).is_some() {
+                                commands.push(self.update(Message::Dialog(DialogAction::Open(
+                                    DialogPage::Icon(String::new()),
+                                ))));
+                            }
+                        }
+                        NavMenuAction::Delete(entity) => {
+                            if self.nav_model.data::<List>(entity).is_some() {
+                                commands.push(self.update(Message::Dialog(DialogAction::Open(
+                                    DialogPage::Delete,
+                                ))));
+                            }
+                        }
+                    },
+                }
             }
-            Message::DialogUpdate(dialog_page) => {
-                //TODO: panicless way to do this?
-                self.dialog_pages[0] = dialog_page;
-            }
-            Message::Focus(id) => return Command::batch(vec![widget::text_input::focus(id)]),
         }
 
-        if !commands.is_empty() {
-            return Command::batch(commands);
-        }
-
-        Command::none()
+        Command::batch(commands)
     }
 
     fn view(&self) -> Element<Self::Message> {
         let content_view = self.content.view().map(Message::Content);
         content_view
+    }
+
+    fn dialog(&self) -> Option<Element<Message>> {
+        let dialog_page = self.dialog_pages.front()?;
+
+        let spacing = theme::active().cosmic().spacing;
+
+        let dialog = match dialog_page {
+            DialogPage::New(name) => widget::dialog(fl!("create-list"))
+                .primary_action(
+                    widget::button::suggested(fl!("save"))
+                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                )
+                .control(
+                    widget::column::with_children(vec![
+                        widget::text::body(fl!("list-name")).into(),
+                        widget::text_input("", name.as_str())
+                            .id(self.dialog_text_input.clone())
+                            .on_input(move |name| {
+                                Message::Dialog(DialogAction::Update(DialogPage::New(name)))
+                            })
+                            .on_submit(Message::Dialog(DialogAction::Complete))
+                            .into(),
+                    ])
+                    .spacing(spacing.space_xxs),
+                ),
+            DialogPage::Rename(name) => widget::dialog(fl!("rename-list"))
+                .primary_action(
+                    widget::button::suggested(fl!("save"))
+                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                )
+                .control(
+                    widget::column::with_children(vec![
+                        widget::text::body(fl!("list-name")).into(),
+                        widget::text_input("", name.as_str())
+                            .id(self.dialog_text_input.clone())
+                            .on_input(move |name| {
+                                Message::Dialog(DialogAction::Update(DialogPage::Rename(name)))
+                            })
+                            .on_submit(Message::Dialog(DialogAction::Complete))
+                            .into(),
+                    ])
+                    .spacing(spacing.space_xxs),
+                ),
+            DialogPage::Delete => widget::dialog(fl!("delete-list"))
+                .body(fl!("delete-list-confirm"))
+                .primary_action(
+                    widget::button::suggested(fl!("ok"))
+                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                ),
+            DialogPage::Icon(icon) => {
+                let icon_buttons: Vec<Element<_>> = emojis::iter()
+                    .map(|emoji| {
+                        widget::button::custom(
+                            widget::container(widget::text(emoji.to_string()))
+                                .width(spacing.space_l)
+                                .height(spacing.space_l)
+                                .align_y(Vertical::Center)
+                                .align_x(Horizontal::Center),
+                        )
+                        .on_press(Message::Dialog(DialogAction::Update(DialogPage::Icon(
+                            emoji.to_string(),
+                        ))))
+                        .into()
+                    })
+                    .collect();
+                let mut dialog = widget::dialog(fl!("icon-select"))
+                    .body(fl!("icon-select-body"))
+                    .primary_action(
+                        widget::button::suggested(fl!("ok"))
+                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel"))
+                            .on_press(Message::Dialog(DialogAction::Close)),
+                    )
+                    .control(
+                        widget::container(scrollable(widget::row::with_children(vec![
+                            widget::flex_row(icon_buttons).into(),
+                            horizontal_space().into(),
+                        ])))
+                        .height(Length::Fixed(300.0)),
+                    );
+
+                if !icon.is_empty() {
+                    dialog = dialog.icon(widget::container(
+                        widget::text(icon.as_str()).size(spacing.space_l),
+                    ));
+                }
+
+                dialog
+            }
+            DialogPage::Calendar(date) => {
+                let dialog = widget::dialog(fl!("select-date"))
+                    .primary_action(
+                        widget::button::suggested(fl!("ok"))
+                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel"))
+                            .on_press(Message::Dialog(DialogAction::Close)),
+                    )
+                    .control(
+                        widget::container(widget::calendar(date, |date| {
+                            Message::Dialog(DialogAction::Update(DialogPage::Calendar(date)))
+                        }))
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Center)
+                        .align_y(Vertical::Center),
+                    );
+                dialog
+            }
+            DialogPage::Export(contents) => {
+                let dialog = widget::dialog(fl!("export"))
+                    .control(
+                        widget::container(scrollable(widget::text(contents)).width(Length::Fill))
+                            .height(Length::Fixed(200.0))
+                            .width(Length::Fill),
+                    )
+                    .primary_action(
+                        widget::button::suggested(fl!("copy"))
+                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel"))
+                            .on_press(Message::Dialog(DialogAction::Close)),
+                    );
+
+                dialog
+            }
+        };
+
+        Some(dialog.into())
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        struct ConfigSubscription;
+        struct ThemeSubscription;
+
+        let mut subscriptions = vec![
+            event::listen_with(|event, _status, _window_id| match event {
+                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => {
+                    Some(Message::Application(ApplicationAction::Key(modifiers, key)))
+                }
+                Event::Keyboard(KeyEvent::ModifiersChanged(modifiers)) => Some(
+                    Message::Application(ApplicationAction::Modifiers(modifiers)),
+                ),
+                _ => None,
+            }),
+            cosmic_config::config_subscription(
+                TypeId::of::<ConfigSubscription>(),
+                Self::APP_ID.into(),
+                CONFIG_VERSION,
+            )
+            .map(|update: Update<ThemeMode>| {
+                if !update.errors.is_empty() {
+                    log::info!(
+                        "errors loading config {:?}: {:?}",
+                        update.keys,
+                        update.errors
+                    );
+                }
+                Message::Application(ApplicationAction::SystemThemeModeChange)
+            }),
+            cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
+                TypeId::of::<ThemeSubscription>(),
+                cosmic_theme::THEME_MODE_ID.into(),
+                cosmic_theme::ThemeMode::version(),
+            )
+            .map(|update: Update<ThemeMode>| {
+                if !update.errors.is_empty() {
+                    log::info!(
+                        "errors loading theme mode {:?}: {:?}",
+                        update.keys,
+                        update.errors
+                    );
+                }
+                Message::Application(ApplicationAction::SystemThemeModeChange)
+            }),
+        ];
+
+        subscriptions.push(self.content.subscription().map(Message::Content));
+
+        Subscription::batch(subscriptions)
     }
 }
