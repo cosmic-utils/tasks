@@ -410,6 +410,8 @@ impl Application for Tasks {
                             self.details.subtasks.clear();
                             self.details.sub_task_input_ids.clear();
                             self.details.task = Some(task.clone());
+                            self.details.text_editor_content =
+                                widget::text_editor::Content::with_text(&task.notes);
                             task.sub_tasks.into_iter().for_each(|task| {
                                 let id = self.details.subtasks.insert(task);
                                 self.details

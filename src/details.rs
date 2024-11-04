@@ -2,8 +2,8 @@ use crate::app::icon_cache::IconCache;
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
 use cosmic::iced_widget::row;
-use cosmic::widget::segmented_button;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::widget::{segmented_button, text_editor};
 use cosmic::{theme, widget, Element};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 use tasks_core::models::{self, Priority, Status};
@@ -17,12 +17,13 @@ pub struct Details {
     pub subtasks: SlotMap<DefaultKey, models::Task>,
     pub editing: SecondaryMap<DefaultKey, bool>,
     pub sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
+    pub text_editor_content: widget::text_editor::Content,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SetTitle(String),
-    SetNotes(String),
+    Editor(text_editor::Action),
     Favorite(bool),
     CompleteSubTask(DefaultKey, bool),
     DeleteSubTask(DefaultKey),
@@ -70,20 +71,22 @@ impl Details {
             subtasks: SlotMap::new(),
             editing: SecondaryMap::new(),
             sub_task_input_ids: SecondaryMap::new(),
+            text_editor_content: widget::text_editor::Content::new(),
         }
     }
 
     pub fn update(&mut self, message: Message) -> Vec<Task> {
         let mut tasks = vec![];
         match message {
+            Message::Editor(action) => {
+                if let Some(task) = &mut self.task {
+                    self.text_editor_content.perform(action);
+                    task.notes.clone_from(&self.text_editor_content.text());
+                }
+            }
             Message::SetTitle(title) => {
                 if let Some(ref mut task) = &mut self.task {
                     task.title.clone_from(&title);
-                }
-            }
-            Message::SetNotes(notes) => {
-                if let Some(ref mut task) = &mut self.task {
-                    task.notes.clone_from(&notes);
                 }
             }
             Message::Favorite(favorite) => {
@@ -251,8 +254,14 @@ impl Details {
                     .add(
                         widget::column::with_children(vec![
                             widget::text::body(fl!("notes")).into(),
-                            widget::text_input(fl!("notes"), &task.notes)
-                                .on_input(Message::SetNotes)
+                            widget::text_editor(&self.text_editor_content)
+                                .class(cosmic::theme::iced::TextEditor::Custom(Box::new(
+                                    text_editor_class,
+                                )))
+                                .padding(spacing.space_xxs)
+                                .placeholder(fl!("notes"))
+                                .height(100.0)
+                                .on_action(Message::Editor)
                                 .into(),
                         ])
                         .spacing(spacing.space_xxs)
@@ -291,5 +300,55 @@ impl Details {
         .spacing(spacing.space_xs)
         .align_y(Alignment::Center)
         .into()
+    }
+}
+
+fn text_editor_class(
+    theme: &cosmic::Theme,
+    status: cosmic::widget::text_editor::Status,
+) -> cosmic::iced_widget::text_editor::Style {
+    let cosmic = theme.cosmic();
+    let container = theme.current_container();
+
+    let mut background: cosmic::iced::Color = container.component.base.into();
+    background.a = 0.25;
+    let selection = cosmic.accent.base.into();
+    let value = cosmic.palette.neutral_9.into();
+    let mut placeholder = cosmic.palette.neutral_9;
+    placeholder.alpha = 0.7;
+    let placeholder = placeholder.into();
+    let icon = cosmic.background.on.into();
+
+    match status {
+        cosmic::iced_widget::text_editor::Status::Active
+        | cosmic::iced_widget::text_editor::Status::Disabled => {
+            cosmic::iced_widget::text_editor::Style {
+                background: background.into(),
+                border: cosmic::iced::Border {
+                    radius: cosmic.corner_radii.radius_m.into(),
+                    width: 2.0,
+                    color: container.component.divider.into(),
+                },
+                icon,
+                placeholder,
+                value,
+                selection,
+            }
+        }
+        cosmic::iced_widget::text_editor::Status::Hovered
+        | cosmic::iced_widget::text_editor::Status::Focused => {
+            cosmic::iced_widget::text_editor::Style {
+                background: background.into(),
+                border: cosmic::iced::Border {
+                    radius: cosmic.corner_radii.radius_m.into(),
+                    width: 2.0,
+                    color: cosmic::iced::Color::from(cosmic.accent.base),
+                },
+                icon,
+                placeholder,
+                value,
+                selection,
+            }
+        }
     }
 }
