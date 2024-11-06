@@ -233,7 +233,7 @@ impl Application for Tasks {
             .set_application_icon(Self::APP_ID)
             .set_developer_name("Eduardo Flores")
             .set_license_type("GPL-3.0")
-            .set_version("0.1.0")
+            .set_version("0.1.1")
             .set_support_url("https://github.com/cosmic-utils/tasks/issues")
             .set_repository_url("https://github.com/cosmic-utils/tasks")
             .set_developers([("Eduardo Flores".into(), "edfloreshz@proton.me".into())]);

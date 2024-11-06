@@ -32,6 +32,17 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.1.1" date="2024-11-06">
+        <description>
+            <p>Text editor for notes 🎉</p>
+            <ul>
+                <li>Notes now has a multiline text editor</li>
+                <li>The window has a border</li>
+                <li>The theme is now synced with COSMIC</li>
+                <li>The about page has been revamped</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.1.0" date="2024-07-02">
         <description>
             <p>Initial release! 🎉</p>
