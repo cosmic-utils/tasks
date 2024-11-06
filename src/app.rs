@@ -528,15 +528,24 @@ impl Application for Tasks {
                                 ));
                             }
                             DialogPage::Rename(name) => {
-                                let entity = self.nav_model.active();
-                                self.nav_model.text_set(entity, name.clone());
                                 if let Some(list) = self.nav_model.active_data_mut::<List>() {
+                                    let title = if let Some(icon) = list.icon() {
+                                        format!("{} {}", icon.clone(), &name)
+                                    } else {
+                                        name.clone()
+                                    };
                                     list.name.clone_from(&name);
+                                    let list = list.clone();
+                                    self.nav_model
+                                        .text_set(self.nav_model.active(), title.clone());
                                     let task = app::Task::perform(
                                         todo::update_list(list.clone(), self.service.clone()),
                                         |_| message::none(),
                                     );
                                     tasks.push(task);
+                                    tasks.push(self.update(Message::Content(
+                                        content::Message::List(Some(list)),
+                                    )));
                                 }
                             }
                             DialogPage::Delete => {
@@ -550,11 +559,15 @@ impl Application for Tasks {
                                 }
                                 if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                     list.icon = Some(icon);
+                                    let list = list.clone();
                                     let task = app::Task::perform(
                                         todo::update_list(list.clone(), self.service.clone()),
                                         |_| message::none(),
                                     );
                                     tasks.push(task);
+                                    tasks.push(self.update(Message::Content(
+                                        content::Message::List(Some(list)),
+                                    )));
                                 }
                             }
                             DialogPage::Calendar(date) => {
