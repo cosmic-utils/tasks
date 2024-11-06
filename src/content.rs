@@ -184,10 +184,18 @@ impl Content {
         let mut tasks = Vec::new();
         match message {
             Message::List(list) => {
-                self.list.clone_from(&list);
-                if let Some(list) = list {
-                    tasks.push(Task::GetTasks(list.id().clone()));
+                match (&self.list, &list) {
+                    (Some(current), Some(list)) => {
+                        if current.id != list.id {
+                            tasks.push(Task::GetTasks(list.id().clone()));
+                        }
+                    }
+                    (None, Some(list)) => {
+                        tasks.push(Task::GetTasks(list.id().clone()));
+                    }
+                    _ => {}
                 }
+                self.list.clone_from(&list);
             }
             Message::TitleUpdate(id, title) => {
                 if let Some(task) = self.tasks.get_mut(id) {
