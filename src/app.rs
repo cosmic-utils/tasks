@@ -7,14 +7,13 @@ use crate::core::models::Task;
 use crate::core::service::{Provider, TaskService};
 use chrono::{Local, NaiveDate};
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use cosmic::app::about::About;
 use cosmic::app::{message, Core, Message as CosmicMessage};
 use cosmic::cosmic_config::Update;
 use cosmic::cosmic_theme::ThemeMode;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::iced::{
-    event, keyboard::Event as KeyEvent, window, Alignment, Event, Length, Subscription,
-};
+use cosmic::iced::{event, keyboard::Event as KeyEvent, window, Event, Length, Subscription};
 use cosmic::widget::menu::action::MenuAction;
 use cosmic::widget::menu::key_bind::KeyBind;
 use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
@@ -39,6 +38,7 @@ pub mod settings;
 
 pub struct Tasks {
     core: Core,
+    about: About,
     service: TaskService,
     nav_model: segmented_button::SingleSelectModel,
     content: Content,
@@ -61,6 +61,7 @@ pub enum Message {
     Dialog(DialogAction),
     ToggleContextPage(ContextPage),
     Application(ApplicationAction),
+    Cosmic(cosmic::app::cosmic::Message),
 }
 
 #[derive(Debug, Clone)]
@@ -82,7 +83,6 @@ pub enum TasksAction {
 
 #[derive(Debug, Clone)]
 pub enum ApplicationAction {
-    LaunchUrl(String),
     WindowClose,
     WindowNew,
     Key(Modifiers, Key),
@@ -178,41 +178,6 @@ impl Tasks {
         app::command::set_theme(self.config.app_theme.theme())
     }
 
-    fn about(&self) -> Element<Message> {
-        let spacing = theme::active().cosmic().spacing;
-        let repository = "https://github.com/cosmic-utils/tasks";
-        let hash = env!("VERGEN_GIT_SHA");
-        let short_hash: String = hash.chars().take(7).collect();
-        let date = env!("VERGEN_GIT_COMMIT_DATE");
-        widget::column::with_children(vec![
-            widget::svg(widget::svg::Handle::from_memory(
-                &include_bytes!("../res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg")[..],
-            ))
-            .into(),
-            widget::text::title3(fl!("tasks")).into(),
-            widget::button::link(repository)
-                .on_press(Message::Application(ApplicationAction::LaunchUrl(
-                    repository.to_string(),
-                )))
-                .padding(spacing.space_none)
-                .into(),
-            widget::button::link(fl!(
-                "git-description",
-                hash = short_hash.as_str(),
-                date = date
-            ))
-            .on_press(Message::Application(ApplicationAction::LaunchUrl(format!(
-                "{repository}/commits/{hash}"
-            ))))
-            .padding(spacing.space_none)
-            .into(),
-        ])
-        .align_x(Alignment::Center)
-        .spacing(spacing.space_xxs)
-        .width(Length::Fill)
-        .into()
-    }
-
     fn settings(&self) -> Element<Message> {
         let app_theme_selected = match self.config.app_theme {
             AppTheme::Dark => 1,
@@ -263,8 +228,19 @@ impl Application for Tasks {
     fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let nav_model = segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
+        let about = About::default()
+            .set_application_name(fl!("tasks"))
+            .set_application_icon(Self::APP_ID)
+            .set_developer_name("Eduardo Flores")
+            .set_license_type("GPL-3.0")
+            .set_version("0.1.0")
+            .set_support_url("https://github.com/cosmic-utils/tasks/issues")
+            .set_repository_url("https://github.com/cosmic-utils/tasks")
+            .set_developers([("Eduardo Flores".into(), "edfloreshz@proton.me".into())]);
+
         let mut app = Tasks {
             core,
+            about,
             service: service.clone(),
             nav_model,
             content: Content::new(),
@@ -293,13 +269,17 @@ impl Application for Tasks {
         (app, app::Task::batch(tasks))
     }
 
+    fn about(&self) -> Option<&About> {
+        Some(&self.about)
+    }
+
     fn context_drawer(&self) -> Option<Element<Message>> {
         if !self.core.window.show_context {
             return None;
         }
 
         Some(match self.context_page {
-            ContextPage::About => self.about(),
+            ContextPage::About => self.about_view()?.map(Message::Cosmic),
             ContextPage::Settings => self.settings(),
             ContextPage::TaskDetails => self.details.view().map(Message::Details),
         })
@@ -385,6 +365,11 @@ impl Application for Tasks {
         let mut tasks = vec![];
 
         match message {
+            Message::Cosmic(message) => {
+                tasks.push(cosmic::app::command::message(cosmic::app::message::cosmic(
+                    message,
+                )));
+            }
             Message::Content(message) => {
                 let content_tasks = self.content.update(message);
                 for content_task in content_tasks {
@@ -654,12 +639,6 @@ impl Application for Tasks {
                         },
                         Err(err) => {
                             eprintln!("failed to get current executable path: {err}");
-                        }
-                    },
-                    ApplicationAction::LaunchUrl(url) => match open::that_detached(&url) {
-                        Ok(()) => {}
-                        Err(err) => {
-                            log::warn!("failed to open {:?}: {}", url, err);
                         }
                     },
                     ApplicationAction::AppTheme(index) => {
