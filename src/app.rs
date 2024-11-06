@@ -77,7 +77,7 @@ pub enum TasksAction {
     PopulateLists(Vec<List>),
     Export(Vec<Task>),
     AddList(List),
-    DeleteList,
+    DeleteList(Option<segmented_button::Entity>),
     FetchLists,
 }
 
@@ -113,9 +113,9 @@ impl ContextPage {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogPage {
     New(String),
-    Icon(String),
-    Rename(String),
-    Delete,
+    Icon(Option<segmented_button::Entity>, String),
+    Rename(Option<segmented_button::Entity>, String),
+    Delete(Option<segmented_button::Entity>),
     Calendar(NaiveDate),
     Export(String),
 }
@@ -147,11 +147,13 @@ impl MenuAction for Action {
             Action::WindowClose => Message::Application(ApplicationAction::WindowClose),
             Action::WindowNew => Message::Application(ApplicationAction::WindowNew),
             Action::NewList => Message::Dialog(DialogAction::Open(DialogPage::New(String::new()))),
-            Action::Icon => Message::Dialog(DialogAction::Open(DialogPage::Icon(String::new()))),
-            Action::RenameList => {
-                Message::Dialog(DialogAction::Open(DialogPage::Rename(String::new())))
+            Action::Icon => {
+                Message::Dialog(DialogAction::Open(DialogPage::Icon(None, String::new())))
             }
-            Action::DeleteList => Message::Dialog(DialogAction::Open(DialogPage::Delete)),
+            Action::RenameList => {
+                Message::Dialog(DialogAction::Open(DialogPage::Rename(None, String::new())))
+            }
+            Action::DeleteList => Message::Dialog(DialogAction::Open(DialogPage::Delete(None))),
         }
     }
 }
@@ -484,20 +486,15 @@ impl Application for Tasks {
             Message::Dialog(dialog_action) => match dialog_action {
                 DialogAction::Open(page) => {
                     match page {
-                        DialogPage::Icon(icon) => {
-                            if self.nav_model.active_data::<List>().is_some() {
-                                self.dialog_pages.push_back(DialogPage::Icon(icon));
-                            }
-                        }
-                        DialogPage::Rename(_) => {
-                            if let Some(list) = self.nav_model.active_data::<List>() {
+                        DialogPage::Rename(entity, _) => {
+                            let data = if let Some(entity) = entity {
+                                self.nav_model.data::<List>(entity)
+                            } else {
+                                self.nav_model.active_data::<List>()
+                            };
+                            if let Some(list) = data {
                                 self.dialog_pages
-                                    .push_back(DialogPage::Rename(list.name.clone()));
-                            }
-                        }
-                        DialogPage::Delete => {
-                            if self.nav_model.active_data::<List>().is_some() {
-                                self.dialog_pages.push_back(DialogPage::Delete);
+                                    .push_back(DialogPage::Rename(entity, list.name.clone()));
                             }
                         }
                         page => self.dialog_pages.push_back(page),
@@ -527,8 +524,13 @@ impl Application for Tasks {
                                     },
                                 ));
                             }
-                            DialogPage::Rename(name) => {
-                                if let Some(list) = self.nav_model.active_data_mut::<List>() {
+                            DialogPage::Rename(entity, name) => {
+                                let data = if let Some(entity) = entity {
+                                    self.nav_model.data_mut::<List>(entity)
+                                } else {
+                                    self.nav_model.active_data_mut::<List>()
+                                };
+                                if let Some(list) = data {
                                     let title = if let Some(icon) = list.icon() {
                                         format!("{} {}", icon.clone(), &name)
                                     } else {
@@ -548,11 +550,18 @@ impl Application for Tasks {
                                     )));
                                 }
                             }
-                            DialogPage::Delete => {
-                                tasks.push(self.update(Message::Tasks(TasksAction::DeleteList)));
+                            DialogPage::Delete(entity) => {
+                                tasks.push(
+                                    self.update(Message::Tasks(TasksAction::DeleteList(entity))),
+                                );
                             }
-                            DialogPage::Icon(icon) => {
-                                if let Some(list) = self.nav_model.active_data::<List>() {
+                            DialogPage::Icon(entity, icon) => {
+                                let data = if let Some(entity) = entity {
+                                    self.nav_model.data::<List>(entity)
+                                } else {
+                                    self.nav_model.active_data::<List>()
+                                };
+                                if let Some(list) = data {
                                     let entity = self.nav_model.active();
                                     let title = format!("{} {}", icon.clone(), list.name.clone());
                                     self.nav_model.text_set(entity, title);
@@ -612,8 +621,13 @@ impl Application for Tasks {
                     let task = self.on_nav_select(entity);
                     tasks.push(task);
                 }
-                TasksAction::DeleteList => {
-                    if let Some(list) = self.nav_model.active_data::<List>() {
+                TasksAction::DeleteList(entity) => {
+                    let data = if let Some(entity) = entity {
+                        self.nav_model.data::<List>(entity)
+                    } else {
+                        self.nav_model.active_data::<List>()
+                    };
+                    if let Some(list) = data {
                         let task = app::Task::perform(
                             todo::delete_list(list.id().clone(), self.service.clone()),
                             |result| match result {
@@ -636,72 +650,64 @@ impl Application for Tasks {
                     }
                 }
             },
-            Message::Application(application_action) => {
-                match application_action {
-                    ApplicationAction::WindowClose => {
-                        if let Some(window_id) = self.core.main_window_id() {
-                            return window::close(window_id);
-                        }
+            Message::Application(application_action) => match application_action {
+                ApplicationAction::WindowClose => {
+                    if let Some(window_id) = self.core.main_window_id() {
+                        return window::close(window_id);
                     }
-                    ApplicationAction::WindowNew => match env::current_exe() {
-                        Ok(exe) => match process::Command::new(&exe).spawn() {
-                            Ok(_) => {}
-                            Err(err) => {
-                                eprintln!("failed to execute {exe:?}: {err}");
-                            }
-                        },
-                        Err(err) => {
-                            eprintln!("failed to get current executable path: {err}");
-                        }
-                    },
-                    ApplicationAction::AppTheme(index) => {
-                        let app_theme = match index {
-                            1 => AppTheme::Dark,
-                            2 => AppTheme::Light,
-                            _ => AppTheme::System,
-                        };
-                        config_set!(app_theme, app_theme);
-                        return self.update_config();
-                    }
-                    ApplicationAction::SystemThemeModeChange => {
-                        return self.update_config();
-                    }
-                    ApplicationAction::Key(modifiers, key) => {
-                        for (key_bind, action) in &self.key_binds {
-                            if key_bind.matches(modifiers, &key) {
-                                return self.update(action.message());
-                            }
-                        }
-                    }
-                    ApplicationAction::Modifiers(modifiers) => {
-                        self.modifiers = modifiers;
-                    }
-                    ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
-                    ApplicationAction::NavMenuAction(nav_menu_action) => match nav_menu_action {
-                        NavMenuAction::Rename(entity) => {
-                            if self.nav_model.data::<List>(entity).is_some() {
-                                tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                                    DialogPage::Rename(String::new()),
-                                ))));
-                            }
-                        }
-                        NavMenuAction::SetIcon(entity) => {
-                            if self.nav_model.data::<List>(entity).is_some() {
-                                tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                                    DialogPage::Icon(String::new()),
-                                ))));
-                            }
-                        }
-                        NavMenuAction::Delete(entity) => {
-                            if self.nav_model.data::<List>(entity).is_some() {
-                                tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                                    DialogPage::Delete,
-                                ))));
-                            }
-                        }
-                    },
                 }
-            }
+                ApplicationAction::WindowNew => match env::current_exe() {
+                    Ok(exe) => match process::Command::new(&exe).spawn() {
+                        Ok(_) => {}
+                        Err(err) => {
+                            eprintln!("failed to execute {exe:?}: {err}");
+                        }
+                    },
+                    Err(err) => {
+                        eprintln!("failed to get current executable path: {err}");
+                    }
+                },
+                ApplicationAction::AppTheme(index) => {
+                    let app_theme = match index {
+                        1 => AppTheme::Dark,
+                        2 => AppTheme::Light,
+                        _ => AppTheme::System,
+                    };
+                    config_set!(app_theme, app_theme);
+                    return self.update_config();
+                }
+                ApplicationAction::SystemThemeModeChange => {
+                    return self.update_config();
+                }
+                ApplicationAction::Key(modifiers, key) => {
+                    for (key_bind, action) in &self.key_binds {
+                        if key_bind.matches(modifiers, &key) {
+                            return self.update(action.message());
+                        }
+                    }
+                }
+                ApplicationAction::Modifiers(modifiers) => {
+                    self.modifiers = modifiers;
+                }
+                ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
+                ApplicationAction::NavMenuAction(nav_menu_action) => match nav_menu_action {
+                    NavMenuAction::Rename(entity) => {
+                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
+                            DialogPage::Rename(Some(entity), String::new()),
+                        ))));
+                    }
+                    NavMenuAction::SetIcon(entity) => {
+                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
+                            DialogPage::Icon(Some(entity), String::new()),
+                        ))));
+                    }
+                    NavMenuAction::Delete(entity) => {
+                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
+                            DialogPage::Delete(Some(entity)),
+                        ))));
+                    }
+                },
+            },
         }
 
         app::Task::batch(tasks)
@@ -740,7 +746,7 @@ impl Application for Tasks {
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::Rename(name) => widget::dialog(fl!("rename-list"))
+            DialogPage::Rename(entity, name) => widget::dialog(fl!("rename-list"))
                 .primary_action(
                     widget::button::suggested(fl!("save"))
                         .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
@@ -755,14 +761,17 @@ impl Application for Tasks {
                         widget::text_input("", name.as_str())
                             .id(self.dialog_text_input.clone())
                             .on_input(move |name| {
-                                Message::Dialog(DialogAction::Update(DialogPage::Rename(name)))
+                                Message::Dialog(DialogAction::Update(DialogPage::Rename(
+                                    entity.clone(),
+                                    name,
+                                )))
                             })
                             .on_submit(Message::Dialog(DialogAction::Complete))
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::Delete => widget::dialog(fl!("delete-list"))
+            DialogPage::Delete(_) => widget::dialog(fl!("delete-list"))
                 .body(fl!("delete-list-confirm"))
                 .primary_action(
                     widget::button::suggested(fl!("ok"))
@@ -772,7 +781,7 @@ impl Application for Tasks {
                     widget::button::standard(fl!("cancel"))
                         .on_press(Message::Dialog(DialogAction::Close)),
                 ),
-            DialogPage::Icon(icon) => {
+            DialogPage::Icon(entity, icon) => {
                 let icon_buttons: Vec<Element<_>> = emojis::iter()
                     .map(|emoji| {
                         widget::button::custom(
@@ -783,6 +792,7 @@ impl Application for Tasks {
                                 .align_x(Horizontal::Center),
                         )
                         .on_press(Message::Dialog(DialogAction::Update(DialogPage::Icon(
+                            entity.clone(),
                             emoji.to_string(),
                         ))))
                         .into()
