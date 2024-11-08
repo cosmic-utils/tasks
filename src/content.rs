@@ -33,7 +33,7 @@ pub enum Message {
 }
 
 pub enum Task {
-    Iced(cosmic::app::Task<super::app::Message>),
+    Focus(widget::Id),
     GetTasks(String),
     DisplayTask(models::Task),
     UpdateTask(models::Task),
@@ -216,9 +216,7 @@ impl Content {
             Message::EditMode(id, editing) => {
                 self.editing.insert(id, editing);
                 if editing {
-                    tasks.push(Task::Iced(widget::text_input::focus(
-                        self.task_input_ids[id].clone(),
-                    )));
+                    tasks.push(Task::Focus(self.task_input_ids[id].clone()));
                 } else if let Some(task) = self.tasks.get(id) {
                     tasks.push(Task::UpdateTask(task.clone()));
                 }

@@ -22,6 +22,7 @@ pub enum Provider {
     #[default]
     Computer,
 }
+
 #[allow(unused)]
 impl TaskService {
     pub fn new(app_id: &str, provider: Provider) -> Self {

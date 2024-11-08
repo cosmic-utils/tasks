@@ -41,7 +41,6 @@ pub enum Task {
     Focus(widget::Id),
     UpdateTask(models::Task),
     OpenCalendarDialog,
-    Iced(cosmic::app::Task<super::app::Message>),
 }
 
 impl Details {
@@ -97,9 +96,7 @@ impl Details {
             Message::EditMode(id, editing) => {
                 self.editing.insert(id, editing);
                 if editing {
-                    tasks.push(Task::Iced(widget::text_input::focus(
-                        self.sub_task_input_ids[id].clone(),
-                    )));
+                    tasks.push(Task::Focus(self.sub_task_input_ids[id].clone()));
                 } else if let Some(task) = self.subtasks.get(id) {
                     tasks.push(Task::UpdateTask(task.clone()));
                 }

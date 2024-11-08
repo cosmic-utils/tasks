@@ -22,7 +22,7 @@ use cosmic::{
     app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Element,
 };
 
-use crate::app::config::{AppTheme, CONFIG_VERSION};
+use crate::app::config::CONFIG_VERSION;
 use crate::app::key_bind::key_binds;
 use crate::content::Content;
 use crate::details::Details;
@@ -181,22 +181,17 @@ impl Tasks {
     }
 
     fn settings(&self) -> Element<Message> {
-        let app_theme_selected = match self.config.app_theme {
-            AppTheme::Dark => 1,
-            AppTheme::Light => 2,
-            AppTheme::System => 0,
-        };
-        widget::settings::view_column(vec![widget::settings::section()
+        widget::settings::section()
             .title(fl!("appearance"))
-            .add(
-                widget::settings::item::builder(fl!("theme")).control(widget::dropdown(
+            .add(widget::settings::item::item(
+                fl!("theme"),
+                widget::dropdown(
                     &self.app_themes,
-                    Some(app_theme_selected),
-                    |index| Message::Application(ApplicationAction::AppTheme(index)),
-                )),
-            )
-            .into()])
-        .into()
+                    Some(self.config.app_theme.into()),
+                    |theme| Message::Application(ApplicationAction::AppTheme(theme)),
+                ),
+            ))
+            .into()
     }
 
     fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
@@ -376,7 +371,8 @@ impl Application for Tasks {
                 let content_tasks = self.content.update(message);
                 for content_task in content_tasks {
                     match content_task {
-                        content::Task::Iced(task) => return task,
+                        content::Task::Focus(id) => tasks
+                            .push(self.update(Message::Application(ApplicationAction::Focus(id)))),
                         content::Task::GetTasks(list_id) => {
                             tasks.push(app::Task::perform(
                                 todo::fetch_tasks(list_id, self.service.clone()),
@@ -465,12 +461,8 @@ impl Application for Tasks {
                                 DialogPage::Calendar(Local::now().date_naive()),
                             ))));
                         }
-                        details::Task::Focus(id) => {
-                            tasks.push(
-                                self.update(Message::Application(ApplicationAction::Focus(id))),
-                            );
-                        }
-                        details::Task::Iced(task) => return task,
+                        details::Task::Focus(id) => tasks
+                            .push(self.update(Message::Application(ApplicationAction::Focus(id)))),
                     }
                 }
             }
@@ -667,13 +659,8 @@ impl Application for Tasks {
                         eprintln!("failed to get current executable path: {err}");
                     }
                 },
-                ApplicationAction::AppTheme(index) => {
-                    let app_theme = match index {
-                        1 => AppTheme::Dark,
-                        2 => AppTheme::Light,
-                        _ => AppTheme::System,
-                    };
-                    config_set!(app_theme, app_theme);
+                ApplicationAction::AppTheme(theme) => {
+                    config_set!(app_theme, theme.into());
                     return self.update_config();
                 }
                 ApplicationAction::SystemThemeModeChange => {
@@ -714,8 +701,7 @@ impl Application for Tasks {
     }
 
     fn view(&self) -> Element<Self::Message> {
-        let content_view = self.content.view().map(Message::Content);
-        content_view
+        self.content.view().map(Message::Content)
     }
 
     fn dialog(&self) -> Option<Element<Message>> {

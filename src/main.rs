@@ -2,10 +2,11 @@ mod app;
 mod content;
 mod core;
 mod details;
-pub use core::Error;
 mod todo;
 
+use app::settings::{flags, settings};
+pub use core::Error;
+
 pub fn main() -> cosmic::iced::Result {
-    let (settings, flags) = app::settings::init();
-    cosmic::app::run::<app::Tasks>(settings, flags)
+    cosmic::app::run::<app::Tasks>(settings(), flags())
 }
