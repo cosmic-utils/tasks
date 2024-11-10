@@ -1,63 +1,96 @@
-empty-folder = Tom katalog
-empty-folder-hidden = Tom katalog (har dolda objekt)
-filesystem = Filsystem
-home = Hem
+tasks = Tasks
 trash = Papperskorg
+about = Om
 
-# Dialog
+# Innehåll
+add-new-task = Lägg till ny uppgift
+
+
+# Detaljer
+title = Titel
+details = Detaljer
+favorite = Favorit
+priority = Prioritet
+due-date = Förfallodatum
+reminder = Påminnelse
+notes = Anteckningar
+
+# Tomt
+no-tasks = Inga uppgifter
+no-tasks-suggestion = Prova att lägga till en uppgift med textfältet nedan
+no-list-selected = Ingen lista vald
+no-list-suggestion = Skapa eller välj en ny lista för att komma igång
+
+sub-tasks = Deluppgifter
+add-sub-task = Lägg till ny deluppgift
+
+# Ny listdialogruta
+create-list = Skapa en ny lista
+
+# Byt namn på lista dialogruta
+rename-list = Byt namn på lista
+
+# Ta bort lista dialogruta
+delete-list = Den valda listan är på väg att raderas
+delete-list-confirm = Är du säker på att du vill ta bort den här listan?
+
+# Ikon dialogruta
+icon = Ställ in ikon
+icon-select = Välj en ikon
+icon-select-body = Välj en ikon för listan
+
+# Datum dialogruta
+select-date = Välj ett datum
+
+# Exportera dialogruta
+export = Exportera
+
+# Dialogrutor
 cancel = Avbryt
-open = Öppna
+ok = Ok
+copy = Kopiera
+confirm = Bekräfta
+save = Spara
+list-name = Listnamn
 
-# List view
-name = Namn
-modified = Modifierad
-size = Storlek
+# Kontext sidor
 
-# Context Pages
+## Om
+git-description = Git commit {$hash} på {$date}
 
-## Operations
-operations = Operationer
-pending = Väntar
-failed = Misslyckades
-complete = Slutförd
-
-## Properties
+## Egenskaper
 properties = Egenskaper
 
-## Settings
+## Inställningar
 settings = Inställningar
 
-### Appearance
+### Utseende
 appearance = Utseende
 theme = Tema
 match-desktop = Matcha skrivbordet
 dark = Mörkt
 light = Ljust
 
-# Context menu
-new-file = Ny fil
-new-folder = Ny katalog
-move-to-trash = Flytta till papperskorg
-restore-from-trash = Återställ från papperskorgen
+# Meny
 
-# Menu
-
-## File
+## Fil
 file = Fil
-new-tab = Ny flik
 new-window = Nytt fönster
-close-tab = Stäng flik
+new-list = Ny lista
 quit = Avsluta
 
-## Edit
+## Redigera
 edit = Redigera
-cut = Klipp ut
-copy = Kopiera
-paste = Klistra in
-select-all = Välj alla
+rename = Byt namn
+delete = Ta bort
 
-## View
+## Visa
 view = Visa
-grid-view = Rutnätsvy
-list-view = Listvy
 menu-settings = Inställningar...
+menu-about = Om Tasks...
+
+## Om
+repository = Förråd
+support = Support
+website = Hemsida
+
