@@ -87,3 +87,8 @@ delete = Delete
 view = View
 menu-settings = Settings...
 menu-about = About Tasks...
+
+## About
+repository = Repository
+support = Support
+website = Website

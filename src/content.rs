@@ -126,10 +126,9 @@ impl Content {
         widget::column::with_capacity(2)
             .spacing(spacing.space_xxs)
             .push(self.list_header(list))
-            .push(items)
+            .push(items.apply(widget::scrollable))
             .apply(widget::container)
             .height(Length::Shrink)
-            .apply(widget::scrollable)
             .height(Length::Fill)
             .into()
     }

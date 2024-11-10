@@ -7,13 +7,13 @@ use crate::core::models::Task;
 use crate::core::service::{Provider, TaskService};
 use chrono::{Local, NaiveDate};
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
-use cosmic::app::about::About;
 use cosmic::app::{message, Core, Message as CosmicMessage};
 use cosmic::cosmic_config::Update;
 use cosmic::cosmic_theme::ThemeMode;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::{event, keyboard::Event as KeyEvent, window, Event, Length, Subscription};
+use cosmic::widget::about::About;
 use cosmic::widget::menu::action::MenuAction;
 use cosmic::widget::menu::key_bind::KeyBind;
 use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
@@ -61,7 +61,7 @@ pub enum Message {
     Dialog(DialogAction),
     ToggleContextPage(ContextPage),
     Application(ApplicationAction),
-    Cosmic(cosmic::app::cosmic::Message),
+    Open(String),
 }
 
 #[derive(Debug, Clone)]
@@ -181,17 +181,17 @@ impl Tasks {
     }
 
     fn settings(&self) -> Element<Message> {
-        widget::settings::section()
-            .title(fl!("appearance"))
-            .add(widget::settings::item::item(
+        widget::scrollable(widget::settings::section().title(fl!("appearance")).add(
+            widget::settings::item::item(
                 fl!("theme"),
                 widget::dropdown(
                     &self.app_themes,
                     Some(self.config.app_theme.into()),
                     |theme| Message::Application(ApplicationAction::AppTheme(theme)),
                 ),
-            ))
-            .into()
+            ),
+        ))
+        .into()
     }
 
     fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
@@ -226,14 +226,20 @@ impl Application for Tasks {
         let nav_model = segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
         let about = About::default()
-            .set_application_name(fl!("tasks"))
-            .set_application_icon(Self::APP_ID)
-            .set_developer_name("Eduardo Flores")
-            .set_license_type("GPL-3.0")
-            .set_version("0.1.1")
-            .set_support_url("https://github.com/cosmic-utils/tasks/issues")
-            .set_repository_url("https://github.com/cosmic-utils/tasks")
-            .set_developers([("Eduardo Flores".into(), "edfloreshz@proton.me".into())]);
+            .name(fl!("tasks"))
+            .icon(Self::APP_ID)
+            .version("0.1.1")
+            .author("Eduardo Flores")
+            .license("GPL-3.0-only")
+            .links([
+                (fl!("repository"), "https://github.com/cosmic-utils/tasks"),
+                (
+                    fl!("support"),
+                    "https://github.com/cosmic-utils/tasks/issues",
+                ),
+                (fl!("website"), "https://tasks.edfloreshz.dev"),
+            ])
+            .developers([("Eduardo Flores", "edfloreshz@proton.me")]);
 
         let mut app = Tasks {
             core,
@@ -266,17 +272,13 @@ impl Application for Tasks {
         (app, app::Task::batch(tasks))
     }
 
-    fn about(&self) -> Option<&About> {
-        Some(&self.about)
-    }
-
     fn context_drawer(&self) -> Option<Element<Message>> {
         if !self.core.window.show_context {
             return None;
         }
 
         Some(match self.context_page {
-            ContextPage::About => self.about_view()?.map(Message::Cosmic),
+            ContextPage::About => widget::about(&self.about, Message::Open),
             ContextPage::Settings => self.settings(),
             ContextPage::TaskDetails => self.details.view().map(Message::Details),
         })
@@ -362,10 +364,10 @@ impl Application for Tasks {
         let mut tasks = vec![];
 
         match message {
-            Message::Cosmic(message) => {
-                tasks.push(cosmic::app::command::message(cosmic::app::message::cosmic(
-                    message,
-                )));
+            Message::Open(url) => {
+                if let Err(err) = open::that_detached(url) {
+                    log::error!("{err}")
+                }
             }
             Message::Content(message) => {
                 let content_tasks = self.content.update(message);
@@ -710,7 +712,8 @@ impl Application for Tasks {
         let spacing = theme::active().cosmic().spacing;
 
         let dialog = match dialog_page {
-            DialogPage::New(name) => widget::dialog(fl!("create-list"))
+            DialogPage::New(name) => widget::dialog()
+                .title(fl!("create-list"))
                 .primary_action(
                     widget::button::suggested(fl!("save"))
                         .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
@@ -732,7 +735,8 @@ impl Application for Tasks {
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::Rename(entity, name) => widget::dialog(fl!("rename-list"))
+            DialogPage::Rename(entity, name) => widget::dialog()
+                .title(fl!("rename-list"))
                 .primary_action(
                     widget::button::suggested(fl!("save"))
                         .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
@@ -757,7 +761,8 @@ impl Application for Tasks {
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::Delete(_) => widget::dialog(fl!("delete-list"))
+            DialogPage::Delete(_) => widget::dialog()
+                .title(fl!("delete-list"))
                 .body(fl!("delete-list-confirm"))
                 .primary_action(
                     widget::button::suggested(fl!("ok"))
@@ -784,7 +789,8 @@ impl Application for Tasks {
                         .into()
                     })
                     .collect();
-                let mut dialog = widget::dialog(fl!("icon-select"))
+                let mut dialog = widget::dialog()
+                    .title(fl!("icon-select"))
                     .body(fl!("icon-select-body"))
                     .primary_action(
                         widget::button::suggested(fl!("ok"))
@@ -811,7 +817,8 @@ impl Application for Tasks {
                 dialog
             }
             DialogPage::Calendar(date) => {
-                let dialog = widget::dialog(fl!("select-date"))
+                let dialog = widget::dialog()
+                    .title(fl!("select-date"))
                     .primary_action(
                         widget::button::suggested(fl!("ok"))
                             .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
@@ -831,7 +838,8 @@ impl Application for Tasks {
                 dialog
             }
             DialogPage::Export(contents) => {
-                let dialog = widget::dialog(fl!("export"))
+                let dialog = widget::dialog()
+                    .title(fl!("export"))
                     .control(
                         widget::container(scrollable(widget::text(contents)).width(Length::Fill))
                             .height(Length::Fixed(200.0))
