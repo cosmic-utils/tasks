@@ -30,7 +30,7 @@ use crate::details::Details;
 use crate::{content, details, fl, todo};
 
 pub mod config;
-pub mod icon_cache;
+pub mod icons;
 mod key_bind;
 pub mod localize;
 pub mod markdown;
@@ -306,9 +306,21 @@ impl Application for Tasks {
         Some(cosmic::widget::menu::items(
             &HashMap::new(),
             vec![
-                cosmic::widget::menu::Item::Button(fl!("rename"), NavMenuAction::Rename(id)),
-                cosmic::widget::menu::Item::Button(fl!("icon"), NavMenuAction::SetIcon(id)),
-                cosmic::widget::menu::Item::Button(fl!("delete"), NavMenuAction::Delete(id)),
+                cosmic::widget::menu::Item::Button(
+                    fl!("rename"),
+                    Some(icons::get_handle("edit-symbolic", 14)),
+                    NavMenuAction::Rename(id),
+                ),
+                cosmic::widget::menu::Item::Button(
+                    fl!("icon"),
+                    Some(icons::get_handle("face-smile-big-symbolic", 14)),
+                    NavMenuAction::SetIcon(id),
+                ),
+                cosmic::widget::menu::Item::Button(
+                    fl!("delete"),
+                    Some(icons::get_handle("user-trash-full-symbolic", 14)),
+                    NavMenuAction::Delete(id),
+                ),
             ],
         ))
     }

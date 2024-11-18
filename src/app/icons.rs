@@ -34,6 +34,16 @@ impl IconCache {
             };
         }
 
+        // Menu icons
+        bundle!("edit-symbolic", 14);
+        bundle!("settings-symbolic", 14);
+        bundle!("tabs-stack-symbolic", 14);
+        bundle!("info-outline-symbolic", 14);
+        bundle!("plus-square-filled-symbolic", 14);
+        bundle!("cross-small-square-filled-symbolic", 14);
+        bundle!("face-smile-big-symbolic", 14);
+        bundle!("user-trash-full-symbolic", 14);
+
         bundle!("edit-clear-symbolic", 18);
         bundle!("folder-open-symbolic", 18);
         bundle!("go-down-symbolic", 18);
@@ -68,18 +78,18 @@ impl IconCache {
             .clone();
         icon::icon(handle).size(size)
     }
+}
 
-    pub fn get(name: &'static str, size: u16) -> icon::Icon {
-        let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
-        icon_cache.get_icon(name, size)
-    }
+pub fn get_icon(name: &'static str, size: u16) -> icon::Icon {
+    let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
+    icon_cache.get_icon(name, size)
+}
 
-    pub fn get_handle(name: &'static str, size: u16) -> icon::Handle {
-        let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
-        icon_cache
-            .cache
-            .entry(IconCacheKey { name, size })
-            .or_insert_with(|| icon::from_name(name).size(size).handle())
-            .clone()
-    }
+pub fn get_handle(name: &'static str, size: u16) -> icon::Handle {
+    let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
+    icon_cache
+        .cache
+        .entry(IconCacheKey { name, size })
+        .or_insert_with(|| icon::from_name(name).size(size).handle())
+        .clone()
 }

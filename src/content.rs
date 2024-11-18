@@ -1,4 +1,4 @@
-use crate::app::icon_cache::IconCache;
+use crate::app::icons;
 use crate::core::models::{self, List, Status};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
@@ -55,7 +55,7 @@ impl Content {
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
-        let export_button = widget::button::icon(IconCache::get_handle("share-symbolic", 18))
+        let export_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
             .class(cosmic::style::Button::Suggested)
             .padding(spacing.space_xxs)
             .on_press(Message::Export(self.tasks.values().cloned().collect()));
@@ -89,13 +89,13 @@ impl Content {
                 .on_toggle(move |value| Message::Complete(id, value));
 
             let delete_button =
-                widget::button::icon(IconCache::get_handle("user-trash-full-symbolic", 18))
+                widget::button::icon(icons::get_handle("user-trash-full-symbolic", 18))
                     .padding(spacing.space_xxs)
                     .class(cosmic::style::Button::Destructive)
                     .on_press(Message::Delete(id));
 
             let details_button =
-                widget::button::icon(IconCache::get_handle("info-outline-symbolic", 18))
+                widget::button::icon(icons::get_handle("info-outline-symbolic", 18))
                     .padding(spacing.space_xxs)
                     .class(cosmic::style::Button::Standard)
                     .on_press(Message::Select(item.clone()));
@@ -138,7 +138,7 @@ impl Content {
 
         let container = widget::container(
             widget::column::with_children(vec![
-                IconCache::get("task-past-due-symbolic", 56).into(),
+                icons::get_icon("task-past-due-symbolic", 56).into(),
                 widget::text::title1(fl!("no-tasks")).into(),
                 widget::text(fl!("no-tasks-suggestion")).into(),
             ])
@@ -165,7 +165,7 @@ impl Content {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button::icon(IconCache::get_handle("mail-send-symbolic", 18))
+            widget::button::icon(icons::get_handle("mail-send-symbolic", 18))
                 .padding(spacing.space_xxs)
                 .class(cosmic::style::Button::Suggested)
                 .on_press(Message::AddTask)
@@ -276,7 +276,7 @@ impl Content {
         let Some(ref list) = self.list else {
             return widget::container(
                 widget::column::with_children(vec![
-                    IconCache::get("applications-office-symbolic", 56).into(),
+                    icons::get_icon("applications-office-symbolic", 56).into(),
                     widget::text::title1(fl!("no-list-selected")).into(),
                     widget::text(fl!("no-list-suggestion")).into(),
                 ])

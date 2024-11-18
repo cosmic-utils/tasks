@@ -1,4 +1,4 @@
-use crate::app::icon_cache::{IconCache, ICON_CACHE};
+use crate::app::icons::{IconCache, ICON_CACHE};
 use crate::app::Flags;
 use cosmic::app::Settings;
 use cosmic::iced::{Limits, Size};

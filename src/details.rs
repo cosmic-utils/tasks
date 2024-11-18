@@ -1,4 +1,4 @@
-use crate::app::icon_cache::IconCache;
+use crate::app::icons;
 use crate::core::models::{self, Priority, Status};
 use chrono::{NaiveDate, TimeZone, Utc};
 use cosmic::iced::{Alignment, Length};
@@ -48,17 +48,17 @@ impl Details {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
-                    .icon(IconCache::get("flag-outline-thin-symbolic", 16))
+                    .icon(icons::get_icon("flag-outline-thin-symbolic", 16))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
-                    .icon(IconCache::get("flag-outline-thick-symbolic", 16))
+                    .icon(icons::get_icon("flag-outline-thick-symbolic", 16))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
-                    .icon(IconCache::get("flag-filled-symbolic", 16))
+                    .icon(icons::get_icon("flag-filled-symbolic", 16))
                     .data(Priority::High)
             })
             .build();
@@ -187,7 +187,7 @@ impl Details {
                 .on_submit(Message::SubTaskEditDone);
 
                 let delete_button =
-                    widget::button::icon(IconCache::get_handle("user-trash-full-symbolic", 18))
+                    widget::button::icon(icons::get_handle("user-trash-full-symbolic", 18))
                         .padding(spacing.space_xxs)
                         .on_press(Message::DeleteSubTask(id));
 
@@ -288,7 +288,7 @@ impl Details {
                 .on_submit(Message::AddTask)
                 .width(Length::Fill)
                 .into(),
-            widget::button::icon(IconCache::get_handle("mail-send-symbolic", 18))
+            widget::button::icon(icons::get_handle("mail-send-symbolic", 18))
                 .padding(spacing.space_xxs)
                 .on_press(Message::AddTask)
                 .into(),

@@ -13,6 +13,8 @@ use crate::{
     fl,
 };
 
+use super::icons;
+
 pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message> {
     MenuBar::new(vec![
         Tree::with_children(
@@ -20,11 +22,23 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             items(
                 key_binds,
                 vec![
-                    Item::Button(fl!("new-window"), Action::WindowNew),
+                    Item::Button(
+                        fl!("new-window"),
+                        Some(icons::get_handle("tabs-stack-symbolic", 14)),
+                        Action::WindowNew,
+                    ),
                     Item::Divider,
-                    Item::Button(fl!("new-list"), Action::NewList),
+                    Item::Button(
+                        fl!("new-list"),
+                        Some(icons::get_handle("plus-square-filled-symbolic", 14)),
+                        Action::NewList,
+                    ),
                     Item::Divider,
-                    Item::Button(fl!("quit"), Action::WindowClose),
+                    Item::Button(
+                        fl!("quit"),
+                        Some(icons::get_handle("cross-small-square-filled-symbolic", 14)),
+                        Action::WindowClose,
+                    ),
                 ],
             ),
         ),
@@ -33,11 +47,23 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             items(
                 key_binds,
                 vec![
-                    Item::Button(fl!("rename"), Action::RenameList),
+                    Item::Button(
+                        fl!("rename"),
+                        Some(icons::get_handle("edit-symbolic", 14)),
+                        Action::RenameList,
+                    ),
                     Item::Divider,
-                    Item::Button(fl!("icon"), Action::Icon),
+                    Item::Button(
+                        fl!("icon"),
+                        Some(icons::get_handle("face-smile-big-symbolic", 14)),
+                        Action::Icon,
+                    ),
                     Item::Divider,
-                    Item::Button(fl!("delete"), Action::DeleteList),
+                    Item::Button(
+                        fl!("delete"),
+                        Some(icons::get_handle("user-trash-full-symbolic", 14)),
+                        Action::DeleteList,
+                    ),
                 ],
             ),
         ),
@@ -46,9 +72,17 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
             items(
                 key_binds,
                 vec![
-                    Item::Button(fl!("menu-settings"), Action::Settings),
+                    Item::Button(
+                        fl!("menu-settings"),
+                        Some(icons::get_handle("settings-symbolic", 14)),
+                        Action::Settings,
+                    ),
                     Item::Divider,
-                    Item::Button(fl!("menu-about"), Action::About),
+                    Item::Button(
+                        fl!("menu-about"),
+                        Some(icons::get_handle("info-outline-symbolic", 14)),
+                        Action::About,
+                    ),
                 ],
             ),
         ),
