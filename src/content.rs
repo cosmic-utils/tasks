@@ -34,11 +34,11 @@ pub enum Message {
 
 pub enum Task {
     Focus(widget::Id),
-    GetTasks(String),
-    DisplayTask(models::Task),
-    UpdateTask(models::Task),
+    Get(String),
+    Display(models::Task),
+    Update(models::Task),
     Delete(String),
-    CreateTask(models::Task),
+    Create(models::Task),
     Export(Vec<models::Task>),
 }
 
@@ -186,11 +186,11 @@ impl Content {
                 match (&self.list, &list) {
                     (Some(current), Some(list)) => {
                         if current.id != list.id {
-                            tasks.push(Task::GetTasks(list.id().clone()));
+                            tasks.push(Task::Get(list.id().clone()));
                         }
                     }
                     (None, Some(list)) => {
-                        tasks.push(Task::GetTasks(list.id().clone()));
+                        tasks.push(Task::Get(list.id().clone()));
                     }
                     _ => {}
                 }
@@ -203,7 +203,7 @@ impl Content {
             }
             Message::TitleSubmit(id) => {
                 if let Some(task) = self.tasks.get(id) {
-                    tasks.push(Task::UpdateTask(task.clone()));
+                    tasks.push(Task::Update(task.clone()));
                     self.editing.insert(id, false);
                 }
             }
@@ -217,7 +217,7 @@ impl Content {
                 if editing {
                     tasks.push(Task::Focus(self.task_input_ids[id].clone()));
                 } else if let Some(task) = self.tasks.get(id) {
-                    tasks.push(Task::UpdateTask(task.clone()));
+                    tasks.push(Task::Update(task.clone()));
                 }
             }
             Message::SetItems(tasks) => {
@@ -228,7 +228,7 @@ impl Content {
                 }
             }
             Message::Select(task) => {
-                tasks.push(Task::DisplayTask(task));
+                tasks.push(Task::Display(task));
             }
             Message::Complete(id, complete) => {
                 let task = self.tasks.get_mut(id);
@@ -238,7 +238,7 @@ impl Content {
                     } else {
                         Status::NotStarted
                     };
-                    tasks.push(Task::UpdateTask(task.clone()));
+                    tasks.push(Task::Update(task.clone()));
                 }
             }
             Message::Input(input) => self.input = input,
@@ -246,7 +246,7 @@ impl Content {
                 if let Some(list) = &self.list {
                     if !self.input.is_empty() {
                         let task = models::Task::new(self.input.clone(), list.id().clone());
-                        tasks.push(Task::CreateTask(task.clone()));
+                        tasks.push(Task::Create(task.clone()));
                         let id = self.tasks.insert(task);
                         self.task_input_ids.insert(id, widget::Id::unique());
                         self.input.clear();
@@ -260,7 +260,7 @@ impl Content {
                     .find(|t| t.id() == updated_task.id());
                 if let Some(task) = task {
                     *task = updated_task.clone();
-                    tasks.push(Task::UpdateTask(task.clone()));
+                    tasks.push(Task::Update(task.clone()));
                 }
             }
             Message::Export(exported_tasks) => {

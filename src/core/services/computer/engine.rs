@@ -19,10 +19,10 @@ impl ComputerStorageEngine {
             std::fs::create_dir_all(&engine.path).ok()?;
         }
         if !engine.lists_path().exists() {
-            std::fs::create_dir_all(&engine.lists_path()).ok()?;
+            std::fs::create_dir_all(engine.lists_path()).ok()?;
         }
         if !engine.tasks_path().exists() {
-            std::fs::create_dir_all(&engine.tasks_path()).ok()?;
+            std::fs::create_dir_all(engine.tasks_path()).ok()?;
         }
         Some(engine)
     }
@@ -81,7 +81,7 @@ impl ComputerStorageEngine {
             .join(&task.id)
             .with_extension("ron");
         if !path.exists() {
-            std::fs::create_dir_all(&self.tasks_path().join(&task.parent))?;
+            std::fs::create_dir_all(self.tasks_path().join(&task.parent))?;
             let content = ron::to_string(&task)?;
             std::fs::write(path, content)?;
             Ok(task)

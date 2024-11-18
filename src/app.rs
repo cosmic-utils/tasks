@@ -7,6 +7,7 @@ use crate::core::models::Task;
 use crate::core::service::{Provider, TaskService};
 use chrono::{Local, NaiveDate};
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{message, Core, Message as CosmicMessage};
 use cosmic::cosmic_config::Update;
 use cosmic::cosmic_theme::ThemeMode;
@@ -62,6 +63,7 @@ pub enum Message {
     ToggleContextPage(ContextPage),
     Application(ApplicationAction),
     Open(String),
+    ToggleContextDrawer,
 }
 
 #[derive(Debug, Clone)]
@@ -272,15 +274,24 @@ impl Application for Tasks {
         (app, app::Task::batch(tasks))
     }
 
-    fn context_drawer(&self) -> Option<Element<Message>> {
+    fn context_drawer(&self) -> Option<ContextDrawer<Self::Message>> {
         if !self.core.window.show_context {
             return None;
         }
 
         Some(match self.context_page {
-            ContextPage::About => widget::about(&self.about, Message::Open),
-            ContextPage::Settings => self.settings(),
-            ContextPage::TaskDetails => self.details.view().map(Message::Details),
+            ContextPage::About => {
+                app::context_drawer::about(&self.about, Message::Open, Message::ToggleContextDrawer)
+            }
+            ContextPage::Settings => {
+                app::context_drawer::context_drawer(self.settings(), Message::ToggleContextDrawer)
+                    .title(self.context_page.title())
+            }
+            ContextPage::TaskDetails => app::context_drawer::context_drawer(
+                self.details.view().map(Message::Details),
+                Message::ToggleContextDrawer,
+            )
+            .title(self.context_page.title()),
         })
     }
 
@@ -375,7 +386,7 @@ impl Application for Tasks {
                     match content_task {
                         content::Task::Focus(id) => tasks
                             .push(self.update(Message::Application(ApplicationAction::Focus(id)))),
-                        content::Task::GetTasks(list_id) => {
+                        content::Task::Get(list_id) => {
                             tasks.push(app::Task::perform(
                                 todo::fetch_tasks(list_id, self.service.clone()),
                                 |result| match result {
@@ -386,7 +397,7 @@ impl Application for Tasks {
                                 },
                             ));
                         }
-                        content::Task::DisplayTask(task) => {
+                        content::Task::Display(task) => {
                             let entity =
                                 self.details.priority_model.entity_at(task.priority as u16);
                             if let Some(entity) = entity {
@@ -407,7 +418,7 @@ impl Application for Tasks {
                                 self.update(Message::ToggleContextPage(ContextPage::TaskDetails)),
                             );
                         }
-                        content::Task::UpdateTask(task) => {
+                        content::Task::Update(task) => {
                             self.details.task = Some(task.clone());
                             let task = app::Task::perform(
                                 todo::update_task(task, self.service.clone().clone()),
@@ -432,7 +443,7 @@ impl Application for Tasks {
                                 tasks.push(task);
                             }
                         }
-                        content::Task::CreateTask(task) => {
+                        content::Task::Create(task) => {
                             let task = app::Task::perform(
                                 todo::create_task(task, self.service.clone()),
                                 |result| match result {
@@ -453,7 +464,7 @@ impl Application for Tasks {
                 let details_tasks = self.details.update(message);
                 for details_task in details_tasks {
                     match details_task {
-                        details::Task::UpdateTask(task) => {
+                        details::Task::Update(task) => {
                             tasks.push(self.update(Message::Content(
                                 content::Message::UpdateTask(task.clone()),
                             )));
@@ -472,10 +483,12 @@ impl Application for Tasks {
                 if self.context_page == context_page {
                     self.core.window.show_context = !self.core.window.show_context;
                 } else {
-                    self.context_page = context_page.clone();
+                    self.context_page = context_page;
                     self.core.window.show_context = true;
                 }
-                self.set_context_title(context_page.clone().title());
+            }
+            Message::ToggleContextDrawer => {
+                self.core.window.show_context = !self.core.window.show_context
             }
             Message::Dialog(dialog_action) => match dialog_action {
                 DialogAction::Open(page) => {
@@ -752,8 +765,7 @@ impl Application for Tasks {
                             .id(self.dialog_text_input.clone())
                             .on_input(move |name| {
                                 Message::Dialog(DialogAction::Update(DialogPage::Rename(
-                                    entity.clone(),
-                                    name,
+                                    *entity, name,
                                 )))
                             })
                             .on_submit(Message::Dialog(DialogAction::Complete))
@@ -783,7 +795,7 @@ impl Application for Tasks {
                                 .align_x(Horizontal::Center),
                         )
                         .on_press(Message::Dialog(DialogAction::Update(DialogPage::Icon(
-                            entity.clone(),
+                            *entity,
                             emoji.to_string(),
                         ))))
                         .into()

@@ -39,7 +39,7 @@ pub enum Message {
 
 pub enum Task {
     Focus(widget::Id),
-    UpdateTask(models::Task),
+    Update(models::Task),
     OpenCalendarDialog,
 }
 
@@ -98,7 +98,7 @@ impl Details {
                 if editing {
                     tasks.push(Task::Focus(self.sub_task_input_ids[id].clone()));
                 } else if let Some(task) = self.subtasks.get(id) {
-                    tasks.push(Task::UpdateTask(task.clone()));
+                    tasks.push(Task::Update(task.clone()));
                 }
             }
             Message::PriorityActivate(entity) => {
@@ -161,7 +161,7 @@ impl Details {
 
         if let Some(task) = &mut self.task {
             task.sub_tasks = self.subtasks.values().cloned().collect();
-            tasks.push(Task::UpdateTask(task.clone()));
+            tasks.push(Task::Update(task.clone()));
         }
 
         tasks

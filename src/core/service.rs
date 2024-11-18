@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::Error;
 use chrono::NaiveDateTime;
@@ -82,7 +82,7 @@ impl TaskService {
 
 use sqlx::Row;
 
-async fn get_tasks(database_path: &PathBuf) -> Result<Vec<Task>, Error> {
+async fn get_tasks(database_path: &Path) -> Result<Vec<Task>, Error> {
     let mut conn = sqlx::SqliteConnection::connect(database_path.to_str().unwrap()).await?;
     let tasks = sqlx::query("SELECT * FROM tasks")
         .map(|row: SqliteRow| Task {
@@ -124,7 +124,7 @@ async fn get_tasks(database_path: &PathBuf) -> Result<Vec<Task>, Error> {
     Ok(tasks)
 }
 
-async fn get_lists(database_path: &PathBuf) -> Result<Vec<List>, Error> {
+async fn get_lists(database_path: &Path) -> Result<Vec<List>, Error> {
     let mut conn = sqlx::SqliteConnection::connect(database_path.to_str().unwrap()).await?;
     let tasks = sqlx::query("SELECT * FROM lists")
         .map(|row: SqliteRow| List {
