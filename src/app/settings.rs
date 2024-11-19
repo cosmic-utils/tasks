@@ -9,18 +9,18 @@ use super::config::TasksConfig;
 use super::localize::localize;
 use super::Tasks;
 
-pub fn settings() -> Settings {
+pub fn init() {
     localize();
     icons();
     log();
     migrate(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
+}
 
-    let config = TasksConfig::config();
-
+pub fn settings() -> Settings {
     Settings::default()
         .antialiasing(true)
         .client_decorations(true)
-        .theme(config.app_theme.theme())
+        .theme(TasksConfig::config().app_theme.theme())
         .size_limits(Limits::NONE.min_width(350.0).min_height(180.0))
         .size(Size::new(700.0, 750.0))
         .debug(false)

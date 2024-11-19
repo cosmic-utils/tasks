@@ -88,7 +88,7 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
         ),
     ])
     .item_height(ItemHeight::Dynamic(40))
-    .item_width(ItemWidth::Uniform(240))
+    .item_width(ItemWidth::Uniform(260))
     .spacing(4.0)
     .into()
 }

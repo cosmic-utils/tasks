@@ -4,9 +4,10 @@ mod core;
 mod details;
 mod todo;
 
-use app::settings::{flags, settings};
+use app::settings;
 pub use core::Error;
 
 pub fn main() -> cosmic::iced::Result {
-    cosmic::app::run::<app::Tasks>(settings(), flags())
+    settings::init();
+    cosmic::app::run::<app::Tasks>(settings::settings(), settings::flags())
 }
