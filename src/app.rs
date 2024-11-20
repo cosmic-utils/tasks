@@ -282,6 +282,7 @@ impl Application for Tasks {
         Some(match self.context_page {
             ContextPage::About => {
                 app::context_drawer::about(&self.about, Message::Open, Message::ToggleContextDrawer)
+                    .title(self.context_page.title())
             }
             ContextPage::Settings => {
                 app::context_drawer::context_drawer(self.settings(), Message::ToggleContextDrawer)

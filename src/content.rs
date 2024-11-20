@@ -294,9 +294,11 @@ impl Content {
             .push(self.list_view(list))
             .push(self.new_task_view())
             .spacing(spacing.space_xxs)
+            .max_width(800.)
             .apply(widget::container)
             .height(Length::Fill)
             .width(Length::Fill)
+            .center(Length::Fill)
             .into()
     }
 
