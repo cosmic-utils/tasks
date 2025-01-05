@@ -54,9 +54,6 @@ list-name = Nombre de la lista
 
 # Context Pages
 
-## Properties
-properties = Propiedades
-
 ## Settings
 settings = Ajustes
 

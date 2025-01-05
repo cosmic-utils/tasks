@@ -5,9 +5,6 @@ trash = Смітник
 
 # Context Pages
 
-## Properties
-properties = Властивості
-
 ## Settings
 settings = Налаштування
 

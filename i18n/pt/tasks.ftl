@@ -51,9 +51,6 @@ pending = Pendentes
 failed = Falhadas
 complete = Concluídas
 
-## Properties
-properties = Propriedades
-
 ## Settings
 settings = Definições
 settings-tab = Separador

@@ -7,8 +7,6 @@ trash = Lixeira
 name = Nome
 modified = Data da Motificação
 size = Tamanho
-## Properties
-properties = Propriedades 
 
 ## Settings
 settings = Configurações 

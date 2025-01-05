@@ -4,9 +4,6 @@ trash = 垃圾
 
 # Context Pages
 
-## Properties
-properties = 属性
-
 ## Settings
 settings = 配置
 

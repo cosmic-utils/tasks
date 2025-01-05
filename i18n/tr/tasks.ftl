@@ -57,9 +57,6 @@ list-name = Liste ismi
 ## About
 git-description = {$date} tarihinde yapılan {$hash} numaralı Git değişikliği
 
-## Properties
-properties = Özellikler
-
 ## Settings
 settings = Ayarlar
 

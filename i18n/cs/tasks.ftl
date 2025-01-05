@@ -4,9 +4,6 @@ trash = Koš
 
 # Context Pages
 
-## Properties
-properties = Vlastnosti
-
 ## Settings
 settings = Nastavení
 

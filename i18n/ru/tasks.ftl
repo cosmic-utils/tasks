@@ -57,9 +57,6 @@ list-name = Имя списка
 ## About
 git-description = Git-коммит {$hash} от {$date}
 
-## Properties
-properties = Свойства
-
 ## Settings
 settings = Параметры
 
