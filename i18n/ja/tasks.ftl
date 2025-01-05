@@ -51,9 +51,6 @@ pending = 保留中
 failed = 失敗
 complete = 完了
 
-## Properties
-properties = プロパティ
-
 ## Settings
 settings = 設定
 settings-tab = タブ

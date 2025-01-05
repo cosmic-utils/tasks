@@ -57,9 +57,6 @@ list-name = List name
 ## About
 git-description = Git commit {$hash} on {$date}
 
-## Properties
-properties = Properties
-
 ## Settings
 settings = Settings
 

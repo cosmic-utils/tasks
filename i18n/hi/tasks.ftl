@@ -57,9 +57,6 @@ list-name = सूची नाम
 ## About
 git-description = {$date} पर गिट कमिट {$hash}
 
-## Properties
-properties = प्रॉपर्टी
-
 ## Settings
 settings = सेटिंग
 

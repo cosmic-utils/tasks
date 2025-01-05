@@ -58,9 +58,6 @@ list-name = Listnamn
 ## Om
 git-description = Git commit {$hash} på {$date}
 
-## Egenskaper
-properties = Egenskaper
-
 ## Inställningar
 settings = Inställningar
 

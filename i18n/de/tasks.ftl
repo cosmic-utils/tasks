@@ -57,9 +57,6 @@ list-name = Listenname
 ## About
 git-description = Git-Commit {$hash} am {$date}
 
-## Properties
-properties = Eigenschaften
-
 ## Settings
 settings = Einstellungen
 

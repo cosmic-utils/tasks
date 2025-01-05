@@ -51,9 +51,6 @@ pending = In sospeso
 failed = Non riuscito
 complete = Completato
 
-## Properties
-properties = Proprietà
-
 ## Settings
 settings = Impostazioni
 settings-tab = Schede

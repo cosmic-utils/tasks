@@ -53,9 +53,6 @@ list-name = Име списка
 ## About
 git-description = Git commit {$hash}, {$date}
 
-## Properties
-properties = Својства
-
 ## Settings
 settings = Подешавања
 

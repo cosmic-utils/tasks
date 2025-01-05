@@ -21,9 +21,6 @@ pending = Oczekujące
 failed = Nieudane
 complete = Ukończone
 
-## Properties
-properties = Właściwości
-
 ## Settings
 settings = Ustawienia
 
