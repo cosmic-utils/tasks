@@ -29,7 +29,7 @@ thiserror = "1.0.65"
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
-features = ["multi-window", "tokio", "winit", "wgpu", "about"]
+features = ["multi-window", "tokio", "winit", "about"]
 
 [dependencies.i18n-embed]
 version = "0.14"
