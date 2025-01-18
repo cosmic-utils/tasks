@@ -70,11 +70,8 @@ pub enum Message {
     Tasks(TasksAction),
     Content(content::Message),
     Details(details::Message),
-    Dialog(DialogAction),
-    ToggleContextPage(ContextPage),
     Application(ApplicationAction),
     Open(String),
-    ToggleContextDrawer,
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +101,9 @@ pub enum ApplicationAction {
     SystemThemeModeChange,
     Focus(widget::Id),
     NavMenuAction(NavMenuAction),
+    Dialog(DialogAction),
+    ToggleContextDrawer,
+    ToggleContextPage(ContextPage),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -155,18 +155,26 @@ impl MenuAction for Action {
     type Message = Message;
     fn message(&self) -> Self::Message {
         match self {
-            Action::About => Message::ToggleContextPage(ContextPage::About),
-            Action::Settings => Message::ToggleContextPage(ContextPage::Settings),
+            Action::About => {
+                Message::Application(ApplicationAction::ToggleContextPage(ContextPage::About))
+            }
+            Action::Settings => {
+                Message::Application(ApplicationAction::ToggleContextPage(ContextPage::Settings))
+            }
             Action::WindowClose => Message::Application(ApplicationAction::WindowClose),
             Action::WindowNew => Message::Application(ApplicationAction::WindowNew),
-            Action::NewList => Message::Dialog(DialogAction::Open(DialogPage::New(String::new()))),
-            Action::Icon => {
-                Message::Dialog(DialogAction::Open(DialogPage::Icon(None, String::new())))
-            }
-            Action::RenameList => {
-                Message::Dialog(DialogAction::Open(DialogPage::Rename(None, String::new())))
-            }
-            Action::DeleteList => Message::Dialog(DialogAction::Open(DialogPage::Delete(None))),
+            Action::NewList => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
+                DialogPage::New(String::new()),
+            ))),
+            Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
+                DialogPage::Icon(None, String::new()),
+            ))),
+            Action::RenameList => Message::Application(ApplicationAction::Dialog(
+                DialogAction::Open(DialogPage::Rename(None, String::new())),
+            )),
+            Action::DeleteList => Message::Application(ApplicationAction::Dialog(
+                DialogAction::Open(DialogPage::Delete(None)),
+            )),
         }
     }
 }
@@ -291,17 +299,20 @@ impl Application for Tasks {
         }
 
         Some(match self.context_page {
-            ContextPage::About => {
-                app::context_drawer::about(&self.about, Message::Open, Message::ToggleContextDrawer)
-                    .title(self.context_page.title())
-            }
-            ContextPage::Settings => {
-                app::context_drawer::context_drawer(self.settings(), Message::ToggleContextDrawer)
-                    .title(self.context_page.title())
-            }
+            ContextPage::About => app::context_drawer::about(
+                &self.about,
+                Message::Open,
+                Message::Application(ApplicationAction::ToggleContextDrawer),
+            )
+            .title(self.context_page.title()),
+            ContextPage::Settings => app::context_drawer::context_drawer(
+                self.settings(),
+                Message::Application(ApplicationAction::ToggleContextDrawer),
+            )
+            .title(self.context_page.title()),
             ContextPage::TaskDetails => app::context_drawer::context_drawer(
                 self.details.view().map(Message::Details),
-                Message::ToggleContextDrawer,
+                Message::Application(ApplicationAction::ToggleContextDrawer),
             )
             .title(self.context_page.title()),
         })
@@ -369,35 +380,7 @@ impl Application for Tasks {
     }
 
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
-        // Helper for updating config values efficiently
-        macro_rules! config_set {
-            ($name: ident, $value: expr) => {
-                match &self.config_handler {
-                    Some(config_handler) => {
-                        match paste::paste! { self.config.[<set_ $name>](config_handler, $value) } {
-                            Ok(_) => {}
-                            Err(err) => {
-                                log::warn!(
-                                    "failed to save config {:?}: {}",
-                                    stringify!($name),
-                                    err
-                                );
-                            }
-                        }
-                    }
-                    None => {
-                        self.config.$name = $value;
-                        log::warn!(
-                            "failed to save config {:?}: no config handler",
-                            stringify!($name)
-                        );
-                    }
-                }
-            };
-        }
-
         let mut tasks = vec![];
-
         match message {
             Message::Open(url) => {
                 if let Err(err) = open::that_detached(url) {
@@ -438,9 +421,9 @@ impl Application for Tasks {
                                     .sub_task_input_ids
                                     .insert(id, widget::Id::unique());
                             });
-                            tasks.push(
-                                self.update(Message::ToggleContextPage(ContextPage::TaskDetails)),
-                            );
+                            tasks.push(self.update(Message::Application(
+                                ApplicationAction::ToggleContextPage(ContextPage::TaskDetails),
+                            )));
                         }
                         content::Task::Update(task) => {
                             self.details.task = Some(task.clone());
@@ -494,133 +477,18 @@ impl Application for Tasks {
                             )));
                         }
                         details::Task::OpenCalendarDialog => {
-                            tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                                DialogPage::Calendar(Local::now().date_naive()),
-                            ))));
+                            tasks.push(self.update(Message::Application(
+                                ApplicationAction::Dialog(DialogAction::Open(
+                                    DialogPage::Calendar(Local::now().date_naive()),
+                                )),
+                            )));
                         }
                         details::Task::Focus(id) => tasks
                             .push(self.update(Message::Application(ApplicationAction::Focus(id)))),
                     }
                 }
             }
-            Message::ToggleContextPage(context_page) => {
-                if self.context_page == context_page {
-                    self.core.window.show_context = !self.core.window.show_context;
-                } else {
-                    self.context_page = context_page;
-                    self.core.window.show_context = true;
-                }
-            }
-            Message::ToggleContextDrawer => {
-                self.core.window.show_context = !self.core.window.show_context
-            }
-            Message::Dialog(dialog_action) => match dialog_action {
-                DialogAction::Open(page) => {
-                    match page {
-                        DialogPage::Rename(entity, _) => {
-                            let data = if let Some(entity) = entity {
-                                self.nav_model.data::<List>(entity)
-                            } else {
-                                self.nav_model.active_data::<List>()
-                            };
-                            if let Some(list) = data {
-                                self.dialog_pages
-                                    .push_back(DialogPage::Rename(entity, list.name.clone()));
-                            }
-                        }
-                        page => self.dialog_pages.push_back(page),
-                    }
-                    tasks.push(self.update(Message::Application(ApplicationAction::Focus(
-                        self.dialog_text_input.clone(),
-                    ))));
-                }
-                DialogAction::Update(dialog_page) => {
-                    self.dialog_pages[0] = dialog_page;
-                }
-                DialogAction::Close => {
-                    self.dialog_pages.pop_front();
-                }
-                DialogAction::Complete => {
-                    if let Some(dialog_page) = self.dialog_pages.pop_front() {
-                        match dialog_page {
-                            DialogPage::New(name) => {
-                                let list = List::new(&name);
-                                tasks.push(app::Task::perform(
-                                    todo::create_list(list, self.service.clone()),
-                                    |result| match result {
-                                        Ok(list) => {
-                                            message::app(Message::Tasks(TasksAction::AddList(list)))
-                                        }
-                                        Err(_) => message::none(),
-                                    },
-                                ));
-                            }
-                            DialogPage::Rename(entity, name) => {
-                                let data = if let Some(entity) = entity {
-                                    self.nav_model.data_mut::<List>(entity)
-                                } else {
-                                    self.nav_model.active_data_mut::<List>()
-                                };
-                                if let Some(list) = data {
-                                    let title = if let Some(icon) = list.icon() {
-                                        format!("{} {}", icon.clone(), &name)
-                                    } else {
-                                        name.clone()
-                                    };
-                                    list.name.clone_from(&name);
-                                    let list = list.clone();
-                                    self.nav_model
-                                        .text_set(self.nav_model.active(), title.clone());
-                                    let task = app::Task::perform(
-                                        todo::update_list(list.clone(), self.service.clone()),
-                                        |_| message::none(),
-                                    );
-                                    tasks.push(task);
-                                    tasks.push(self.update(Message::Content(
-                                        content::Message::List(Some(list)),
-                                    )));
-                                }
-                            }
-                            DialogPage::Delete(entity) => {
-                                tasks.push(
-                                    self.update(Message::Tasks(TasksAction::DeleteList(entity))),
-                                );
-                            }
-                            DialogPage::Icon(entity, icon) => {
-                                let data = if let Some(entity) = entity {
-                                    self.nav_model.data::<List>(entity)
-                                } else {
-                                    self.nav_model.active_data::<List>()
-                                };
-                                if let Some(list) = data {
-                                    let entity = self.nav_model.active();
-                                    let title = format!("{} {}", icon.clone(), list.name.clone());
-                                    self.nav_model.text_set(entity, title);
-                                }
-                                if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                    list.icon = Some(icon);
-                                    let list = list.clone();
-                                    let task = app::Task::perform(
-                                        todo::update_list(list.clone(), self.service.clone()),
-                                        |_| message::none(),
-                                    );
-                                    tasks.push(task);
-                                    tasks.push(self.update(Message::Content(
-                                        content::Message::List(Some(list)),
-                                    )));
-                                }
-                            }
-                            DialogPage::Calendar(date) => {
-                                self.details.update(details::Message::SetDueDate(date));
-                            }
-                            DialogPage::Export(content) => {
-                                let mut clipboard = ClipboardContext::new().unwrap();
-                                clipboard.set_contents(content).unwrap();
-                            }
-                        }
-                    }
-                }
-            },
+
             Message::Tasks(tasks_action) => match tasks_action {
                 TasksAction::FetchLists => {
                     tasks.push(app::Task::perform(
@@ -675,8 +543,8 @@ impl Application for Tasks {
                 TasksAction::Export(exported_tasks) => {
                     if let Some(list) = self.nav_model.active_data() {
                         let exported_markdown = todo::export_list(list, &exported_tasks);
-                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                            DialogPage::Export(exported_markdown),
+                        tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
+                            DialogAction::Open(DialogPage::Export(exported_markdown)),
                         ))));
                     }
                 }
@@ -699,7 +567,14 @@ impl Application for Tasks {
                     }
                 },
                 ApplicationAction::AppTheme(theme) => {
-                    config_set!(app_theme, theme.into());
+                    let Some(handler) = &self.config_handler else {
+                        return self.update_config();
+                    };
+
+                    if let Err(err) = self.config.set_app_theme(&handler, theme.into()) {
+                        log::error!("{err}")
+                    }
+
                     return self.update_config();
                 }
                 ApplicationAction::SystemThemeModeChange => {
@@ -715,24 +590,145 @@ impl Application for Tasks {
                 ApplicationAction::Modifiers(modifiers) => {
                     self.modifiers = modifiers;
                 }
-                ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
                 ApplicationAction::NavMenuAction(nav_menu_action) => match nav_menu_action {
                     NavMenuAction::Rename(entity) => {
-                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                            DialogPage::Rename(Some(entity), String::new()),
+                        tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
+                            DialogAction::Open(DialogPage::Rename(Some(entity), String::new())),
                         ))));
                     }
                     NavMenuAction::SetIcon(entity) => {
-                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                            DialogPage::Icon(Some(entity), String::new()),
+                        tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
+                            DialogAction::Open(DialogPage::Icon(Some(entity), String::new())),
                         ))));
                     }
                     NavMenuAction::Delete(entity) => {
-                        tasks.push(self.update(Message::Dialog(DialogAction::Open(
-                            DialogPage::Delete(Some(entity)),
+                        tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
+                            DialogAction::Open(DialogPage::Delete(Some(entity))),
                         ))));
                     }
                 },
+                ApplicationAction::ToggleContextPage(context_page) => {
+                    if self.context_page == context_page {
+                        self.core.window.show_context = !self.core.window.show_context;
+                    } else {
+                        self.context_page = context_page;
+                        self.core.window.show_context = true;
+                    }
+                }
+                ApplicationAction::ToggleContextDrawer => {
+                    self.core.window.show_context = !self.core.window.show_context
+                }
+                ApplicationAction::Dialog(dialog_action) => match dialog_action {
+                    DialogAction::Open(page) => {
+                        match page {
+                            DialogPage::Rename(entity, _) => {
+                                let data = if let Some(entity) = entity {
+                                    self.nav_model.data::<List>(entity)
+                                } else {
+                                    self.nav_model.active_data::<List>()
+                                };
+                                if let Some(list) = data {
+                                    self.dialog_pages
+                                        .push_back(DialogPage::Rename(entity, list.name.clone()));
+                                }
+                            }
+                            page => self.dialog_pages.push_back(page),
+                        }
+                        tasks.push(self.update(Message::Application(ApplicationAction::Focus(
+                            self.dialog_text_input.clone(),
+                        ))));
+                    }
+                    DialogAction::Update(dialog_page) => {
+                        self.dialog_pages[0] = dialog_page;
+                    }
+                    DialogAction::Close => {
+                        self.dialog_pages.pop_front();
+                    }
+                    DialogAction::Complete => {
+                        if let Some(dialog_page) = self.dialog_pages.pop_front() {
+                            match dialog_page {
+                                DialogPage::New(name) => {
+                                    let list = List::new(&name);
+                                    tasks.push(app::Task::perform(
+                                        todo::create_list(list, self.service.clone()),
+                                        |result| match result {
+                                            Ok(list) => message::app(Message::Tasks(
+                                                TasksAction::AddList(list),
+                                            )),
+                                            Err(_) => message::none(),
+                                        },
+                                    ));
+                                }
+                                DialogPage::Rename(entity, name) => {
+                                    let data = if let Some(entity) = entity {
+                                        self.nav_model.data_mut::<List>(entity)
+                                    } else {
+                                        self.nav_model.active_data_mut::<List>()
+                                    };
+                                    if let Some(list) = data {
+                                        let title = if let Some(icon) = list.icon() {
+                                            format!("{} {}", icon.clone(), &name)
+                                        } else {
+                                            name.clone()
+                                        };
+                                        list.name.clone_from(&name);
+                                        let list = list.clone();
+                                        self.nav_model
+                                            .text_set(self.nav_model.active(), title.clone());
+                                        let task = app::Task::perform(
+                                            todo::update_list(list.clone(), self.service.clone()),
+                                            |_| message::none(),
+                                        );
+                                        tasks.push(task);
+                                        tasks.push(self.update(Message::Content(
+                                            content::Message::List(Some(list)),
+                                        )));
+                                    }
+                                }
+                                DialogPage::Delete(entity) => {
+                                    tasks.push(
+                                        self.update(Message::Tasks(TasksAction::DeleteList(
+                                            entity,
+                                        ))),
+                                    );
+                                }
+                                DialogPage::Icon(entity, icon) => {
+                                    let data = if let Some(entity) = entity {
+                                        self.nav_model.data::<List>(entity)
+                                    } else {
+                                        self.nav_model.active_data::<List>()
+                                    };
+                                    if let Some(list) = data {
+                                        let entity = self.nav_model.active();
+                                        let title =
+                                            format!("{} {}", icon.clone(), list.name.clone());
+                                        self.nav_model.text_set(entity, title);
+                                    }
+                                    if let Some(list) = self.nav_model.active_data_mut::<List>() {
+                                        list.icon = Some(icon);
+                                        let list = list.clone();
+                                        let task = app::Task::perform(
+                                            todo::update_list(list.clone(), self.service.clone()),
+                                            |_| message::none(),
+                                        );
+                                        tasks.push(task);
+                                        tasks.push(self.update(Message::Content(
+                                            content::Message::List(Some(list)),
+                                        )));
+                                    }
+                                }
+                                DialogPage::Calendar(date) => {
+                                    self.details.update(details::Message::SetDueDate(date));
+                                }
+                                DialogPage::Export(content) => {
+                                    let mut clipboard = ClipboardContext::new().unwrap();
+                                    clipboard.set_contents(content).unwrap();
+                                }
+                            }
+                        }
+                    }
+                },
+                ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
             },
         }
 
@@ -751,48 +747,50 @@ impl Application for Tasks {
         let dialog = match dialog_page {
             DialogPage::New(name) => widget::dialog()
                 .title(fl!("create-list"))
-                .primary_action(
-                    widget::button::suggested(fl!("save"))
-                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel"))
-                        .on_press(Message::Dialog(DialogAction::Close)),
-                )
+                .primary_action(widget::button::suggested(fl!("save")).on_press_maybe(Some(
+                    Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
+                )))
+                .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                    Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                ))
                 .control(
                     widget::column::with_children(vec![
                         widget::text::body(fl!("list-name")).into(),
                         widget::text_input("", name.as_str())
                             .id(self.dialog_text_input.clone())
                             .on_input(move |name| {
-                                Message::Dialog(DialogAction::Update(DialogPage::New(name)))
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::New(name)),
+                                ))
                             })
-                            .on_submit(Message::Dialog(DialogAction::Complete))
+                            .on_submit(Message::Application(ApplicationAction::Dialog(
+                                DialogAction::Complete,
+                            )))
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
                 ),
             DialogPage::Rename(entity, name) => widget::dialog()
                 .title(fl!("rename-list"))
-                .primary_action(
-                    widget::button::suggested(fl!("save"))
-                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel"))
-                        .on_press(Message::Dialog(DialogAction::Close)),
-                )
+                .primary_action(widget::button::suggested(fl!("save")).on_press_maybe(Some(
+                    Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
+                )))
+                .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                    Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                ))
                 .control(
                     widget::column::with_children(vec![
                         widget::text::body(fl!("list-name")).into(),
                         widget::text_input("", name.as_str())
                             .id(self.dialog_text_input.clone())
                             .on_input(move |name| {
-                                Message::Dialog(DialogAction::Update(DialogPage::Rename(
-                                    *entity, name,
-                                )))
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::Rename(*entity, name)),
+                                ))
                             })
-                            .on_submit(Message::Dialog(DialogAction::Complete))
+                            .on_submit(Message::Application(ApplicationAction::Dialog(
+                                DialogAction::Complete,
+                            )))
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
@@ -800,14 +798,12 @@ impl Application for Tasks {
             DialogPage::Delete(_) => widget::dialog()
                 .title(fl!("delete-list"))
                 .body(fl!("delete-list-confirm"))
-                .primary_action(
-                    widget::button::suggested(fl!("ok"))
-                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel"))
-                        .on_press(Message::Dialog(DialogAction::Close)),
-                ),
+                .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
+                    Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
+                )))
+                .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                    Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                )),
             DialogPage::Icon(entity, icon) => {
                 let icon_buttons: Vec<Element<_>> = emojis::iter()
                     .map(|emoji| {
@@ -818,24 +814,21 @@ impl Application for Tasks {
                                 .align_y(Vertical::Center)
                                 .align_x(Horizontal::Center),
                         )
-                        .on_press(Message::Dialog(DialogAction::Update(DialogPage::Icon(
-                            *entity,
-                            emoji.to_string(),
-                        ))))
+                        .on_press(Message::Application(ApplicationAction::Dialog(
+                            DialogAction::Update(DialogPage::Icon(*entity, emoji.to_string())),
+                        )))
                         .into()
                     })
                     .collect();
                 let mut dialog = widget::dialog()
                     .title(fl!("icon-select"))
                     .body(fl!("icon-select-body"))
-                    .primary_action(
-                        widget::button::suggested(fl!("ok"))
-                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel"))
-                            .on_press(Message::Dialog(DialogAction::Close)),
-                    )
+                    .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
+                    )))
+                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                    ))
                     .control(
                         widget::container(scrollable(widget::row::with_children(vec![
                             widget::flex_row(icon_buttons).into(),
@@ -855,17 +848,17 @@ impl Application for Tasks {
             DialogPage::Calendar(date) => {
                 let dialog = widget::dialog()
                     .title(fl!("select-date"))
-                    .primary_action(
-                        widget::button::suggested(fl!("ok"))
-                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel"))
-                            .on_press(Message::Dialog(DialogAction::Close)),
-                    )
+                    .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
+                    )))
+                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                    ))
                     .control(
                         widget::container(widget::calendar(date, |date| {
-                            Message::Dialog(DialogAction::Update(DialogPage::Calendar(date)))
+                            Message::Application(ApplicationAction::Dialog(DialogAction::Update(
+                                DialogPage::Calendar(date),
+                            )))
                         }))
                         .width(Length::Fill)
                         .align_x(Horizontal::Center)
@@ -881,14 +874,12 @@ impl Application for Tasks {
                             .height(Length::Fixed(200.0))
                             .width(Length::Fill),
                     )
-                    .primary_action(
-                        widget::button::suggested(fl!("copy"))
-                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                    )
-                    .secondary_action(
-                        widget::button::standard(fl!("cancel"))
-                            .on_press(Message::Dialog(DialogAction::Close)),
-                    );
+                    .primary_action(widget::button::suggested(fl!("copy")).on_press_maybe(Some(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
+                    )))
+                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                    ));
 
                 dialog
             }
