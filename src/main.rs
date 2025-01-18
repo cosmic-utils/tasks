@@ -1,7 +1,10 @@
+mod actions;
 mod app;
 mod content;
+mod context;
 mod core;
 mod details;
+mod dialog;
 mod todo;
 
 use app::settings;

@@ -4,39 +4,35 @@ use std::{
     env, process,
 };
 
-use chrono::{Local, NaiveDate};
+use chrono::Local;
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::{
-    app::{self, context_drawer::ContextDrawer, message, Core, Message as CosmicMessage},
+    app::{self, message, Core, Message as AppMessage},
     cosmic_config::{self, Update},
     cosmic_theme::{self, ThemeMode},
-    executor,
     iced::{
-        alignment::{Horizontal, Vertical},
-        event,
-        keyboard::{Event as KeyEvent, Key, Modifiers},
-        window, Event, Length, Subscription,
+        keyboard::{Event as KeyEvent, Modifiers},
+        Event, Subscription,
     },
-    theme,
     widget::{
         self,
-        about::About,
-        horizontal_space,
-        menu::{action::MenuAction, key_bind::KeyBind},
-        scrollable,
-        segmented_button::{self, Entity, EntityMut, SingleSelect},
+        menu::{key_bind::KeyBind, Action as _},
+        segmented_button::{Entity, EntityMut, SingleSelect},
     },
     Application, ApplicationExt, Element,
 };
 
 use crate::{
+    actions::{Action, ApplicationAction, NavMenuAction, TasksAction},
     app::{config::CONFIG_VERSION, key_bind::key_binds},
     content::{self, Content},
+    context::ContextPage,
     core::{
-        models::{List, Task},
+        models::List,
         service::{Provider, TaskService},
     },
     details::{self, Details},
+    dialog::{DialogAction, DialogPage},
     fl, todo,
 };
 
@@ -50,9 +46,9 @@ pub mod settings;
 
 pub struct Tasks {
     core: Core,
-    about: About,
+    about: widget::about::About,
+    nav_model: widget::segmented_button::SingleSelectModel,
     service: TaskService,
-    nav_model: segmented_button::SingleSelectModel,
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
@@ -67,70 +63,11 @@ pub struct Tasks {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Tasks(TasksAction),
     Content(content::Message),
     Details(details::Message),
+    Tasks(TasksAction),
     Application(ApplicationAction),
     Open(String),
-}
-
-#[derive(Debug, Clone)]
-pub enum DialogAction {
-    Open(DialogPage),
-    Update(DialogPage),
-    Close,
-    Complete,
-}
-
-#[derive(Debug, Clone)]
-pub enum TasksAction {
-    PopulateLists(Vec<List>),
-    Export(Vec<Task>),
-    AddList(List),
-    DeleteList(Option<segmented_button::Entity>),
-    FetchLists,
-}
-
-#[derive(Debug, Clone)]
-pub enum ApplicationAction {
-    WindowClose,
-    WindowNew,
-    Key(Modifiers, Key),
-    Modifiers(Modifiers),
-    AppTheme(usize),
-    SystemThemeModeChange,
-    Focus(widget::Id),
-    NavMenuAction(NavMenuAction),
-    Dialog(DialogAction),
-    ToggleContextDrawer,
-    ToggleContextPage(ContextPage),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ContextPage {
-    About,
-    TaskDetails,
-    Settings,
-}
-
-impl ContextPage {
-    fn title(&self) -> String {
-        match self {
-            Self::About => fl!("about"),
-            Self::Settings => fl!("settings"),
-            Self::TaskDetails => fl!("details"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum DialogPage {
-    New(String),
-    Icon(Option<segmented_button::Entity>, String),
-    Rename(Option<segmented_button::Entity>, String),
-    Delete(Option<segmented_button::Entity>),
-    Calendar(NaiveDate),
-    Export(String),
 }
 
 #[derive(Clone, Debug)]
@@ -139,68 +76,7 @@ pub struct Flags {
     pub config: config::TasksConfig,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Action {
-    About,
-    Settings,
-    WindowClose,
-    WindowNew,
-    NewList,
-    DeleteList,
-    RenameList,
-    Icon,
-}
-
-impl MenuAction for Action {
-    type Message = Message;
-    fn message(&self) -> Self::Message {
-        match self {
-            Action::About => {
-                Message::Application(ApplicationAction::ToggleContextPage(ContextPage::About))
-            }
-            Action::Settings => {
-                Message::Application(ApplicationAction::ToggleContextPage(ContextPage::Settings))
-            }
-            Action::WindowClose => Message::Application(ApplicationAction::WindowClose),
-            Action::WindowNew => Message::Application(ApplicationAction::WindowNew),
-            Action::NewList => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
-                DialogPage::New(String::new()),
-            ))),
-            Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
-                DialogPage::Icon(None, String::new()),
-            ))),
-            Action::RenameList => Message::Application(ApplicationAction::Dialog(
-                DialogAction::Open(DialogPage::Rename(None, String::new())),
-            )),
-            Action::DeleteList => Message::Application(ApplicationAction::Dialog(
-                DialogAction::Open(DialogPage::Delete(None)),
-            )),
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum NavMenuAction {
-    Rename(segmented_button::Entity),
-    SetIcon(segmented_button::Entity),
-    Delete(segmented_button::Entity),
-}
-
-impl MenuAction for NavMenuAction {
-    type Message = cosmic::app::Message<Message>;
-
-    fn message(&self) -> Self::Message {
-        cosmic::app::Message::App(Message::Application(ApplicationAction::NavMenuAction(
-            *self,
-        )))
-    }
-}
-
 impl Tasks {
-    fn update_config(&mut self) -> app::Task<Message> {
-        app::command::set_theme(self.config.app_theme.theme())
-    }
-
     fn settings(&self) -> Element<Message> {
         widget::scrollable(widget::settings::section().title(fl!("appearance")).add(
             widget::settings::item::item(
@@ -230,7 +106,7 @@ impl Tasks {
 }
 
 impl Application for Tasks {
-    type Executor = executor::Default;
+    type Executor = cosmic::executor::Default;
     type Flags = Flags;
     type Message = Message;
     const APP_ID: &'static str = "dev.edfloreshz.Tasks";
@@ -244,9 +120,9 @@ impl Application for Tasks {
     }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
-        let nav_model = segmented_button::ModelBuilder::default().build();
+        let nav_model = widget::segmented_button::ModelBuilder::default().build();
         let service = TaskService::new(Self::APP_ID, Provider::Computer);
-        let about = About::default()
+        let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(Self::APP_ID)
             .version("0.1.1")
@@ -293,7 +169,7 @@ impl Application for Tasks {
         (app, app::Task::batch(tasks))
     }
 
-    fn context_drawer(&self) -> Option<ContextDrawer<Self::Message>> {
+    fn context_drawer(&self) -> Option<app::context_drawer::ContextDrawer<Self::Message>> {
         if !self.core.window.show_context {
             return None;
         }
@@ -325,7 +201,7 @@ impl Application for Tasks {
     fn nav_context_menu(
         &self,
         id: widget::nav_bar::Id,
-    ) -> Option<Vec<widget::menu::Tree<CosmicMessage<Self::Message>>>> {
+    ) -> Option<Vec<widget::menu::Tree<AppMessage<Self::Message>>>> {
         Some(cosmic::widget::menu::items(
             &HashMap::new(),
             vec![
@@ -348,7 +224,7 @@ impl Application for Tasks {
         ))
     }
 
-    fn nav_model(&self) -> Option<&segmented_button::SingleSelectModel> {
+    fn nav_model(&self) -> Option<&widget::segmented_button::SingleSelectModel> {
         Some(&self.nav_model)
     }
 
@@ -552,7 +428,7 @@ impl Application for Tasks {
             Message::Application(application_action) => match application_action {
                 ApplicationAction::WindowClose => {
                     if let Some(window_id) = self.core.main_window_id() {
-                        return window::close(window_id);
+                        tasks.push(cosmic::iced::window::close(window_id));
                     }
                 }
                 ApplicationAction::WindowNew => match env::current_exe() {
@@ -567,18 +443,14 @@ impl Application for Tasks {
                     }
                 },
                 ApplicationAction::AppTheme(theme) => {
-                    let Some(handler) = &self.config_handler else {
-                        return self.update_config();
-                    };
-
-                    if let Err(err) = self.config.set_app_theme(&handler, theme.into()) {
-                        log::error!("{err}")
+                    if let Some(handler) = &self.config_handler {
+                        if let Err(err) = self.config.set_app_theme(&handler, theme.into()) {
+                            log::error!("{err}")
+                        }
                     }
-
-                    return self.update_config();
                 }
                 ApplicationAction::SystemThemeModeChange => {
-                    return self.update_config();
+                    tasks.push(app::command::set_theme(self.config.app_theme.theme()));
                 }
                 ApplicationAction::Key(modifiers, key) => {
                     for (key_bind, action) in &self.key_binds {
@@ -741,150 +613,7 @@ impl Application for Tasks {
 
     fn dialog(&self) -> Option<Element<Message>> {
         let dialog_page = self.dialog_pages.front()?;
-
-        let spacing = theme::active().cosmic().spacing;
-
-        let dialog = match dialog_page {
-            DialogPage::New(name) => widget::dialog()
-                .title(fl!("create-list"))
-                .primary_action(widget::button::suggested(fl!("save")).on_press_maybe(Some(
-                    Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                )))
-                .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                    Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                ))
-                .control(
-                    widget::column::with_children(vec![
-                        widget::text::body(fl!("list-name")).into(),
-                        widget::text_input("", name.as_str())
-                            .id(self.dialog_text_input.clone())
-                            .on_input(move |name| {
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::New(name)),
-                                ))
-                            })
-                            .on_submit(Message::Application(ApplicationAction::Dialog(
-                                DialogAction::Complete,
-                            )))
-                            .into(),
-                    ])
-                    .spacing(spacing.space_xxs),
-                ),
-            DialogPage::Rename(entity, name) => widget::dialog()
-                .title(fl!("rename-list"))
-                .primary_action(widget::button::suggested(fl!("save")).on_press_maybe(Some(
-                    Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                )))
-                .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                    Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                ))
-                .control(
-                    widget::column::with_children(vec![
-                        widget::text::body(fl!("list-name")).into(),
-                        widget::text_input("", name.as_str())
-                            .id(self.dialog_text_input.clone())
-                            .on_input(move |name| {
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::Rename(*entity, name)),
-                                ))
-                            })
-                            .on_submit(Message::Application(ApplicationAction::Dialog(
-                                DialogAction::Complete,
-                            )))
-                            .into(),
-                    ])
-                    .spacing(spacing.space_xxs),
-                ),
-            DialogPage::Delete(_) => widget::dialog()
-                .title(fl!("delete-list"))
-                .body(fl!("delete-list-confirm"))
-                .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
-                    Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                )))
-                .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                    Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                )),
-            DialogPage::Icon(entity, icon) => {
-                let icon_buttons: Vec<Element<_>> = emojis::iter()
-                    .map(|emoji| {
-                        widget::button::custom(
-                            widget::container(widget::text(emoji.to_string()))
-                                .width(spacing.space_l)
-                                .height(spacing.space_l)
-                                .align_y(Vertical::Center)
-                                .align_x(Horizontal::Center),
-                        )
-                        .on_press(Message::Application(ApplicationAction::Dialog(
-                            DialogAction::Update(DialogPage::Icon(*entity, emoji.to_string())),
-                        )))
-                        .into()
-                    })
-                    .collect();
-                let mut dialog = widget::dialog()
-                    .title(fl!("icon-select"))
-                    .body(fl!("icon-select-body"))
-                    .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                    )))
-                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                    ))
-                    .control(
-                        widget::container(scrollable(widget::row::with_children(vec![
-                            widget::flex_row(icon_buttons).into(),
-                            horizontal_space().into(),
-                        ])))
-                        .height(Length::Fixed(300.0)),
-                    );
-
-                if !icon.is_empty() {
-                    dialog = dialog.icon(widget::container(
-                        widget::text(icon.as_str()).size(spacing.space_l),
-                    ));
-                }
-
-                dialog
-            }
-            DialogPage::Calendar(date) => {
-                let dialog = widget::dialog()
-                    .title(fl!("select-date"))
-                    .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                    )))
-                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                    ))
-                    .control(
-                        widget::container(widget::calendar(date, |date| {
-                            Message::Application(ApplicationAction::Dialog(DialogAction::Update(
-                                DialogPage::Calendar(date),
-                            )))
-                        }))
-                        .width(Length::Fill)
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center),
-                    );
-                dialog
-            }
-            DialogPage::Export(contents) => {
-                let dialog = widget::dialog()
-                    .title(fl!("export"))
-                    .control(
-                        widget::container(scrollable(widget::text(contents)).width(Length::Fill))
-                            .height(Length::Fixed(200.0))
-                            .width(Length::Fill),
-                    )
-                    .primary_action(widget::button::suggested(fl!("copy")).on_press_maybe(Some(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                    )))
-                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                    ));
-
-                dialog
-            }
-        };
-
+        let dialog = dialog_page.view(&self.dialog_text_input);
         Some(dialog.into())
     }
 
@@ -893,7 +622,7 @@ impl Application for Tasks {
         struct ThemeSubscription;
 
         let mut subscriptions = vec![
-            event::listen_with(|event, _status, _window_id| match event {
+            cosmic::iced::event::listen_with(|event, _status, _window_id| match event {
                 Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => {
                     Some(Message::Application(ApplicationAction::Key(modifiers, key)))
                 }
