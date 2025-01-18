@@ -1,14 +1,22 @@
-use crate::app::icons;
-use crate::core::models::{self, Priority, Status};
 use chrono::{NaiveDate, TimeZone, Utc};
-use cosmic::iced::{Alignment, Length};
-use cosmic::iced_widget::row;
-use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::{segmented_button, text_editor};
-use cosmic::{theme, widget, Element};
+use cosmic::{
+    iced::{Alignment, Length},
+    iced_widget::row,
+    theme,
+    widget::{
+        self,
+        segmented_button::{self, Entity},
+        text_editor,
+    },
+    Element,
+};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
-use crate::fl;
+use crate::{
+    app::icons,
+    core::models::{self, Priority, Status},
+    fl,
+};
 
 pub struct Details {
     pub task: Option<models::Task>,

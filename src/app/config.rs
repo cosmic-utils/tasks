@@ -1,9 +1,10 @@
-use crate::app::Tasks;
 use cosmic::{
     cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, Config, CosmicConfigEntry},
     theme, Application,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::app::Tasks;
 
 pub const CONFIG_VERSION: u64 = 1;
 

@@ -5104,7 +5104,6 @@ dependencies = [
  "libcosmic",
  "libset",
  "log",
- "once_cell",
  "open",
  "paste",
  "ron",

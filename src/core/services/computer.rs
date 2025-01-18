@@ -6,7 +6,7 @@ use crate::{
     Error,
 };
 
-use self::engine::ComputerStorageEngine;
+use engine::ComputerStorageEngine;
 
 mod engine;
 

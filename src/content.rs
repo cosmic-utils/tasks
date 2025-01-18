@@ -1,12 +1,18 @@
-use crate::app::icons;
-use crate::core::models::{self, List, Status};
-use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::{Alignment, Length, Subscription};
-use cosmic::iced_widget::row;
-use cosmic::{theme, widget, Apply, Element};
+use cosmic::{
+    iced::{
+        alignment::{Horizontal, Vertical},
+        Alignment, Length, Subscription,
+    },
+    iced_widget::row,
+    theme, widget, Apply, Element,
+};
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
-use crate::fl;
+use crate::{
+    app::icons,
+    core::models::{self, List, Status},
+    fl,
+};
 
 pub struct Content {
     list: Option<List>,

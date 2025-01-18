@@ -1,6 +1,4 @@
-use crate::core::models::List;
-use crate::core::models::Status;
-use crate::core::models::Task;
+use crate::core::models::{List, Status, Task};
 
 pub trait Markdown {
     fn markdown(&self) -> String;

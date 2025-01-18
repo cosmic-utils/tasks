@@ -1,33 +1,44 @@
-use std::any::TypeId;
-use std::collections::{HashMap, VecDeque};
-use std::{env, process};
-
-use crate::core::models::List;
-use crate::core::models::Task;
-use crate::core::service::{Provider, TaskService};
-use chrono::{Local, NaiveDate};
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
-use cosmic::app::context_drawer::ContextDrawer;
-use cosmic::app::{message, Core, Message as CosmicMessage};
-use cosmic::cosmic_config::Update;
-use cosmic::cosmic_theme::ThemeMode;
-use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::iced::{event, keyboard::Event as KeyEvent, window, Event, Length, Subscription};
-use cosmic::widget::about::About;
-use cosmic::widget::menu::action::MenuAction;
-use cosmic::widget::menu::key_bind::KeyBind;
-use cosmic::widget::segmented_button::{Entity, EntityMut, SingleSelect};
-use cosmic::widget::{horizontal_space, scrollable, segmented_button};
-use cosmic::{
-    app, cosmic_config, cosmic_theme, executor, theme, widget, Application, ApplicationExt, Element,
+use std::{
+    any::TypeId,
+    collections::{HashMap, VecDeque},
+    env, process,
 };
 
-use crate::app::config::CONFIG_VERSION;
-use crate::app::key_bind::key_binds;
-use crate::content::Content;
-use crate::details::Details;
-use crate::{content, details, fl, todo};
+use chrono::{Local, NaiveDate};
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use cosmic::{
+    app::{self, context_drawer::ContextDrawer, message, Core, Message as CosmicMessage},
+    cosmic_config::{self, Update},
+    cosmic_theme::{self, ThemeMode},
+    executor,
+    iced::{
+        alignment::{Horizontal, Vertical},
+        event,
+        keyboard::{Event as KeyEvent, Key, Modifiers},
+        window, Event, Length, Subscription,
+    },
+    theme,
+    widget::{
+        self,
+        about::About,
+        horizontal_space,
+        menu::{action::MenuAction, key_bind::KeyBind},
+        scrollable,
+        segmented_button::{self, Entity, EntityMut, SingleSelect},
+    },
+    Application, ApplicationExt, Element,
+};
+
+use crate::{
+    app::{config::CONFIG_VERSION, key_bind::key_binds},
+    content::{self, Content},
+    core::{
+        models::{List, Task},
+        service::{Provider, TaskService},
+    },
+    details::{self, Details},
+    fl, todo,
+};
 
 pub mod config;
 pub mod icons;

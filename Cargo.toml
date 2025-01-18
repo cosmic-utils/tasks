@@ -4,9 +4,7 @@ version = "0.1.1"
 edition = "2021"
 
 [dependencies]
-
 i18n-embed-fl = "0.8"
-once_cell = "1.19"
 rust-embed = "8"
 log = "0.4"
 env_logger = "0.11"

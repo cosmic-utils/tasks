@@ -2,18 +2,16 @@
 
 use std::collections::HashMap;
 
-use cosmic::widget::menu::key_bind::KeyBind;
 use cosmic::{
-    widget::menu::{items, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
+    widget::menu::{items, key_bind::KeyBind, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
     Element,
 };
 
 use crate::{
+    app::icons,
     app::{Action, Message},
     fl,
 };
-
-use super::icons;
 
 pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message> {
     MenuBar::new(vec![

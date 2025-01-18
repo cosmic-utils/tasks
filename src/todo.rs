@@ -1,9 +1,12 @@
-use crate::app::markdown::Markdown;
-use crate::core::models::List;
-use crate::core::models::Task;
-use crate::core::service::TaskService;
-use crate::core::TasksError;
-use crate::Error;
+use crate::{
+    app::markdown::Markdown,
+    core::{
+        models::{List, Task},
+        service::TaskService,
+        TasksError,
+    },
+    Error,
+};
 
 pub async fn update_list(list: List, service: TaskService) -> Result<(), Error> {
     if let Some(mut service) = service.get_service() {

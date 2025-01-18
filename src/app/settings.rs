@@ -1,13 +1,16 @@
-use crate::app::icons::{IconCache, ICON_CACHE};
-use crate::app::Flags;
-use cosmic::app::Settings;
-use cosmic::iced::{Limits, Size};
-use cosmic::Application;
+use cosmic::{
+    app::Settings,
+    iced::{Limits, Size},
+    Application,
+};
 use std::sync::Mutex;
 
-use super::config::TasksConfig;
-use super::localize::localize;
-use super::Tasks;
+use crate::app::{
+    config::TasksConfig,
+    icons::{IconCache, ICON_CACHE},
+    localize::localize,
+    Flags, Tasks,
+};
 
 pub fn init() {
     localize();

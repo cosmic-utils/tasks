@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use cosmic::widget::menu::key_bind::KeyBind;
-use cosmic::widget::menu::key_bind::Modifier;
-use cosmic::{iced::keyboard::Key, iced_core::keyboard::key::Named};
+use cosmic::{
+    iced::keyboard::Key,
+    iced_core::keyboard::key::Named,
+    widget::menu::key_bind::{KeyBind, Modifier},
+};
 
 use crate::app::Action;
 
