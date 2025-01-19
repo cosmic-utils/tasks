@@ -192,11 +192,11 @@ impl Content {
                 match (&self.list, &list) {
                     (Some(current), Some(list)) => {
                         if current.id != list.id {
-                            tasks.push(Task::Get(list.id().clone()));
+                            tasks.push(Task::Get(list.id.clone()));
                         }
                     }
                     (None, Some(list)) => {
-                        tasks.push(Task::Get(list.id().clone()));
+                        tasks.push(Task::Get(list.id.clone()));
                     }
                     _ => {}
                 }
@@ -215,7 +215,7 @@ impl Content {
             }
             Message::Delete(id) => {
                 if let Some(task) = self.tasks.remove(id) {
-                    tasks.push(Task::Delete(task.id().clone()));
+                    tasks.push(Task::Delete(task.id.clone()));
                 }
             }
             Message::EditMode(id, editing) => {
@@ -251,7 +251,7 @@ impl Content {
             Message::AddTask => {
                 if let Some(list) = &self.list {
                     if !self.input.is_empty() {
-                        let task = models::Task::new(self.input.clone(), list.id().clone());
+                        let task = models::Task::new(self.input.clone(), list.id.clone());
                         tasks.push(Task::Create(task.clone()));
                         let id = self.tasks.insert(task);
                         self.task_input_ids.insert(id, widget::Id::unique());
@@ -260,10 +260,7 @@ impl Content {
                 }
             }
             Message::UpdateTask(updated_task) => {
-                let task = self
-                    .tasks
-                    .values_mut()
-                    .find(|t| t.id() == updated_task.id());
+                let task = self.tasks.values_mut().find(|t| t.id == updated_task.id);
                 if let Some(task) = task {
                     *task = updated_task.clone();
                     tasks.push(Task::Update(task.clone()));

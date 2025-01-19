@@ -6,23 +6,20 @@ edition = "2021"
 [dependencies]
 i18n-embed-fl = "0.8"
 rust-embed = "8"
-log = "0.4"
-env_logger = "0.11"
-paste = "1.0"
 open = "5.0.2"
 dirs = "5.0.1"
-tokio = "1"
-tracing = "0.1.40"
 cli-clipboard = "0.4.0"
 slotmap = "1.0.7"
 emojis = "0.6.1"
-serde_json = "1.0.87"
 ron = "0.8.1"
 async-trait = "0.1.68"
 libset = "0.1.6"
-derive-getters = "0.3.0"
-derive_setters = "0.1.6"
 thiserror = "1.0.65"
+tracing = "0.1.40"
+
+[dependencies.tracing-subscriber]
+version = "0.3.19"
+features = ["env-filter"]
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
@@ -36,10 +33,6 @@ features = ["fluent-system", "desktop-requester"]
 [dependencies.serde]
 version = "1"
 features = ["derive"]
-
-[dependencies.smol_str]
-version = "0.2.1"
-features = ["serde"]
 
 [dependencies.sqlx]
 version = "0.8.0"
@@ -56,9 +49,6 @@ features = ["v4"]
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
-
-# [patch."https://github.com/pop-os/libcosmic.git"]
-# libcosmic = { git = "https://github.com/edfloreshz/libcosmic.git", branch = "editable_input_internal" }
 
 # [patch."https://github.com/pop-os/libcosmic.git"]
 # libcosmic = { path = "../libcosmic" }

@@ -260,7 +260,7 @@ impl Application for Tasks {
         match message {
             Message::Open(url) => {
                 if let Err(err) = open::that_detached(url) {
-                    log::error!("{err}")
+                    tracing::error!("{err}")
                 }
             }
             Message::Content(message) => {
@@ -315,7 +315,7 @@ impl Application for Tasks {
                             if let Some(list) = self.nav_model.active_data::<List>() {
                                 let task = app::Task::perform(
                                     todo::delete_task(
-                                        list.id().clone(),
+                                        list.id.clone(),
                                         id.clone(),
                                         self.service.clone().clone(),
                                     ),
@@ -404,7 +404,7 @@ impl Application for Tasks {
                     };
                     if let Some(list) = data {
                         let task = app::Task::perform(
-                            todo::delete_list(list.id().clone(), self.service.clone()),
+                            todo::delete_list(list.id.clone(), self.service.clone()),
                             |result| match result {
                                 Ok(()) | Err(_) => message::none(),
                             },
@@ -445,7 +445,7 @@ impl Application for Tasks {
                 ApplicationAction::AppTheme(theme) => {
                     if let Some(handler) = &self.config_handler {
                         if let Err(err) = self.config.set_app_theme(&handler, theme.into()) {
-                            log::error!("{err}")
+                            tracing::error!("{err}")
                         }
                     }
                 }
@@ -538,7 +538,7 @@ impl Application for Tasks {
                                         self.nav_model.active_data_mut::<List>()
                                     };
                                     if let Some(list) = data {
-                                        let title = if let Some(icon) = list.icon() {
+                                        let title = if let Some(icon) = &list.icon {
                                             format!("{} {}", icon.clone(), &name)
                                         } else {
                                             name.clone()
@@ -638,7 +638,7 @@ impl Application for Tasks {
             )
             .map(|update: Update<ThemeMode>| {
                 if !update.errors.is_empty() {
-                    log::info!(
+                    tracing::info!(
                         "errors loading config {:?}: {:?}",
                         update.keys,
                         update.errors
@@ -653,7 +653,7 @@ impl Application for Tasks {
             )
             .map(|update: Update<ThemeMode>| {
                 if !update.errors.is_empty() {
-                    log::info!(
+                    tracing::info!(
                         "errors loading theme mode {:?}: {:?}",
                         update.keys,
                         update.errors

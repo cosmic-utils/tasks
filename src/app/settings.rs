@@ -4,6 +4,7 @@ use cosmic::{
     Application,
 };
 use std::sync::Mutex;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::app::{
     config::TasksConfig,
@@ -15,7 +16,7 @@ use crate::app::{
 pub fn init() {
     localize();
     icons();
-    log();
+    tracing();
     migrate(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
 }
 
@@ -38,8 +39,14 @@ pub fn flags() -> Flags {
     }
 }
 
-pub fn log() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+pub fn tracing() {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 }
 
 pub fn icons() {
@@ -52,8 +59,8 @@ pub fn migrate(prev_app_ids: &[&str]) {
         let new = dirs::data_local_dir().unwrap().join(Tasks::APP_ID);
         if prev.exists() {
             match std::fs::rename(prev, new) {
-                Ok(()) => log::info!("migrated data to new directory"),
-                Err(err) => log::error!("error migrating data: {:?}", err),
+                Ok(()) => tracing::info!("migrated data to new directory"),
+                Err(err) => tracing::error!("error migrating data: {:?}", err),
             }
         }
     }

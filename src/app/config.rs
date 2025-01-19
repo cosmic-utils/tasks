@@ -22,7 +22,7 @@ impl TasksConfig {
         match Self::config_handler() {
             Some(config_handler) => {
                 TasksConfig::get_entry(&config_handler).unwrap_or_else(|(errs, config)| {
-                    log::info!("errors loading config: {:?}", errs);
+                    tracing::info!("errors loading config: {:?}", errs);
                     config
                 })
             }

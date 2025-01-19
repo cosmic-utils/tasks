@@ -147,7 +147,7 @@ impl Details {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
                         let sub_task =
-                            models::Task::new(self.subtask_input.clone(), task.id().clone());
+                            models::Task::new(self.subtask_input.clone(), task.id.clone());
                         task.sub_tasks.push(sub_task.clone());
                         let id = self.subtasks.insert(sub_task);
                         self.sub_task_input_ids.insert(id, widget::Id::unique());

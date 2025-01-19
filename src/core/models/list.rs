@@ -1,10 +1,7 @@
-use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(
-    Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Getters,
-)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct List {
     pub(crate) id: String,
     pub name: String,

@@ -1,13 +1,10 @@
 use chrono::{DateTime, Utc};
-use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{priority::Priority, recurrence::Recurrence, status::Status};
 
-#[derive(
-    Clone, Default, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Getters,
-)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Task {
     pub(crate) id: String,
     pub parent: String,

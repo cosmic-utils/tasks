@@ -111,8 +111,8 @@ async fn get_tasks(database_path: &Path) -> Result<Vec<Task>, Error> {
             )
             .unwrap()
             .and_utc(),
-            sub_tasks: serde_json::from_str(row.get(12)).unwrap(),
-            tags: serde_json::from_str(row.get(13)).unwrap(),
+            sub_tasks: ron::from_str(row.get(12)).unwrap(),
+            tags: ron::from_str(row.get(13)).unwrap(),
             today: row.get(14),
             deletion_date: NaiveDateTime::parse_from_str(row.get(15), "%Y-%m-%d %H:%M:%S.%f")
                 .map(|ndt| ndt.and_utc())
