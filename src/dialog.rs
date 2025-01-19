@@ -1,10 +1,9 @@
-use chrono::NaiveDate;
 use cosmic::{
     iced::{
         alignment::{Horizontal, Vertical},
         Length,
     },
-    widget::{self, segmented_button},
+    widget::{self, calendar::CalendarModel, segmented_button},
     Element,
 };
 
@@ -16,6 +15,7 @@ pub enum DialogAction {
     Update(DialogPage),
     Close,
     Complete,
+    None,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -24,7 +24,7 @@ pub enum DialogPage {
     Icon(Option<segmented_button::Entity>, String),
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
-    Calendar(NaiveDate),
+    Calendar(CalendarModel),
     Export(String),
 }
 
@@ -143,11 +143,19 @@ impl DialogPage {
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                     ))
                     .control(
-                        widget::container(widget::calendar(date, |date| {
-                            Message::Application(ApplicationAction::Dialog(DialogAction::Update(
-                                DialogPage::Calendar(date),
-                            )))
-                        }))
+                        widget::container(widget::calendar(
+                            date,
+                            |selected_date| {
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::Calendar(CalendarModel::new(
+                                        selected_date,
+                                        selected_date,
+                                    ))),
+                                ))
+                            },
+                            || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
+                            || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
+                        ))
                         .width(Length::Fill)
                         .align_x(Horizontal::Center)
                         .align_y(Vertical::Center),

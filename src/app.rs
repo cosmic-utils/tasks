@@ -4,7 +4,6 @@ use std::{
     env, process,
 };
 
-use chrono::Local;
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::{
     app::{self, message, Core, Message as AppMessage},
@@ -16,6 +15,7 @@ use cosmic::{
     },
     widget::{
         self,
+        calendar::CalendarModel,
         menu::{key_bind::KeyBind, Action as _},
         segmented_button::{Entity, EntityMut, SingleSelect},
     },
@@ -355,7 +355,7 @@ impl Application for Tasks {
                         details::Task::OpenCalendarDialog => {
                             tasks.push(self.update(Message::Application(
                                 ApplicationAction::Dialog(DialogAction::Open(
-                                    DialogPage::Calendar(Local::now().date_naive()),
+                                    DialogPage::Calendar(CalendarModel::now()),
                                 )),
                             )));
                         }
@@ -590,7 +590,8 @@ impl Application for Tasks {
                                     }
                                 }
                                 DialogPage::Calendar(date) => {
-                                    self.details.update(details::Message::SetDueDate(date));
+                                    self.details
+                                        .update(details::Message::SetDueDate(date.selected));
                                 }
                                 DialogPage::Export(content) => {
                                     let mut clipboard = ClipboardContext::new().unwrap();
@@ -599,6 +600,7 @@ impl Application for Tasks {
                             }
                         }
                     }
+                    DialogAction::None => (),
                 },
                 ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
             },
