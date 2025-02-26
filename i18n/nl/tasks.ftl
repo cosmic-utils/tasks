@@ -86,5 +86,5 @@ menu-about = Over Tasks...
 
 ## About
 repository = Repository
-support = Doneer
+support = Ondersteuning
 website = Website
