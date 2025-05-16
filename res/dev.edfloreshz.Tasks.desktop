@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=Tasks
+Name[pt]=Tarefas
 GenericName=Task Manager
+GenericName[pt]=Gerenciador de Tarefas
 Exec=tasks %F
 Terminal=false
 Type=Application
@@ -8,3 +10,4 @@ StartupNotify=true
 Icon=dev.edfloreshz.Tasks
 Categories=Utility;
 Keywords=Tasks;Management,Todo,Project,Planner,Organizer,Reminder,Checklist,Task,To-do,List;
+Keywords[pt]=tasks;todo;projeto;organizador;lembrete;checklist;task;to-do;lista;
