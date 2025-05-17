@@ -20,6 +20,7 @@ pub struct Content {
     editing: SecondaryMap<DefaultKey, bool>,
     task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     input: String,
+    hide_complete: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +30,7 @@ pub enum Message {
     Delete(DefaultKey),
     EditMode(DefaultKey, bool),
     Export(Vec<models::Task>),
+    ToggleComplete,
     Input(String),
     List(Option<List>),
     Select(models::Task),
@@ -56,6 +58,7 @@ impl Content {
             editing: SecondaryMap::new(),
             task_input_ids: SecondaryMap::new(),
             input: String::new(),
+            hide_complete: false,
         }
     }
 
@@ -64,7 +67,13 @@ impl Content {
         let export_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
             .class(cosmic::style::Button::Suggested)
             .padding(spacing.space_xxs)
+            .on_press(Message::ToggleComplete);
+
+        let hide_complete_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
+            .class(cosmic::style::Button::Suggested)
+            .padding(spacing.space_xxs)
             .on_press(Message::Export(self.tasks.values().cloned().collect()));
+
         let default_icon = emojis::get_by_shortcode("pencil").unwrap().to_string();
         let icon = list.icon.clone().unwrap_or(default_icon);
 
@@ -74,6 +83,7 @@ impl Content {
             .padding([spacing.space_none, spacing.space_xxs])
             .push(widget::text(icon).size(spacing.space_m))
             .push(widget::text::title3(&list.name).width(Length::Fill))
+            .push(hide_complete_button)
             .push(export_button)
             .into()
     }
@@ -91,6 +101,9 @@ impl Content {
             .padding([spacing.space_none, spacing.space_xxs]);
 
         for (id, item) in &self.tasks {
+            if item.status == Status::Completed && self.hide_complete {
+                continue;
+            }
             let item_checkbox = widget::checkbox("", item.status == Status::Completed)
                 .on_toggle(move |value| Message::Complete(id, value));
 
@@ -269,6 +282,7 @@ impl Content {
             Message::Export(exported_tasks) => {
                 tasks.push(Task::Export(exported_tasks));
             }
+            Message::ToggleComplete => self.hide_complete = !self.hide_complete,
         }
         tasks
     }
