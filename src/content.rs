@@ -30,7 +30,7 @@ pub enum Message {
     Delete(DefaultKey),
     EditMode(DefaultKey, bool),
     Export(Vec<models::Task>),
-    ToggleComplete,
+    ToggleHideCompleted,
     Input(String),
     List(Option<List>),
     Select(models::Task),
@@ -67,7 +67,7 @@ impl Content {
         let export_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
             .class(cosmic::style::Button::Suggested)
             .padding(spacing.space_xxs)
-            .on_press(Message::ToggleComplete);
+            .on_press(Message::ToggleHideCompleted);
 
         let hide_complete_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
             .class(cosmic::style::Button::Suggested)
@@ -282,7 +282,7 @@ impl Content {
             Message::Export(exported_tasks) => {
                 tasks.push(Task::Export(exported_tasks));
             }
-            Message::ToggleComplete => self.hide_complete = !self.hide_complete,
+            Message::ToggleHideCompleted => self.hide_complete = !self.hide_complete,
         }
         tasks
     }
