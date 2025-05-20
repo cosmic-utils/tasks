@@ -81,10 +81,10 @@ pub enum NavMenuAction {
 }
 
 impl MenuAction for NavMenuAction {
-    type Message = cosmic::app::Message<Message>;
+    type Message = cosmic::Action<Message>;
 
     fn message(&self) -> Self::Message {
-        cosmic::app::Message::App(Message::Application(ApplicationAction::NavMenuAction(
+        cosmic::Action::App(Message::Application(ApplicationAction::NavMenuAction(
             *self,
         )))
     }

@@ -113,7 +113,7 @@ impl Content {
                 move |editing| Message::EditMode(id, editing),
             )
             .id(self.task_input_ids[id].clone())
-            .on_submit(Message::TitleSubmit(id))
+            .on_submit(move |_| Message::TitleSubmit(id))
             .on_input(move |text| Message::TitleUpdate(id, text))
             .width(Length::Fill);
 
@@ -168,7 +168,7 @@ impl Content {
         row(vec![
             widget::text_input(fl!("add-new-task"), &self.input)
                 .on_input(Message::Input)
-                .on_submit(Message::AddTask)
+                .on_submit(|_| Message::AddTask)
                 .width(Length::Fill)
                 .into(),
             widget::button::icon(icons::get_handle("mail-send-symbolic", 18))

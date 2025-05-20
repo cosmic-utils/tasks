@@ -51,9 +51,11 @@ impl DialogPage {
                                     DialogAction::Update(DialogPage::New(name)),
                                 ))
                             })
-                            .on_submit(Message::Application(ApplicationAction::Dialog(
-                                DialogAction::Complete,
-                            )))
+                            .on_submit(|_| {
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Complete,
+                                ))
+                            })
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
@@ -76,9 +78,11 @@ impl DialogPage {
                                     DialogAction::Update(DialogPage::Rename(*entity, name)),
                                 ))
                             })
-                            .on_submit(Message::Application(ApplicationAction::Dialog(
-                                DialogAction::Complete,
-                            )))
+                            .on_submit(|_| {
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Complete,
+                                ))
+                            })
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
@@ -155,6 +159,7 @@ impl DialogPage {
                             },
                             || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
                             || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
+                            chrono::Weekday::Mon,
                         ))
                         .width(Length::Fill)
                         .align_x(Horizontal::Center)

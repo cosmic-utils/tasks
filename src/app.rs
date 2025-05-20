@@ -6,7 +6,7 @@ use std::{
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::{
-    app::{self, message, Core, Message as AppMessage},
+    app::{self, Core},
     cosmic_config::{self, Update},
     cosmic_theme::{self, ThemeMode},
     iced::{
@@ -159,7 +159,7 @@ impl Application for Tasks {
 
         let mut tasks = vec![app::Task::perform(
             TaskService::migrate(Self::APP_ID),
-            |_| message::app(Message::Tasks(TasksAction::FetchLists)),
+            |_| cosmic::action::app(Message::Tasks(TasksAction::FetchLists)),
         )];
 
         if let Some(id) = app.core.main_window_id() {
@@ -201,7 +201,7 @@ impl Application for Tasks {
     fn nav_context_menu(
         &self,
         id: widget::nav_bar::Id,
-    ) -> Option<Vec<widget::menu::Tree<AppMessage<Self::Message>>>> {
+    ) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
         Some(cosmic::widget::menu::items(
             &HashMap::new(),
             vec![
@@ -273,10 +273,10 @@ impl Application for Tasks {
                             tasks.push(app::Task::perform(
                                 todo::fetch_tasks(list_id, self.service.clone()),
                                 |result| match result {
-                                    Ok(data) => message::app(Message::Content(
+                                    Ok(data) => cosmic::action::app(Message::Content(
                                         content::Message::SetItems(data),
                                     )),
-                                    Err(_) => message::none(),
+                                    Err(_) => cosmic::action::none(),
                                 },
                             ));
                         }
@@ -306,7 +306,7 @@ impl Application for Tasks {
                             let task = app::Task::perform(
                                 todo::update_task(task, self.service.clone().clone()),
                                 |result| match result {
-                                    Ok(()) | Err(_) => message::none(),
+                                    Ok(()) | Err(_) => cosmic::action::none(),
                                 },
                             );
                             tasks.push(task);
@@ -320,7 +320,7 @@ impl Application for Tasks {
                                         self.service.clone().clone(),
                                     ),
                                     |result| match result {
-                                        Ok(()) | Err(_) => message::none(),
+                                        Ok(()) | Err(_) => cosmic::action::none(),
                                     },
                                 );
                                 tasks.push(task);
@@ -330,7 +330,7 @@ impl Application for Tasks {
                             let task = app::Task::perform(
                                 todo::create_task(task, self.service.clone()),
                                 |result| match result {
-                                    Ok(()) | Err(_) => message::none(),
+                                    Ok(()) | Err(_) => cosmic::action::none(),
                                 },
                             );
                             tasks.push(task);
@@ -370,10 +370,10 @@ impl Application for Tasks {
                     tasks.push(app::Task::perform(
                         todo::fetch_lists(self.service.clone()),
                         |result| match result {
-                            Ok(data) => {
-                                message::app(Message::Tasks(TasksAction::PopulateLists(data)))
-                            }
-                            Err(_) => message::none(),
+                            Ok(data) => cosmic::action::app(Message::Tasks(
+                                TasksAction::PopulateLists(data),
+                            )),
+                            Err(_) => cosmic::action::none(),
                         },
                     ));
                 }
@@ -406,7 +406,7 @@ impl Application for Tasks {
                         let task = app::Task::perform(
                             todo::delete_list(list.id.clone(), self.service.clone()),
                             |result| match result {
-                                Ok(()) | Err(_) => message::none(),
+                                Ok(()) | Err(_) => cosmic::action::none(),
                             },
                         );
 
@@ -450,7 +450,7 @@ impl Application for Tasks {
                     }
                 }
                 ApplicationAction::SystemThemeModeChange => {
-                    tasks.push(app::command::set_theme(self.config.app_theme.theme()));
+                    tasks.push(cosmic::command::set_theme(self.config.app_theme.theme()));
                 }
                 ApplicationAction::Key(modifiers, key) => {
                     for (key_bind, action) in &self.key_binds {
@@ -524,10 +524,10 @@ impl Application for Tasks {
                                     tasks.push(app::Task::perform(
                                         todo::create_list(list, self.service.clone()),
                                         |result| match result {
-                                            Ok(list) => message::app(Message::Tasks(
+                                            Ok(list) => cosmic::action::app(Message::Tasks(
                                                 TasksAction::AddList(list),
                                             )),
-                                            Err(_) => message::none(),
+                                            Err(_) => cosmic::action::none(),
                                         },
                                     ));
                                 }
@@ -549,7 +549,7 @@ impl Application for Tasks {
                                             .text_set(self.nav_model.active(), title.clone());
                                         let task = app::Task::perform(
                                             todo::update_list(list.clone(), self.service.clone()),
-                                            |_| message::none(),
+                                            |_| cosmic::action::none(),
                                         );
                                         tasks.push(task);
                                         tasks.push(self.update(Message::Content(
@@ -581,7 +581,7 @@ impl Application for Tasks {
                                         let list = list.clone();
                                         let task = app::Task::perform(
                                             todo::update_list(list.clone(), self.service.clone()),
-                                            |_| message::none(),
+                                            |_| cosmic::action::none(),
                                         );
                                         tasks.push(task);
                                         tasks.push(self.update(Message::Content(

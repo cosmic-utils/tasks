@@ -192,7 +192,7 @@ impl Details {
                 )
                 .id(self.sub_task_input_ids[id].clone())
                 .on_input(move |title| Message::SetSubTaskTitle(id, title))
-                .on_submit(Message::SubTaskEditDone);
+                .on_submit(|_| Message::SubTaskEditDone);
 
                 let delete_button =
                     widget::button::icon(icons::get_handle("user-trash-full-symbolic", 18))
@@ -293,7 +293,7 @@ impl Details {
             widget::text_input(fl!("add-sub-task"), &self.subtask_input)
                 .id(widget::Id::new("new_sub_task_input"))
                 .on_input(Message::SubTaskInput)
-                .on_submit(Message::AddTask)
+                .on_submit(|_| Message::AddTask)
                 .width(Length::Fill)
                 .into(),
             widget::button::icon(icons::get_handle("mail-send-symbolic", 18))
