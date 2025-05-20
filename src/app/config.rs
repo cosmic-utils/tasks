@@ -11,6 +11,7 @@ pub const CONFIG_VERSION: u64 = 1;
 #[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, CosmicConfigEntry)]
 pub struct TasksConfig {
     pub app_theme: AppTheme,
+    pub hide_completed: bool,
 }
 
 impl TasksConfig {
