@@ -84,6 +84,7 @@ delete = Delete
 view = View
 menu-settings = Settings...
 menu-about = About Tasks...
+hide-completed = Hide completed
 
 ## About
 repository = Repository

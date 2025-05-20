@@ -19,6 +19,7 @@ pub enum Action {
     DeleteList,
     RenameList,
     Icon,
+    ToggleHideCompleted(bool),
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,7 @@ pub enum ApplicationAction {
     Dialog(DialogAction),
     ToggleContextDrawer,
     ToggleContextPage(ContextPage),
+    ToggleHideCompleted(bool),
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +71,9 @@ impl MenuAction for Action {
             Action::DeleteList => Message::Application(ApplicationAction::Dialog(
                 DialogAction::Open(DialogPage::Delete(None)),
             )),
+            Action::ToggleHideCompleted(value) => {
+                Message::Application(ApplicationAction::ToggleHideCompleted(*value))
+            }
         }
     }
 }
