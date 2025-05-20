@@ -13,7 +13,12 @@ use crate::{
     fl,
 };
 
-pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message> {
+use super::config::TasksConfig;
+
+pub fn menu_bar<'a>(
+    key_binds: &HashMap<KeyBind, Action>,
+    config: &TasksConfig,
+) -> Element<'a, Message> {
     MenuBar::new(vec![
         Tree::with_children(
             root(fl!("file")),
@@ -74,6 +79,13 @@ pub fn menu_bar<'a>(key_binds: &HashMap<KeyBind, Action>) -> Element<'a, Message
                         fl!("menu-settings"),
                         Some(icons::get_handle("settings-symbolic", 14)),
                         Action::Settings,
+                    ),
+                    Item::Divider,
+                    Item::CheckBox(
+                        fl!("hide-completed"),
+                        None,
+                        config.hide_completed,
+                        Action::ToggleHideCompleted(!config.hide_completed),
                     ),
                     Item::Divider,
                     Item::Button(

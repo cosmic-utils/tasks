@@ -195,7 +195,7 @@ impl Application for Tasks {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![menu::menu_bar(&self.key_binds)]
+        vec![menu::menu_bar(&self.key_binds, &self.config)]
     }
 
     fn nav_context_menu(
@@ -445,6 +445,13 @@ impl Application for Tasks {
                 ApplicationAction::AppTheme(theme) => {
                     if let Some(handler) = &self.config_handler {
                         if let Err(err) = self.config.set_app_theme(&handler, theme.into()) {
+                            tracing::error!("{err}")
+                        }
+                    }
+                }
+                ApplicationAction::ToggleHideCompleted(value) => {
+                    if let Some(handler) = &self.config_handler {
+                        if let Err(err) = self.config.set_hide_completed(&handler, value) {
                             tracing::error!("{err}")
                         }
                     }
