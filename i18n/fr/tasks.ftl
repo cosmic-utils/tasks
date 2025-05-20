@@ -81,9 +81,10 @@ rename = Renommer
 delete = Supprimer
 
 ## View
-view = Vue
+view = Affichage
 menu-settings = Préférences...
 menu-about = À propos de Tâches...
+hide-completed = Cacher les tâches achevées
 
 ## About
 repository = Dépot de code
