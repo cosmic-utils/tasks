@@ -340,6 +340,16 @@ impl Application for Tasks {
                                 self.update(Message::Tasks(TasksAction::Export(exported_tasks))),
                             );
                         }
+                        content::Task::ToggleCompleted(list) => {
+                            if let Some(data) = self.nav_model.active_data_mut::<List>() {
+                                data.hide_completed = list.hide_completed;
+                            }
+                            let task = cosmic::app::Task::perform(
+                                crate::todo::update_list(list.clone(), self.service.clone()),
+                                |_| cosmic::action::none(),
+                            );
+                            tasks.push(task);
+                        }
                     }
                 }
             }
@@ -454,6 +464,7 @@ impl Application for Tasks {
                         if let Err(err) = self.config.set_hide_completed(&handler, value) {
                             tracing::error!("{err}")
                         }
+                        tasks.push(self.update(Message::Content(content::Message::SetConfig(self.config.clone()))));
                     }
                 }
                 ApplicationAction::SystemThemeModeChange => {

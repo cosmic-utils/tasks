@@ -13,14 +13,15 @@ use crate::{
     core::models::{self, List, Status},
     fl,
 };
+use crate::app::config;
 
 pub struct Content {
     list: Option<List>,
     tasks: SlotMap<DefaultKey, models::Task>,
     editing: SecondaryMap<DefaultKey, bool>,
     task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
+    config: config::TasksConfig,
     input: String,
-    hide_complete: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +39,7 @@ pub enum Message {
     TitleSubmit(DefaultKey),
     TitleUpdate(DefaultKey, String),
     UpdateTask(models::Task),
+    SetConfig(config::TasksConfig),
 }
 
 pub enum Task {
@@ -48,6 +50,7 @@ pub enum Task {
     Delete(String),
     Create(models::Task),
     Export(Vec<models::Task>),
+    ToggleCompleted(List),
 }
 
 impl Content {
@@ -58,18 +61,23 @@ impl Content {
             editing: SecondaryMap::new(),
             task_input_ids: SecondaryMap::new(),
             input: String::new(),
-            hide_complete: false,
+            config: config::TasksConfig::config(),
         }
     }
 
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
-        let export_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
-            .class(cosmic::style::Button::Suggested)
-            .padding(spacing.space_xxs)
-            .on_press(Message::ToggleHideCompleted);
 
-        let hide_complete_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
+        let mut hide_completed_button =
+            widget::button::icon(icons::get_handle("check-round-outline-symbolic", 18))
+                .selected(list.hide_completed || self.config.hide_completed)
+                .padding(spacing.space_xxs);
+
+        if !self.config.hide_completed {
+            hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
+        }
+
+        let export_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
             .class(cosmic::style::Button::Suggested)
             .padding(spacing.space_xxs)
             .on_press(Message::Export(self.tasks.values().cloned().collect()));
@@ -83,7 +91,7 @@ impl Content {
             .padding([spacing.space_none, spacing.space_xxs])
             .push(widget::text(icon).size(spacing.space_m))
             .push(widget::text::title3(&list.name).width(Length::Fill))
-            .push(hide_complete_button)
+            .push(hide_completed_button)
             .push(export_button)
             .into()
     }
@@ -95,13 +103,19 @@ impl Content {
             return self.empty(list);
         }
 
+        let hide_completed = if list.hide_completed {
+            list.hide_completed
+        } else {
+            self.config.hide_completed
+        };
+
         let mut items = widget::list::list_column()
             .style(theme::Container::ContextDrawer)
             .spacing(spacing.space_xxxs)
             .padding([spacing.space_none, spacing.space_xxs]);
 
         for (id, item) in &self.tasks {
-            if item.status == Status::Completed && self.hide_complete {
+            if item.status == Status::Completed && hide_completed {
                 continue;
             }
             let item_checkbox = widget::checkbox("", item.status == Status::Completed)
@@ -201,6 +215,9 @@ impl Content {
     pub fn update(&mut self, message: Message) -> Vec<Task> {
         let mut tasks = Vec::new();
         match message {
+            Message::SetConfig(config) => {
+                self.config = config;
+            }
             Message::List(list) => {
                 match (&self.list, &list) {
                     (Some(current), Some(list)) => {
@@ -282,7 +299,12 @@ impl Content {
             Message::Export(exported_tasks) => {
                 tasks.push(Task::Export(exported_tasks));
             }
-            Message::ToggleHideCompleted => self.hide_complete = !self.hide_complete,
+            Message::ToggleHideCompleted => {
+                if let Some(ref mut list) = self.list {
+                    list.hide_completed = !list.hide_completed;
+                    tasks.push(Task::ToggleCompleted(list.clone()));
+                }
+            }
         }
         tasks
     }

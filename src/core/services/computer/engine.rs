@@ -44,19 +44,19 @@ impl ComputerStorageEngine {
     }
 
     pub fn lists(&self) -> Result<Vec<List>, Error> {
-        let mut tasks = vec![];
+        let mut lists = vec![];
         let path = self.lists_path();
         if !path.exists() {
-            return Ok(tasks);
+            return Ok(lists);
         }
         for entry in self.lists_path().read_dir()? {
             let entry = entry?;
             let path = entry.path();
             let content = std::fs::read_to_string(&path)?;
-            let task = ron::from_str(&content)?;
-            tasks.push(task);
+            let list = ron::from_str(&content)?;
+            lists.push(list);
         }
-        Ok(tasks)
+        Ok(lists)
     }
 
     pub fn get_task(&self, list_id: &str, task_id: &str) -> Result<Task, Error> {
@@ -132,6 +132,7 @@ impl ComputerStorageEngine {
 
     pub fn create_list(&self, list: List) -> Result<List, Error> {
         let path = self.lists_path().join(&list.id).with_extension("ron");
+        println!("{path:?}");
         if !path.exists() {
             let content = ron::to_string(&list)?;
             std::fs::write(path, content).unwrap();

@@ -7,6 +7,8 @@ pub struct List {
     pub name: String,
     pub description: String,
     pub icon: Option<String>,
+    #[serde(default)]
+    pub hide_completed: bool,
 }
 
 unsafe impl Send for List {}
@@ -28,6 +30,7 @@ impl List {
             name: name.to_string(),
             description: String::new(),
             icon: Some(emojis::get_by_shortcode("pencil").unwrap().to_string()),
+            hide_completed: false,
         }
     }
 }

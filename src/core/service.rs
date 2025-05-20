@@ -132,6 +132,7 @@ async fn get_lists(database_path: &Path) -> Result<Vec<List>, Error> {
             name: row.get(1),
             description: row.get(2),
             icon: row.get(3),
+            hide_completed: false,
         })
         .fetch_all(&mut conn)
         .await?;
