@@ -1,5 +1,5 @@
 tasks = Tasks
-trash = Vuilnisbak
+trash = Prullenbak
 about = Over
 
 # Content
@@ -16,9 +16,9 @@ notes = Opmerkingen
 
 # Empty
 no-tasks = Geen taken
-no-tasks-suggestion = Probeer een taak toe te voegen met het onderstaande tekstveld
+no-tasks-suggestion = Voeg een taak toe via het onderstaande tekstveld
 no-list-selected = Geen lijst geselecteerd
-no-list-suggestion = Een nieuwe lijst aanmaken of selecteren om te beginnen
+no-list-suggestion = Selecteer of maak een nieuwe lijst aan
 sub-tasks = Subtaken
 add-sub-task = Subtaak toevoegen
 
