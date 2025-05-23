@@ -82,6 +82,7 @@ impl MenuAction for Action {
 pub enum NavMenuAction {
     Rename(segmented_button::Entity),
     SetIcon(segmented_button::Entity),
+    Export(segmented_button::Entity),
     Delete(segmented_button::Entity),
 }
 
