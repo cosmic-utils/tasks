@@ -8,12 +8,12 @@ use cosmic::{
 };
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
+use crate::app::config;
 use crate::{
     app::icons,
     core::models::{self, List, Status},
     fl,
 };
-use crate::app::config;
 
 pub struct Content {
     list: Option<List>,
@@ -30,7 +30,6 @@ pub enum Message {
     Complete(DefaultKey, bool),
     Delete(DefaultKey),
     EditMode(DefaultKey, bool),
-    Export(Vec<models::Task>),
     ToggleHideCompleted,
     Input(String),
     List(Option<List>),
@@ -49,7 +48,6 @@ pub enum Task {
     Update(models::Task),
     Delete(String),
     Create(models::Task),
-    Export(Vec<models::Task>),
     ToggleCompleted(List),
 }
 
@@ -77,11 +75,6 @@ impl Content {
             hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
         }
 
-        let export_button = widget::button::icon(icons::get_handle("share-symbolic", 18))
-            .class(cosmic::style::Button::Suggested)
-            .padding(spacing.space_xxs)
-            .on_press(Message::Export(self.tasks.values().cloned().collect()));
-
         let default_icon = emojis::get_by_shortcode("pencil").unwrap().to_string();
         let icon = list.icon.clone().unwrap_or(default_icon);
 
@@ -92,7 +85,6 @@ impl Content {
             .push(widget::text(icon).size(spacing.space_m))
             .push(widget::text::title3(&list.name).width(Length::Fill))
             .push(hide_completed_button)
-            .push(export_button)
             .into()
     }
 
@@ -295,9 +287,6 @@ impl Content {
                     *task = updated_task.clone();
                     tasks.push(Task::Update(task.clone()));
                 }
-            }
-            Message::Export(exported_tasks) => {
-                tasks.push(Task::Export(exported_tasks));
             }
             Message::ToggleHideCompleted => {
                 if let Some(ref mut list) = self.list {

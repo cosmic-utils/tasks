@@ -217,7 +217,7 @@ impl Application for Tasks {
                 ),
                 cosmic::widget::menu::Item::Button(
                     fl!("export"),
-                    Some(icons::get_handle("share-symbolic", 14)),
+                    Some(icons::get_handle("share-symbolic", 18)),
                     NavMenuAction::Export(id),
                 ),
                 cosmic::widget::menu::Item::Button(
@@ -340,11 +340,6 @@ impl Application for Tasks {
                             );
                             tasks.push(task);
                         }
-                        content::Task::Export(exported_tasks) => {
-                            tasks.push(
-                                self.update(Message::Tasks(TasksAction::Export(exported_tasks))),
-                            );
-                        }
                         content::Task::ToggleCompleted(list) => {
                             if let Some(data) = self.nav_model.active_data_mut::<List>() {
                                 data.hide_completed = list.hide_completed;
@@ -430,14 +425,6 @@ impl Application for Tasks {
                         tasks.push(task);
                     }
                     self.nav_model.remove(self.nav_model.active());
-                }
-                TasksAction::Export(exported_tasks) => {
-                    if let Some(list) = self.nav_model.active_data() {
-                        let exported_markdown = todo::export_list(list, &exported_tasks);
-                        tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                            DialogAction::Open(DialogPage::Export(exported_markdown)),
-                        ))));
-                    }
                 }
             },
             Message::Application(application_action) => match application_action {
