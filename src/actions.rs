@@ -1,7 +1,7 @@
 use crate::{
     app::Message,
     context::ContextPage,
-    core::models::{List, Task},
+    core::models::List,
     dialog::{DialogAction, DialogPage},
 };
 use cosmic::{
@@ -41,7 +41,6 @@ pub enum ApplicationAction {
 #[derive(Debug, Clone)]
 pub enum TasksAction {
     PopulateLists(Vec<List>),
-    Export(Vec<Task>),
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
     FetchLists,
