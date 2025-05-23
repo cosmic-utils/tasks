@@ -216,6 +216,11 @@ impl Application for Tasks {
                     NavMenuAction::SetIcon(id),
                 ),
                 cosmic::widget::menu::Item::Button(
+                    fl!("export"),
+                    Some(icons::get_handle("share-symbolic", 14)),
+                    NavMenuAction::Export(id),
+                ),
+                cosmic::widget::menu::Item::Button(
                     fl!("delete"),
                     Some(icons::get_handle("user-trash-full-symbolic", 14)),
                     NavMenuAction::Delete(id),
@@ -464,7 +469,9 @@ impl Application for Tasks {
                         if let Err(err) = self.config.set_hide_completed(&handler, value) {
                             tracing::error!("{err}")
                         }
-                        tasks.push(self.update(Message::Content(content::Message::SetConfig(self.config.clone()))));
+                        tasks.push(self.update(Message::Content(content::Message::SetConfig(
+                            self.config.clone(),
+                        ))));
                     }
                 }
                 ApplicationAction::SystemThemeModeChange => {
@@ -490,6 +497,30 @@ impl Application for Tasks {
                         tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
                             DialogAction::Open(DialogPage::Icon(Some(entity), String::new())),
                         ))));
+                    }
+                    NavMenuAction::Export(entity) => {
+                        if let Some(list) = self.nav_model.data::<List>(entity) {
+                            // Spawn a task to fetch tasks asynchronously and then show the export dialog
+                            let list_id = list.id.clone();
+                            let service = self.service.clone();
+                            let list_clone = list.clone();
+                            tasks.push(app::Task::perform(
+                                async move {
+                                    let tasks = todo::fetch_tasks(list_id, service)
+                                        .await
+                                        .unwrap_or_default();
+                                    (list_clone, tasks)
+                                },
+                                |(list, tasks)| {
+                                    let exported_markdown = todo::export_list(&list, &tasks);
+                                    cosmic::Action::App(Message::Application(
+                                        ApplicationAction::Dialog(DialogAction::Open(
+                                            DialogPage::Export(exported_markdown),
+                                        )),
+                                    ))
+                                },
+                            ));
+                        }
                     }
                     NavMenuAction::Delete(entity) => {
                         tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
