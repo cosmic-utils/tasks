@@ -27,13 +27,10 @@ use crate::{
     app::{config::CONFIG_VERSION, key_bind::key_binds},
     content::{self, Content},
     context::ContextPage,
-    core::{
-        models::List,
-        service::{Provider, TaskService},
-    },
+    core::{models::List, storage::ComputerStorage},
     details::{self, Details},
     dialog::{DialogAction, DialogPage},
-    fl, todo,
+    fl,
 };
 
 pub mod config;
@@ -48,7 +45,7 @@ pub struct Tasks {
     core: Core,
     about: widget::about::About,
     nav_model: widget::segmented_button::SingleSelectModel,
-    service: TaskService,
+    storage: ComputerStorage,
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
@@ -121,7 +118,7 @@ impl Application for Tasks {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let nav_model = widget::segmented_button::ModelBuilder::default().build();
-        let service = TaskService::new(Self::APP_ID, Provider::Computer);
+        let storage = ComputerStorage::new(Self::APP_ID);
         let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(Self::APP_ID)
@@ -141,7 +138,7 @@ impl Application for Tasks {
         let mut app = Tasks {
             core,
             about,
-            service: service.clone(),
+            storage,
             nav_model,
             content: Content::new(),
             details: Details::new(),
@@ -157,10 +154,7 @@ impl Application for Tasks {
 
         app.core.nav_bar_toggle_condensed();
 
-        let mut tasks = vec![app::Task::perform(
-            TaskService::migrate(Self::APP_ID),
-            |_| cosmic::action::app(Message::Tasks(TasksAction::FetchLists)),
-        )];
+        let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
 
         if let Some(id) = app.core.main_window_id() {
             tasks.push(app.set_window_title(fl!("tasks"), id));
@@ -274,17 +268,14 @@ impl Application for Tasks {
                     match content_task {
                         content::Task::Focus(id) => tasks
                             .push(self.update(Message::Application(ApplicationAction::Focus(id)))),
-                        content::Task::Get(list_id) => {
-                            tasks.push(app::Task::perform(
-                                todo::fetch_tasks(list_id, self.service.clone()),
-                                |result| match result {
-                                    Ok(data) => cosmic::action::app(Message::Content(
-                                        content::Message::SetItems(data),
-                                    )),
-                                    Err(_) => cosmic::action::none(),
-                                },
-                            ));
-                        }
+                        content::Task::Get(list_id) => match self.storage.tasks(&list_id) {
+                            Ok(data) => tasks.push(
+                                self.update(Message::Content(content::Message::SetItems(data))),
+                            ),
+                            Err(err) => {
+                                tracing::error!("Error updating list: {err}");
+                            }
+                        },
                         content::Task::Display(task) => {
                             let entity =
                                 self.details.priority_model.entity_at(task.priority as u16);
@@ -307,48 +298,29 @@ impl Application for Tasks {
                             )));
                         }
                         content::Task::Update(task) => {
-                            self.details.task = Some(task.clone());
-                            let task = app::Task::perform(
-                                todo::update_task(task, self.service.clone().clone()),
-                                |result| match result {
-                                    Ok(()) | Err(_) => cosmic::action::none(),
-                                },
-                            );
-                            tasks.push(task);
+                            if let Err(err) = self.storage.update_task(task) {
+                                tracing::error!("Error updating list: {err}");
+                            }
                         }
                         content::Task::Delete(id) => {
                             if let Some(list) = self.nav_model.active_data::<List>() {
-                                let task = app::Task::perform(
-                                    todo::delete_task(
-                                        list.id.clone(),
-                                        id.clone(),
-                                        self.service.clone().clone(),
-                                    ),
-                                    |result| match result {
-                                        Ok(()) | Err(_) => cosmic::action::none(),
-                                    },
-                                );
-                                tasks.push(task);
+                                if let Err(err) = self.storage.delete_task(&list.id, &id) {
+                                    tracing::error!("Error deleting task: {err}");
+                                }
                             }
                         }
                         content::Task::Create(task) => {
-                            let task = app::Task::perform(
-                                todo::create_task(task, self.service.clone()),
-                                |result| match result {
-                                    Ok(()) | Err(_) => cosmic::action::none(),
-                                },
-                            );
-                            tasks.push(task);
+                            if let Err(err) = self.storage.create_task(task) {
+                                tracing::error!("Error creating task: {err}");
+                            }
                         }
                         content::Task::ToggleCompleted(list) => {
                             if let Some(data) = self.nav_model.active_data_mut::<List>() {
                                 data.hide_completed = list.hide_completed;
+                                if let Err(err) = self.storage.update_list(list.clone()) {
+                                    tracing::error!("Error updating list: {err}");
+                                }
                             }
-                            let task = cosmic::app::Task::perform(
-                                crate::todo::update_list(list.clone(), self.service.clone()),
-                                |_| cosmic::action::none(),
-                            );
-                            tasks.push(task);
                         }
                     }
                 }
@@ -376,17 +348,14 @@ impl Application for Tasks {
             }
 
             Message::Tasks(tasks_action) => match tasks_action {
-                TasksAction::FetchLists => {
-                    tasks.push(app::Task::perform(
-                        todo::fetch_lists(self.service.clone()),
-                        |result| match result {
-                            Ok(data) => cosmic::action::app(Message::Tasks(
-                                TasksAction::PopulateLists(data),
-                            )),
-                            Err(_) => cosmic::action::none(),
-                        },
-                    ));
-                }
+                TasksAction::FetchLists => match self.storage.lists() {
+                    Ok(lists) => {
+                        tasks.push(self.update(Message::Tasks(TasksAction::PopulateLists(lists))));
+                    }
+                    Err(err) => {
+                        tracing::error!("Error fetching lists: {err}");
+                    }
+                },
                 TasksAction::PopulateLists(lists) => {
                     for list in lists {
                         self.create_nav_item(&list);
@@ -413,16 +382,11 @@ impl Application for Tasks {
                         self.nav_model.active_data::<List>()
                     };
                     if let Some(list) = data {
-                        let task = app::Task::perform(
-                            todo::delete_list(list.id.clone(), self.service.clone()),
-                            |result| match result {
-                                Ok(()) | Err(_) => cosmic::action::none(),
-                            },
-                        );
+                        if let Err(err) = self.storage.delete_list(&list.id) {
+                            tracing::error!("Error deleting list: {err}");
+                        }
 
                         tasks.push(self.update(Message::Content(content::Message::List(None))));
-
-                        tasks.push(task);
                     }
                     self.nav_model.remove(self.nav_model.active());
                 }
@@ -487,26 +451,20 @@ impl Application for Tasks {
                     }
                     NavMenuAction::Export(entity) => {
                         if let Some(list) = self.nav_model.data::<List>(entity) {
-                            // Spawn a task to fetch tasks asynchronously and then show the export dialog
-                            let list_id = list.id.clone();
-                            let service = self.service.clone();
-                            let list_clone = list.clone();
-                            tasks.push(app::Task::perform(
-                                async move {
-                                    let tasks = todo::fetch_tasks(list_id, service)
-                                        .await
-                                        .unwrap_or_default();
-                                    (list_clone, tasks)
-                                },
-                                |(list, tasks)| {
-                                    let exported_markdown = todo::export_list(&list, &tasks);
-                                    cosmic::Action::App(Message::Application(
+                            match self.storage.tasks(&list.id) {
+                                Ok(data) => {
+                                    let exported_markdown =
+                                        ComputerStorage::export_list(&list, &data);
+                                    tasks.push(self.update(Message::Application(
                                         ApplicationAction::Dialog(DialogAction::Open(
                                             DialogPage::Export(exported_markdown),
                                         )),
-                                    ))
-                                },
-                            ));
+                                    )));
+                                }
+                                Err(err) => {
+                                    tracing::error!("Error fetching tasks: {err}");
+                                }
+                            }
                         }
                     }
                     NavMenuAction::Delete(entity) => {
@@ -557,15 +515,16 @@ impl Application for Tasks {
                             match dialog_page {
                                 DialogPage::New(name) => {
                                     let list = List::new(&name);
-                                    tasks.push(app::Task::perform(
-                                        todo::create_list(list, self.service.clone()),
-                                        |result| match result {
-                                            Ok(list) => cosmic::action::app(Message::Tasks(
+                                    match self.storage.create_list(list.clone()) {
+                                        Ok(list) => {
+                                            tasks.push(self.update(Message::Tasks(
                                                 TasksAction::AddList(list),
-                                            )),
-                                            Err(_) => cosmic::action::none(),
-                                        },
-                                    ));
+                                            )));
+                                        }
+                                        Err(err) => {
+                                            tracing::error!("Error creating list: {err}");
+                                        }
+                                    }
                                 }
                                 DialogPage::Rename(entity, name) => {
                                     let data = if let Some(entity) = entity {
@@ -583,11 +542,9 @@ impl Application for Tasks {
                                         let list = list.clone();
                                         self.nav_model
                                             .text_set(self.nav_model.active(), title.clone());
-                                        let task = app::Task::perform(
-                                            todo::update_list(list.clone(), self.service.clone()),
-                                            |_| cosmic::action::none(),
-                                        );
-                                        tasks.push(task);
+                                        if let Err(err) = self.storage.update_list(list.clone()) {
+                                            tracing::error!("Error updating list: {err}");
+                                        }
                                         tasks.push(self.update(Message::Content(
                                             content::Message::List(Some(list)),
                                         )));
@@ -615,11 +572,9 @@ impl Application for Tasks {
                                     if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                         list.icon = Some(icon);
                                         let list = list.clone();
-                                        let task = app::Task::perform(
-                                            todo::update_list(list.clone(), self.service.clone()),
-                                            |_| cosmic::action::none(),
-                                        );
-                                        tasks.push(task);
+                                        if let Err(err) = self.storage.update_list(list.clone()) {
+                                            tracing::error!("Error updating list: {err}");
+                                        }
                                         tasks.push(self.update(Message::Content(
                                             content::Message::List(Some(list)),
                                         )));

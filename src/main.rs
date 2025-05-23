@@ -5,7 +5,6 @@ mod context;
 mod core;
 mod details;
 mod dialog;
-mod todo;
 
 use app::settings;
 pub use core::Error;

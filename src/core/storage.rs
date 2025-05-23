@@ -1,30 +1,51 @@
 use std::path::PathBuf;
 
 use crate::{
-    core::models::{List, Task},
-    core::TasksError,
+    app::markdown::Markdown,
+    core::{
+        models::{List, Task},
+        TasksError,
+    },
     Error,
 };
 
 #[derive(Debug, Clone)]
-pub struct ComputerStorageEngine {
-    path: PathBuf,
+pub struct ComputerStorage {
+    application_id: String,
 }
 
-impl ComputerStorageEngine {
-    pub fn new(application_id: &str) -> Option<Self> {
-        let path = dirs::data_local_dir()?.join(application_id);
-        let engine = Self { path };
-        if !engine.path.exists() {
-            std::fs::create_dir_all(&engine.path).ok()?;
+impl ComputerStorage {
+    /// Creates a new instance of `ComputerStorage`.
+    /// If the directory does not exist, it will be created.
+    /// Returns `None` if the data local directory cannot be determined.
+    /// # Arguments
+    /// * `application_id` - The application ID used to create the storage path.
+    /// # Returns
+    /// * `Some(ComputerStorage)` - A new instance of the storage engine.
+    /// * `None` - If the data local directory cannot be determined.
+    pub fn new(application_id: &str) -> Self {
+        let storage = Self {
+            application_id: application_id.to_string(),
+        };
+        if !storage.path().exists() {
+            std::fs::create_dir_all(&storage.application_id)
+                .expect("Failed to create storage directory");
         }
-        if !engine.lists_path().exists() {
-            std::fs::create_dir_all(engine.lists_path()).ok()?;
+        if !storage.lists_path().exists() {
+            std::fs::create_dir_all(storage.lists_path())
+                .expect("Failed to create lists directory");
         }
-        if !engine.tasks_path().exists() {
-            std::fs::create_dir_all(engine.tasks_path()).ok()?;
+        if !storage.tasks_path().exists() {
+            std::fs::create_dir_all(storage.tasks_path())
+                .expect("Failed to create tasks directory");
         }
-        Some(engine)
+        storage
+    }
+
+    pub fn path(&self) -> PathBuf {
+        dirs::data_local_dir()
+            .expect("Failed to get data local dir")
+            .join(&self.application_id)
     }
 
     pub fn tasks(&self, list_id: &str) -> Result<Vec<Task>, Error> {
@@ -59,6 +80,7 @@ impl ComputerStorageEngine {
         Ok(lists)
     }
 
+    #[allow(unused)]
     pub fn get_task(&self, list_id: &str, task_id: &str) -> Result<Task, Error> {
         let path = self
             .tasks_path()
@@ -119,6 +141,7 @@ impl ComputerStorageEngine {
         }
     }
 
+    #[allow(unused)]
     pub fn get_list(&self, list_id: &str) -> Result<List, Error> {
         let path = self.lists_path().join(list_id).with_extension("ron");
         if path.exists() {
@@ -165,11 +188,17 @@ impl ComputerStorageEngine {
         }
     }
 
+    pub fn export_list(list: &List, tasks: &[Task]) -> String {
+        let markdown = list.markdown();
+        let tasks_markdown: String = tasks.iter().map(Markdown::markdown).collect();
+        format!("{markdown}\n{tasks_markdown}")
+    }
+
     pub fn lists_path(&self) -> PathBuf {
-        self.path.join("lists")
+        self.path().join("lists")
     }
 
     pub fn tasks_path(&self) -> PathBuf {
-        self.path.join("tasks")
+        self.path().join("tasks")
     }
 }
