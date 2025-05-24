@@ -14,14 +14,13 @@ pub struct LocalStorage {
 #[derive(Debug, Clone)]
 pub struct LocalStoragePaths {
     lists: PathBuf,
-    tasks: PathBuf,
 }
 
 impl LocalStorage {
     pub fn new(application_id: &str) -> Result<Self, LocalStorageError> {
         let base_path = dirs::data_local_dir()
             .ok_or(LocalStorageError::XdgLocalDirNotFound)?
-            .join(&application_id);
+            .join(application_id);
         let lists_path = base_path.join("lists");
         let tasks_path = base_path.join("tasks");
         if !base_path.exists() {
@@ -37,18 +36,39 @@ impl LocalStorage {
                 .map_err(LocalStorageError::TasksDirectoryCreationFailed)?;
         }
         let storage = Self {
-            paths: LocalStoragePaths {
-                lists: lists_path,
-                tasks: tasks_path,
-            },
+            paths: LocalStoragePaths { lists: lists_path },
         };
 
         Ok(storage)
     }
 
-    pub fn tasks(&self, list_id: &str) -> Result<Vec<Task>, Error> {
+    pub fn tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
         let mut tasks = vec![];
-        let path = self.paths.tasks.join(list_id);
+        let path = list.tasks_path();
+        if !path.exists() {
+            return Ok(tasks);
+        }
+        for entry in path.read_dir()? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                let content = std::fs::read_to_string(&path)?;
+                let mut task: Task = ron::from_str(&content)?;
+                if let Some(stem) = path.file_stem() {
+                    let folder_path = path.parent().unwrap().join(stem);
+                    if folder_path.is_dir() {
+                        task.sub_tasks = Self::sub_tasks(&task)?;
+                    }
+                }
+                tasks.push(task);
+            }
+        }
+        Ok(tasks)
+    }
+
+    pub fn sub_tasks(task: &Task) -> Result<Vec<Task>, Error> {
+        let mut tasks = vec![];
+        let path = task.sub_tasks_path();
         if !path.exists() {
             return Ok(tasks);
         }
@@ -56,7 +76,14 @@ impl LocalStorage {
             let entry = entry?;
             let path = entry.path();
             let content = std::fs::read_to_string(&path)?;
-            let task = ron::from_str(&content)?;
+            let mut task: Task = ron::from_str(&content)?;
+            // Check for nested sub-task folders
+            if let Some(stem) = path.file_stem() {
+                let folder_path = path.parent().unwrap().join(stem);
+                if folder_path.is_dir() {
+                    task.sub_tasks = Self::sub_tasks(&task)?;
+                }
+            }
             tasks.push(task);
         }
         Ok(tasks)
@@ -74,47 +101,20 @@ impl LocalStorage {
         Ok(lists)
     }
 
-    #[allow(unused)]
-    pub fn get_task(&self, list_id: &str, task_id: &str) -> Result<Task, Error> {
-        let path = self
-            .paths
-            .tasks
-            .join(list_id)
-            .join(task_id)
-            .with_extension("ron");
-        if path.exists() {
-            let content = std::fs::read_to_string(path)?;
-            let task = ron::from_str(&content)?;
-            Ok(task)
-        } else {
-            Err(Error::Tasks(TasksError::TaskNotFound))
-        }
-    }
-
-    pub fn create_task(&self, task: Task) -> Result<Task, Error> {
-        let path = self
-            .paths
-            .tasks
-            .join(&task.parent)
-            .join(&task.id)
-            .with_extension("ron");
+    pub fn create_task(&self, task: &Task) -> Result<Task, Error> {
+        let path = task.file_path();
         if !path.exists() {
-            std::fs::create_dir_all(self.paths.tasks.join(&task.parent))?;
+            std::fs::create_dir_all(&task.path)?;
             let content = ron::to_string(&task)?;
             std::fs::write(path, content)?;
-            Ok(task)
+            Ok(task.clone())
         } else {
             Err(Error::Tasks(TasksError::ExistingTask))
         }
     }
 
-    pub fn update_task(&self, task: Task) -> Result<(), Error> {
-        let path = self
-            .paths
-            .tasks
-            .join(&task.parent)
-            .join(&task.id)
-            .with_extension("ron");
+    pub fn update_task(&self, task: &Task) -> Result<(), Error> {
+        let path = task.file_path();
         if path.exists() {
             let content = ron::to_string(&task)?;
             std::fs::write(path, content)?;
@@ -124,62 +124,41 @@ impl LocalStorage {
         }
     }
 
-    pub fn delete_task(&self, list_id: &str, task_id: &str) -> Result<(), Error> {
-        let path = self
-            .paths
-            .tasks
-            .join(list_id)
-            .join(task_id)
-            .with_extension("ron");
+    pub fn delete_task(&self, task: &Task) -> Result<(), Error> {
+        let path = task.file_path();
         if path.exists() {
             std::fs::remove_file(path)?;
+            std::fs::remove_dir_all(task.sub_tasks_path())?;
             Ok(())
         } else {
             Err(Error::Tasks(TasksError::TaskNotFound))
         }
     }
 
-    #[allow(unused)]
-    pub fn get_list(&self, list_id: &str) -> Result<List, Error> {
-        let path = self.paths.lists.join(list_id).with_extension("ron");
-        if path.exists() {
-            let content = std::fs::read_to_string(path)?;
-            let list = ron::from_str(&content)?;
-            Ok(list)
-        } else {
-            Err(Error::Tasks(TasksError::ListNotFound))
-        }
-    }
-
-    pub fn create_list(&self, list: List) -> Result<List, Error> {
-        let path = self.paths.lists.join(&list.id).with_extension("ron");
-        println!("{path:?}");
-        if !path.exists() {
+    pub fn create_list(&self, list: &List) -> Result<List, Error> {
+        if !list.file_path.exists() {
             let content = ron::to_string(&list)?;
-            std::fs::write(path, content).unwrap();
-            Ok(list)
+            std::fs::write(&list.file_path, content)?;
+            Ok(list.clone())
         } else {
             Err(Error::Tasks(TasksError::ExistingList))
         }
     }
 
-    pub fn update_list(&self, list: List) -> Result<(), Error> {
-        let path = self.paths.lists.join(&list.id).with_extension("ron");
-        if path.exists() {
+    pub fn update_list(&self, list: &List) -> Result<(), Error> {
+        if list.file_path.exists() {
             let content = ron::to_string(&list)?;
-            std::fs::write(path, content)?;
+            std::fs::write(&list.file_path, content)?;
             Ok(())
         } else {
             Err(Error::Tasks(TasksError::ListNotFound))
         }
     }
 
-    pub fn delete_list(&self, list_id: &str) -> Result<(), Error> {
-        let path = self.paths.lists.join(list_id).with_extension("ron");
-        let tasks = self.paths.tasks.join(list_id);
-        if path.exists() {
-            std::fs::remove_file(path)?;
-            std::fs::remove_dir_all(tasks)?;
+    pub fn delete_list(&self, list: &List) -> Result<(), Error> {
+        if list.file_path.exists() {
+            std::fs::remove_file(&list.file_path)?;
+            std::fs::remove_dir_all(list.tasks_path())?;
             Ok(())
         } else {
             Err(Error::Tasks(TasksError::ListNotFound))

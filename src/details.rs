@@ -14,7 +14,10 @@ use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::{
     app::icons,
-    core::models::{self, Priority, Status},
+    core::{
+        models::{self, Priority, Status},
+        storage::LocalStorage,
+    },
     fl,
 };
 
@@ -26,6 +29,7 @@ pub struct Details {
     pub editing: SecondaryMap<DefaultKey, bool>,
     pub sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     pub text_editor_content: widget::text_editor::Content,
+    pub storage: LocalStorage,
 }
 
 #[derive(Debug, Clone)]
@@ -40,19 +44,18 @@ pub enum Message {
     EditMode(DefaultKey, bool),
     PriorityActivate(Entity),
     SubTaskInput(String),
-    AddTask,
+    AddSubTask,
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
 }
 
 pub enum Task {
     Focus(widget::Id),
-    Update(models::Task),
     OpenCalendarDialog,
 }
 
 impl Details {
-    pub fn new() -> Self {
+    pub fn new(storage: LocalStorage) -> Self {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
@@ -79,6 +82,7 @@ impl Details {
             editing: SecondaryMap::new(),
             sub_task_input_ids: SecondaryMap::new(),
             text_editor_content: widget::text_editor::Content::new(),
+            storage,
         }
     }
 
@@ -106,7 +110,9 @@ impl Details {
                 if editing {
                     tasks.push(Task::Focus(self.sub_task_input_ids[id].clone()));
                 } else if let Some(task) = self.subtasks.get(id) {
-                    tasks.push(Task::Update(task.clone()));
+                    if let Err(e) = self.storage.update_task(task) {
+                        tracing::error!("Failed to update sub-task: {}", e);
+                    }
                 }
             }
             Message::PriorityActivate(entity) => {
@@ -135,7 +141,12 @@ impl Details {
                 }
             }
             Message::DeleteSubTask(id) => {
-                self.subtasks.remove(id);
+                let sub_task = self.subtasks.remove(id);
+                if let Some(sub_task) = sub_task {
+                    if let Err(e) = self.storage.delete_task(&sub_task) {
+                        tracing::error!("Failed to delete sub-task: {}", e);
+                    }
+                }
             }
             Message::SubTaskEditDone => {
                 tasks.push(Task::Focus(widget::Id::new("new_sub_task_input")));
@@ -143,12 +154,14 @@ impl Details {
             Message::SubTaskInput(text) => {
                 self.subtask_input = text;
             }
-            Message::AddTask => {
+            Message::AddSubTask => {
                 if let Some(ref mut task) = &mut self.task {
                     if !self.subtask_input.is_empty() {
                         let sub_task =
-                            models::Task::new(self.subtask_input.clone(), task.id.clone());
-                        task.sub_tasks.push(sub_task.clone());
+                            models::Task::new(self.subtask_input.clone(), task.sub_tasks_path());
+                        if let Err(e) = self.storage.create_task(&sub_task) {
+                            tracing::error!("Failed to add sub-task: {}", e);
+                        }
                         let id = self.subtasks.insert(sub_task);
                         self.sub_task_input_ids.insert(id, widget::Id::unique());
                         self.subtask_input.clear();
@@ -167,9 +180,10 @@ impl Details {
             }
         }
 
-        if let Some(task) = &mut self.task {
-            task.sub_tasks = self.subtasks.values().cloned().collect();
-            tasks.push(Task::Update(task.clone()));
+        for sub_task in self.subtasks.values().cloned().collect::<Vec<_>>() {
+            if let Err(e) = self.storage.update_task(&sub_task) {
+                tracing::error!("Failed to update sub-task: {}", e);
+            }
         }
 
         tasks
@@ -293,12 +307,12 @@ impl Details {
             widget::text_input(fl!("add-sub-task"), &self.subtask_input)
                 .id(widget::Id::new("new_sub_task_input"))
                 .on_input(Message::SubTaskInput)
-                .on_submit(|_| Message::AddTask)
+                .on_submit(|_| Message::AddSubTask)
                 .width(Length::Fill)
                 .into(),
             widget::button::icon(icons::get_handle("mail-send-symbolic", 18))
                 .padding(spacing.space_xxs)
-                .on_press(Message::AddTask)
+                .on_press(Message::AddSubTask)
                 .into(),
         ])
         .padding([spacing.space_none, spacing.space_s])
