@@ -90,3 +90,6 @@ hide-completed = Hide completed
 repository = Repository
 support = Support
 website = Website
+
+## Error
+cause = Cause

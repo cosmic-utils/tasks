@@ -2,55 +2,53 @@ use std::path::PathBuf;
 
 use crate::{
     app::markdown::Markdown,
-    core::{
-        models::{List, Task},
-        TasksError,
-    },
-    Error,
+    core::models::{List, Task},
+    Error, LocalStorageError, TasksError,
 };
 
 #[derive(Debug, Clone)]
-pub struct ComputerStorage {
-    application_id: String,
+pub struct LocalStorage {
+    paths: LocalStoragePaths,
 }
 
-impl ComputerStorage {
-    /// Creates a new instance of `ComputerStorage`.
-    /// If the directory does not exist, it will be created.
-    /// Returns `None` if the data local directory cannot be determined.
-    /// # Arguments
-    /// * `application_id` - The application ID used to create the storage path.
-    /// # Returns
-    /// * `Some(ComputerStorage)` - A new instance of the storage engine.
-    /// * `None` - If the data local directory cannot be determined.
-    pub fn new(application_id: &str) -> Self {
-        let storage = Self {
-            application_id: application_id.to_string(),
-        };
-        if !storage.path().exists() {
-            std::fs::create_dir_all(&storage.application_id)
-                .expect("Failed to create storage directory");
-        }
-        if !storage.lists_path().exists() {
-            std::fs::create_dir_all(storage.lists_path())
-                .expect("Failed to create lists directory");
-        }
-        if !storage.tasks_path().exists() {
-            std::fs::create_dir_all(storage.tasks_path())
-                .expect("Failed to create tasks directory");
-        }
-        storage
-    }
+#[derive(Debug, Clone)]
+pub struct LocalStoragePaths {
+    lists: PathBuf,
+    tasks: PathBuf,
+}
 
-    pub fn path(&self) -> PathBuf {
-        dirs::data_local_dir()
-            .expect("Failed to get data local dir")
-            .join(&self.application_id)
+impl LocalStorage {
+    pub fn new(application_id: &str) -> Result<Self, LocalStorageError> {
+        let base_path = dirs::data_local_dir()
+            .ok_or(LocalStorageError::XdgLocalDirNotFound)?
+            .join(&application_id);
+        let lists_path = base_path.join("lists");
+        let tasks_path = base_path.join("tasks");
+        if !base_path.exists() {
+            std::fs::create_dir_all(&base_path)
+                .map_err(LocalStorageError::LocalStorageDirectoryCreationFailed)?;
+        }
+        if !lists_path.exists() {
+            std::fs::create_dir_all(&lists_path)
+                .map_err(LocalStorageError::ListsDirectoryCreationFailed)?;
+        }
+        if !tasks_path.exists() {
+            std::fs::create_dir_all(&tasks_path)
+                .map_err(LocalStorageError::TasksDirectoryCreationFailed)?;
+        }
+        let storage = Self {
+            paths: LocalStoragePaths {
+                lists: lists_path,
+                tasks: tasks_path,
+            },
+        };
+
+        Ok(storage)
     }
 
     pub fn tasks(&self, list_id: &str) -> Result<Vec<Task>, Error> {
         let mut tasks = vec![];
-        let path = self.tasks_path().join(list_id);
+        let path = self.paths.tasks.join(list_id);
         if !path.exists() {
             return Ok(tasks);
         }
@@ -66,11 +64,7 @@ impl ComputerStorage {
 
     pub fn lists(&self) -> Result<Vec<List>, Error> {
         let mut lists = vec![];
-        let path = self.lists_path();
-        if !path.exists() {
-            return Ok(lists);
-        }
-        for entry in self.lists_path().read_dir()? {
+        for entry in self.paths.lists.read_dir()? {
             let entry = entry?;
             let path = entry.path();
             let content = std::fs::read_to_string(&path)?;
@@ -83,7 +77,8 @@ impl ComputerStorage {
     #[allow(unused)]
     pub fn get_task(&self, list_id: &str, task_id: &str) -> Result<Task, Error> {
         let path = self
-            .tasks_path()
+            .paths
+            .tasks
             .join(list_id)
             .join(task_id)
             .with_extension("ron");
@@ -98,12 +93,13 @@ impl ComputerStorage {
 
     pub fn create_task(&self, task: Task) -> Result<Task, Error> {
         let path = self
-            .tasks_path()
+            .paths
+            .tasks
             .join(&task.parent)
             .join(&task.id)
             .with_extension("ron");
         if !path.exists() {
-            std::fs::create_dir_all(self.tasks_path().join(&task.parent))?;
+            std::fs::create_dir_all(self.paths.tasks.join(&task.parent))?;
             let content = ron::to_string(&task)?;
             std::fs::write(path, content)?;
             Ok(task)
@@ -114,7 +110,8 @@ impl ComputerStorage {
 
     pub fn update_task(&self, task: Task) -> Result<(), Error> {
         let path = self
-            .tasks_path()
+            .paths
+            .tasks
             .join(&task.parent)
             .join(&task.id)
             .with_extension("ron");
@@ -129,7 +126,8 @@ impl ComputerStorage {
 
     pub fn delete_task(&self, list_id: &str, task_id: &str) -> Result<(), Error> {
         let path = self
-            .tasks_path()
+            .paths
+            .tasks
             .join(list_id)
             .join(task_id)
             .with_extension("ron");
@@ -143,7 +141,7 @@ impl ComputerStorage {
 
     #[allow(unused)]
     pub fn get_list(&self, list_id: &str) -> Result<List, Error> {
-        let path = self.lists_path().join(list_id).with_extension("ron");
+        let path = self.paths.lists.join(list_id).with_extension("ron");
         if path.exists() {
             let content = std::fs::read_to_string(path)?;
             let list = ron::from_str(&content)?;
@@ -154,7 +152,7 @@ impl ComputerStorage {
     }
 
     pub fn create_list(&self, list: List) -> Result<List, Error> {
-        let path = self.lists_path().join(&list.id).with_extension("ron");
+        let path = self.paths.lists.join(&list.id).with_extension("ron");
         println!("{path:?}");
         if !path.exists() {
             let content = ron::to_string(&list)?;
@@ -166,7 +164,7 @@ impl ComputerStorage {
     }
 
     pub fn update_list(&self, list: List) -> Result<(), Error> {
-        let path = self.lists_path().join(&list.id).with_extension("ron");
+        let path = self.paths.lists.join(&list.id).with_extension("ron");
         if path.exists() {
             let content = ron::to_string(&list)?;
             std::fs::write(path, content)?;
@@ -177,8 +175,8 @@ impl ComputerStorage {
     }
 
     pub fn delete_list(&self, list_id: &str) -> Result<(), Error> {
-        let path = self.lists_path().join(list_id).with_extension("ron");
-        let tasks = self.tasks_path().join(list_id);
+        let path = self.paths.lists.join(list_id).with_extension("ron");
+        let tasks = self.paths.tasks.join(list_id);
         if path.exists() {
             std::fs::remove_file(path)?;
             std::fs::remove_dir_all(tasks)?;
@@ -192,13 +190,5 @@ impl ComputerStorage {
         let markdown = list.markdown();
         let tasks_markdown: String = tasks.iter().map(Markdown::markdown).collect();
         format!("{markdown}\n{tasks_markdown}")
-    }
-
-    pub fn lists_path(&self) -> PathBuf {
-        self.path().join("lists")
-    }
-
-    pub fn tasks_path(&self) -> PathBuf {
-        self.path().join("tasks")
     }
 }
