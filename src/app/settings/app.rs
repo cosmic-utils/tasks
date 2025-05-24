@@ -1,23 +1,46 @@
 use cosmic::{
     app::Settings,
+    cosmic_config,
     iced::{Limits, Size},
     Application,
 };
 use std::sync::Mutex;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::app::{
-    config::TasksConfig,
-    icons::{IconCache, ICON_CACHE},
-    localize::localize,
-    Flags, Tasks,
+use crate::{
+    app::{
+        config::{self, TasksConfig},
+        icons::{IconCache, ICON_CACHE},
+        localize::localize,
+        Tasks,
+    },
+    core::storage::LocalStorage,
+    LocalStorageError,
 };
+
+#[derive(Clone, Debug)]
+pub struct Flags {
+    pub config_handler: Option<cosmic_config::Config>,
+    pub config: config::TasksConfig,
+    pub storage: LocalStorage,
+}
 
 pub fn init() {
     localize();
     icons();
     tracing();
     migrate(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
+}
+
+pub fn storage() -> Result<LocalStorage, crate::LocalStorageError> {
+    return Err(
+        LocalStorageError::LocalStorageDirectoryCreationFailed(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Failed to create local storage directory",
+        ))
+        .into(),
+    );
+    LocalStorage::new(Tasks::APP_ID)
 }
 
 pub fn settings() -> Settings {
@@ -30,12 +53,13 @@ pub fn settings() -> Settings {
         .debug(false)
 }
 
-pub fn flags() -> Flags {
+pub fn flags(storage: LocalStorage) -> Flags {
     let (config_handler, config) = (TasksConfig::config_handler(), TasksConfig::config());
 
     Flags {
         config_handler,
         config,
+        storage,
     }
 }
 

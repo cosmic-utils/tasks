@@ -27,7 +27,7 @@ use crate::{
     app::{config::CONFIG_VERSION, key_bind::key_binds},
     content::{self, Content},
     context::ContextPage,
-    core::{models::List, storage::ComputerStorage},
+    core::{models::List, storage::LocalStorage},
     details::{self, Details},
     dialog::{DialogAction, DialogPage},
     fl,
@@ -45,7 +45,7 @@ pub struct Tasks {
     core: Core,
     about: widget::about::About,
     nav_model: widget::segmented_button::SingleSelectModel,
-    storage: ComputerStorage,
+    storage: LocalStorage,
     content: Content,
     details: Details,
     config_handler: Option<cosmic_config::Config>,
@@ -65,12 +65,6 @@ pub enum Message {
     Tasks(TasksAction),
     Application(ApplicationAction),
     Open(String),
-}
-
-#[derive(Clone, Debug)]
-pub struct Flags {
-    pub config_handler: Option<cosmic_config::Config>,
-    pub config: config::TasksConfig,
 }
 
 impl Tasks {
@@ -377,7 +371,7 @@ impl Tasks {
                     if let Some(list) = self.nav_model.data::<List>(entity) {
                         match self.storage.tasks(&list.id) {
                             Ok(data) => {
-                                let exported_markdown = ComputerStorage::export_list(&list, &data);
+                                let exported_markdown = LocalStorage::export_list(&list, &data);
                                 tasks.push(self.update(Message::Application(
                                     ApplicationAction::Dialog(DialogAction::Open(
                                         DialogPage::Export(exported_markdown),
@@ -466,7 +460,7 @@ impl Tasks {
 
 impl Application for Tasks {
     type Executor = cosmic::executor::Default;
-    type Flags = Flags;
+    type Flags = crate::settings::app::Flags;
     type Message = Message;
     const APP_ID: &'static str = "dev.edfloreshz.Tasks";
 
@@ -480,7 +474,7 @@ impl Application for Tasks {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let nav_model = widget::segmented_button::ModelBuilder::default().build();
-        let storage = ComputerStorage::new(Self::APP_ID);
+
         let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(Self::APP_ID)
@@ -500,7 +494,7 @@ impl Application for Tasks {
         let mut app = Tasks {
             core,
             about,
-            storage,
+            storage: flags.storage,
             nav_model,
             content: Content::new(),
             details: Details::new(),
@@ -514,13 +508,13 @@ impl Application for Tasks {
             dialog_text_input: widget::Id::unique(),
         };
 
-        app.core.nav_bar_toggle_condensed();
-
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
 
         if let Some(id) = app.core.main_window_id() {
             tasks.push(app.set_window_title(fl!("tasks"), id));
         }
+
+        app.core.nav_bar_toggle_condensed();
 
         (app, app::Task::batch(tasks))
     }
