@@ -21,6 +21,7 @@ impl Markdown for Task {
             },
             self.title
         );
+
         let sub_tasks = self.sub_tasks.iter().fold(String::new(), |acc, sub_task| {
             format!(
                 "{}  - [{}] {}\n",

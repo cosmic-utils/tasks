@@ -15,7 +15,6 @@ use crate::{
         Tasks,
     },
     core::storage::LocalStorage,
-    LocalStorageError,
 };
 
 #[derive(Clone, Debug)]
