@@ -90,3 +90,8 @@ hide-completed = Cacher les tâches achevées
 repository = Dépot de code
 support = Support
 website = Site web
+
+## Error
+cause = Raison
+oops-something-wrong = Oups! Il y a un problème.
+error-title = Tâches - Erreur
