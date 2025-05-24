@@ -103,18 +103,10 @@ impl Tasks {
         let content_tasks = self.content.update(message);
         for content_task in content_tasks {
             match content_task {
-                content::Task::Focus(id) => {
+                content::Output::Focus(id) => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Focus(id))))
                 }
-                content::Task::Get(list_id) => match self.storage.tasks(&list_id) {
-                    Ok(data) => {
-                        tasks.push(self.update(Message::Content(content::Message::SetItems(data))))
-                    }
-                    Err(err) => {
-                        tracing::error!("Error updating list: {err}");
-                    }
-                },
-                content::Task::Display(task) => {
+                content::Output::OpenTaskDetails(task) => {
                     let entity = self.details.priority_model.entity_at(task.priority as u16);
                     if let Some(entity) = entity {
                         self.details.priority_model.activate(entity);
@@ -124,34 +116,20 @@ impl Tasks {
                     self.details.task = Some(task.clone());
                     self.details.text_editor_content =
                         widget::text_editor::Content::with_text(&task.notes);
-                    task.sub_tasks.into_iter().for_each(|task| {
-                        let id = self.details.subtasks.insert(task);
-                        self.details
-                            .sub_task_input_ids
-                            .insert(id, widget::Id::unique());
-                    });
+                    if let Ok(sub_tasks) = self.storage.get_sub_tasks(&task.parent, &task.id) {
+                        sub_tasks.into_iter().for_each(|task| {
+                            let id = self.details.subtasks.insert(task);
+                            self.details
+                                .sub_task_input_ids
+                                .insert(id, widget::Id::unique());
+                        });
+                    }
+
                     tasks.push(self.update(Message::Application(
                         ApplicationAction::ToggleContextPage(ContextPage::TaskDetails),
                     )));
                 }
-                content::Task::Update(task) => {
-                    if let Err(err) = self.storage.update_task(task) {
-                        tracing::error!("Error updating list: {err}");
-                    }
-                }
-                content::Task::Delete(id) => {
-                    if let Some(list) = self.nav_model.active_data::<List>() {
-                        if let Err(err) = self.storage.delete_task(&list.id, &id) {
-                            tracing::error!("Error deleting task: {err}");
-                        }
-                    }
-                }
-                content::Task::Create(task) => {
-                    if let Err(err) = self.storage.create_task(task) {
-                        tracing::error!("Error creating task: {err}");
-                    }
-                }
-                content::Task::ToggleCompleted(list) => {
+                content::Output::ToggleHideCompleted(list) => {
                     if let Some(data) = self.nav_model.active_data_mut::<List>() {
                         data.hide_completed = list.hide_completed;
                         if let Err(err) = self.storage.update_list(list.clone()) {
@@ -171,11 +149,6 @@ impl Tasks {
         let details_tasks = self.details.update(message);
         for details_task in details_tasks {
             match details_task {
-                details::Task::Update(task) => {
-                    tasks.push(
-                        self.update(Message::Content(content::Message::UpdateTask(task.clone()))),
-                    );
-                }
                 details::Task::OpenCalendarDialog => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
                         DialogAction::Open(DialogPage::Calendar(CalendarModel::now())),
@@ -254,11 +227,9 @@ impl Tasks {
                                 if let Err(err) = self.storage.update_list(list.clone()) {
                                     tracing::error!("Error updating list: {err}");
                                 }
-                                tasks.push(
-                                    self.update(Message::Content(content::Message::List(Some(
-                                        list,
-                                    )))),
-                                );
+                                tasks.push(self.update(Message::Content(
+                                    content::Message::SetList(Some(list)),
+                                )));
                             }
                         }
                         DialogPage::Delete(entity) => {
@@ -282,11 +253,9 @@ impl Tasks {
                                 if let Err(err) = self.storage.update_list(list.clone()) {
                                     tracing::error!("Error updating list: {err}");
                                 }
-                                tasks.push(
-                                    self.update(Message::Content(content::Message::List(Some(
-                                        list,
-                                    )))),
-                                );
+                                tasks.push(self.update(Message::Content(
+                                    content::Message::SetList(Some(list)),
+                                )));
                             }
                         }
                         DialogPage::Calendar(date) => {
@@ -450,7 +419,7 @@ impl Tasks {
                         tracing::error!("Error deleting list: {err}");
                     }
 
-                    tasks.push(self.update(Message::Content(content::Message::List(None))));
+                    tasks.push(self.update(Message::Content(content::Message::SetList(None))));
                 }
                 self.nav_model.remove(self.nav_model.active());
             }
@@ -494,10 +463,10 @@ impl Application for Tasks {
         let mut app = Tasks {
             core,
             about,
-            storage: flags.storage,
+            storage: flags.storage.clone(),
             nav_model,
-            content: Content::new(),
-            details: Details::new(),
+            content: Content::new(flags.storage.clone()),
+            details: Details::new(flags.storage),
             config_handler: flags.config_handler,
             config: flags.config,
             app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
@@ -599,7 +568,7 @@ impl Application for Tasks {
         let location_opt = self.nav_model.data::<List>(entity);
 
         if let Some(list) = location_opt {
-            let message = Message::Content(content::Message::List(Some(list.clone())));
+            let message = Message::Content(content::Message::SetList(Some(list.clone())));
             let window_title = format!("{} - {}", list.name, fl!("tasks"));
             if let Some(window_id) = self.core.main_window_id() {
                 tasks.push(self.set_window_title(window_title, window_id));

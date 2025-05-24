@@ -55,6 +55,7 @@ impl IconCache {
         bundle!("replace-all-symbolic", 18);
         bundle!("window-close-symbolic", 18);
         bundle!("share-symbolic", 18);
+        bundle!("view-more-symbolic", 18);
         bundle!("check-round-outline-symbolic", 18);
 
         bundle!("sad-computer-symbolic", 32);

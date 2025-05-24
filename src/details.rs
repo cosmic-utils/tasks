@@ -14,7 +14,10 @@ use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::{
     app::icons,
-    core::models::{self, Priority, Status},
+    core::{
+        models::{self, Priority, Status},
+        storage::LocalStorage,
+    },
     fl,
 };
 
@@ -26,6 +29,7 @@ pub struct Details {
     pub editing: SecondaryMap<DefaultKey, bool>,
     pub sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     pub text_editor_content: widget::text_editor::Content,
+    pub storage: LocalStorage,
 }
 
 #[derive(Debug, Clone)]
@@ -47,12 +51,11 @@ pub enum Message {
 
 pub enum Task {
     Focus(widget::Id),
-    Update(models::Task),
     OpenCalendarDialog,
 }
 
 impl Details {
-    pub fn new() -> Self {
+    pub fn new(storage: LocalStorage) -> Self {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
@@ -79,6 +82,7 @@ impl Details {
             editing: SecondaryMap::new(),
             sub_task_input_ids: SecondaryMap::new(),
             text_editor_content: widget::text_editor::Content::new(),
+            storage,
         }
     }
 
@@ -106,7 +110,9 @@ impl Details {
                 if editing {
                     tasks.push(Task::Focus(self.sub_task_input_ids[id].clone()));
                 } else if let Some(task) = self.subtasks.get(id) {
-                    tasks.push(Task::Update(task.clone()));
+                    if let Err(e) = self.storage.update_task(task.clone()) {
+                        tracing::error!("Failed to update sub-task: {}", e);
+                    }
                 }
             }
             Message::PriorityActivate(entity) => {
@@ -135,7 +141,17 @@ impl Details {
                 }
             }
             Message::DeleteSubTask(id) => {
-                self.subtasks.remove(id);
+                let sub_task = self.subtasks.remove(id);
+                if let Some(sub_task) = sub_task {
+                    if let Some(task) = self.task.as_ref() {
+                        if let Err(e) =
+                            self.storage
+                                .delete_sub_task(&task.parent, &task.id, &sub_task.id)
+                        {
+                            tracing::error!("Failed to delete sub-task: {}", e);
+                        }
+                    }
+                }
             }
             Message::SubTaskEditDone => {
                 tasks.push(Task::Focus(widget::Id::new("new_sub_task_input")));
@@ -148,7 +164,9 @@ impl Details {
                     if !self.subtask_input.is_empty() {
                         let sub_task =
                             models::Task::new(self.subtask_input.clone(), task.id.clone());
-                        task.sub_tasks.push(sub_task.clone());
+                        if let Err(e) = self.storage.add_sub_task(&task.parent, sub_task.clone()) {
+                            tracing::error!("Failed to add sub-task: {}", e);
+                        }
                         let id = self.subtasks.insert(sub_task);
                         self.sub_task_input_ids.insert(id, widget::Id::unique());
                         self.subtask_input.clear();
@@ -168,8 +186,11 @@ impl Details {
         }
 
         if let Some(task) = &mut self.task {
-            task.sub_tasks = self.subtasks.values().cloned().collect();
-            tasks.push(Task::Update(task.clone()));
+            for sub_task in self.subtasks.values().cloned().collect::<Vec<_>>() {
+                if let Err(e) = self.storage.update_sub_task(&task.parent, sub_task) {
+                    tracing::error!("Failed to update sub-task: {}", e);
+                }
+            }
         }
 
         tasks
