@@ -93,3 +93,5 @@ website = Website
 
 ## Error
 cause = Cause
+oops-something-wrong = Oops! Something went wrong.
+error-title = Tasks - Error

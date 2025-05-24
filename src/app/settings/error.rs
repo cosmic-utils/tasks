@@ -46,7 +46,7 @@ impl Application for View {
         let mut tasks = vec![];
 
         if let Some(window_id) = app.core.main_window_id() {
-            tasks.push(app.set_window_title("Tasks - Error".to_string(), window_id));
+            tasks.push(app.set_window_title(fl!("error-title"), window_id));
         }
 
         (app, cosmic::app::Task::batch(tasks))
@@ -56,7 +56,7 @@ impl Application for View {
         widget::column()
             .push(widget::icon(icons::get_handle("sad-computer-symbolic", 32)).size(32))
             .push(
-                widget::text("Oops! Something went wrong.")
+                widget::text(fl!("oops-something-wrong"))
                     .size(22)
                     .class(cosmic::style::Text::Color(Color::from_rgb(0.8, 0.1, 0.1))),
             )
