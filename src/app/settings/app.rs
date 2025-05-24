@@ -33,13 +33,6 @@ pub fn init() {
 }
 
 pub fn storage() -> Result<LocalStorage, crate::LocalStorageError> {
-    return Err(
-        LocalStorageError::LocalStorageDirectoryCreationFailed(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Failed to create local storage directory",
-        ))
-        .into(),
-    );
     LocalStorage::new(Tasks::APP_ID)
 }
 
