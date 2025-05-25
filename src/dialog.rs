@@ -4,7 +4,6 @@ use cosmic::{
         Length,
     },
     widget::{self, calendar::CalendarModel, segmented_button},
-    Element,
 };
 
 use crate::{actions::ApplicationAction, app::Message, fl};
@@ -97,24 +96,21 @@ impl DialogPage {
                     Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                 )),
             DialogPage::Icon(entity, icon) => {
-                let icon_buttons: Vec<Element<_>> = emojis::iter()
-                    .map(|emoji| {
-                        widget::button::custom(
-                            widget::container(widget::text(emoji.to_string()))
-                                .width(spacing.space_l)
-                                .height(spacing.space_l)
-                                .align_y(Vertical::Center)
-                                .align_x(Horizontal::Center),
-                        )
-                        .on_press(Message::Application(ApplicationAction::Dialog(
-                            DialogAction::Update(DialogPage::Icon(*entity, emoji.to_string())),
-                        )))
-                        .into()
+                let icon_buttons = crate::app::icons::get_all_icon_handles(20)
+                    .iter()
+                    .map(|(name, icon)| {
+                        widget::button::icon(icon.clone())
+                            .medium()
+                            .on_press(Message::Application(ApplicationAction::Dialog(
+                                DialogAction::Update(DialogPage::Icon(*entity, name.clone())),
+                            )))
+                            .into()
                     })
                     .collect();
-                let mut dialog = widget::dialog()
+
+                let dialog = widget::dialog()
                     .title(fl!("icon-select"))
-                    .body(fl!("icon-select-body"))
+                    .icon(crate::app::icons::get_icon(icon, 32))
                     .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
                         Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
                     )))
@@ -122,18 +118,13 @@ impl DialogPage {
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                     ))
                     .control(
-                        widget::container(widget::scrollable(widget::row::with_children(vec![
-                            widget::flex_row(icon_buttons).into(),
-                            widget::horizontal_space().into(),
-                        ])))
+                        widget::container(widget::scrollable(
+                            widget::row()
+                                .push(widget::flex_row(icon_buttons))
+                                .push(widget::horizontal_space()),
+                        ))
                         .height(Length::Fixed(300.0)),
                     );
-
-                if !icon.is_empty() {
-                    dialog = dialog.icon(widget::container(
-                        widget::text(icon.as_str()).size(spacing.space_l),
-                    ));
-                }
 
                 dialog
             }
