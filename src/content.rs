@@ -30,6 +30,7 @@ pub struct Content {
     config: config::TasksConfig,
     input: String,
     storage: LocalStorage,
+    context_menu_open: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +61,9 @@ pub enum Message {
     SetList(Option<List>),
     SetTasks(Vec<models::Task>),
     SetConfig(config::TasksConfig),
+    RefreshTask(models::Task),
+    Empty,
+    ContextMenuOpen(bool),
 }
 
 pub enum Output {
@@ -119,6 +123,7 @@ impl Content {
             input: String::new(),
             config: config::TasksConfig::config(),
             storage,
+            context_menu_open: false,
         }
     }
 
@@ -161,13 +166,14 @@ impl Content {
             .collect::<Vec<_>>();
 
         let items = widget::column::with_children(items)
-            .spacing(spacing.space_xs)
+            .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs]);
 
         widget::column::with_capacity(2)
-            .spacing(spacing.space_xxs)
             .push(self.list_header(list))
             .push(items)
+            .padding([spacing.space_none, spacing.space_m])
+            .spacing(spacing.space_xs)
             .apply(widget::container)
             .height(Length::Shrink)
             .apply(widget::scrollable)
@@ -196,12 +202,12 @@ impl Content {
         let expand_button = not_empty.then(|| {
             widget::button::icon(icons::get_handle(icon, 18))
                 .padding(spacing.space_xxs)
-                .class(theme::Button::Text)
                 .on_press(Message::TaskExpand(id))
         });
 
         let more_button = widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
-            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18)),
+            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
+                .on_press(Message::Empty),
             widget::menu::items(
                 &HashMap::new(),
                 vec![
@@ -227,8 +233,11 @@ impl Content {
             }
         });
 
-        let subtask_count =
-            widget::text(format!("{}/{}", completed, total)).class(cosmic::style::Text::Accent);
+        let subtask_count = if total > 0 {
+            Some(widget::text(format!("{}/{}", completed, total)))
+        } else {
+            None
+        };
 
         let task_item_text = widget::editable_input(
             "",
@@ -236,19 +245,20 @@ impl Content {
             *self.task_editing.get(id).unwrap_or(&false),
             move |editing| Message::TaskToggleTitleEditMode(id, editing),
         )
+        .size(13)
         .trailing_icon(widget::column().into())
         .id(self.task_input_ids[id].clone())
         .on_submit(move |_| Message::TaskTitleSubmit(id))
         .on_input(move |text| Message::TaskTitleUpdate(id, text));
 
-        let row = widget::row::with_capacity(4)
+        let row = widget::row::with_capacity(5)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
             .padding([spacing.space_xxs, spacing.space_s])
             .push(item_checkbox)
             .push(task_item_text)
-            .push(subtask_count)
             .push_maybe(expand_button)
+            .push_maybe(subtask_count)
             .push(more_button);
 
         let mut column = widget::column::with_capacity(2).push(row);
@@ -268,6 +278,7 @@ impl Content {
         }
 
         column
+            .padding(spacing.space_xxs)
             .apply(widget::container)
             .class(cosmic::style::Container::ContextDrawer)
             .into()
@@ -298,12 +309,12 @@ impl Content {
         let expand_button = not_empty.then(|| {
             widget::button::icon(icons::get_handle(icon, 18))
                 .padding(spacing.space_xxs)
-                .class(theme::Button::Text)
                 .on_press(Message::SubTaskExpand(id))
         });
 
         let more_button = widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
-            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18)),
+            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
+                .on_press(Message::Empty),
             widget::menu::items(
                 &HashMap::new(),
                 vec![
@@ -329,8 +340,11 @@ impl Content {
             }
         });
 
-        let subtask_count =
-            widget::text(format!("{}/{}", completed, total)).class(cosmic::style::Text::Accent);
+        let subtask_count = if total > 0 {
+            Some(widget::text(format!("{}/{}", completed, total)))
+        } else {
+            None
+        };
 
         let task_item_text = widget::editable_input(
             "",
@@ -338,6 +352,7 @@ impl Content {
             *self.sub_task_editing.get(id).unwrap_or(&false),
             move |editing| Message::SubTaskToggleTitleEditMode(id, editing),
         )
+        .size(13)
         .trailing_icon(widget::column().into())
         .id(self.sub_task_input_ids[id].clone())
         .on_submit(move |_| Message::SubTaskTitleSubmit(id))
@@ -349,8 +364,8 @@ impl Content {
             .padding([spacing.space_xxs, spacing.space_s])
             .push(item_checkbox)
             .push(task_item_text)
-            .push(subtask_count)
             .push_maybe(expand_button)
+            .push_maybe(subtask_count)
             .push(more_button);
 
         let mut column = widget::column::with_capacity(2).push(row);
@@ -445,6 +460,10 @@ impl Content {
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = Vec::new();
         match message {
+            Message::Empty => return tasks,
+            Message::ContextMenuOpen(open) => {
+                self.context_menu_open = open;
+            }
             Message::SetTasks(tasks) => {
                 self.tasks.clear();
                 self.task_input_ids.clear();
@@ -484,9 +503,26 @@ impl Content {
             Message::SetConfig(config) => {
                 self.config = config;
             }
-            Message::TaskOpenDetails(task) => match self.tasks.get(task) {
+            Message::RefreshTask(refreshed_task) => {
+                if let Some((id, _)) = self.tasks.iter().find(|(_, t)| t.id == refreshed_task.id) {
+                    if let Some(task) = self.tasks.get_mut(id) {
+                        *task = refreshed_task.clone();
+                    }
+                } else if let Some((id, _)) = self
+                    .sub_tasks
+                    .iter()
+                    .find(|(_, t)| t.id == refreshed_task.id)
+                {
+                    if let Some(task) = self.sub_tasks.get_mut(id) {
+                        *task = refreshed_task.clone();
+                    }
+                } else {
+                    tracing::warn!("Task with ID {:?} not found", refreshed_task.id);
+                }
+            }
+            Message::TaskOpenDetails(id) => match self.tasks.get(id) {
                 Some(task) => tasks.push(Output::OpenTaskDetails(task.clone())),
-                None => tracing::warn!("Task with ID {:?} not found", task),
+                None => tracing::warn!("Task with ID {:?} not found", id),
             },
             Message::TaskExpand(default_key) => {
                 if let Some(task) = self.tasks.get_mut(default_key) {
@@ -706,7 +742,11 @@ impl Content {
             .apply(widget::container)
             .height(Length::Fill)
             .width(Length::Fill)
-            .center(Length::Fill)
+            .center(if self.context_menu_open {
+                Length::Shrink
+            } else {
+                Length::Fill
+            })
             .padding([spacing.space_xxs, spacing.space_none])
             .into()
     }

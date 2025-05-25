@@ -66,9 +66,9 @@ impl IconCache {
         bundle!("mail-send-symbolic", 18);
         bundle!("applications-office-symbolic", 18);
 
-        bundle!("flag-filled-symbolic", 16);
-        bundle!("flag-outline-thick-symbolic", 16);
-        bundle!("flag-outline-thin-symbolic", 16);
+        bundle!("flag-filled-symbolic", 14);
+        bundle!("flag-outline-thick-symbolic", 14);
+        bundle!("flag-outline-thin-symbolic", 14);
 
         Self { cache }
     }

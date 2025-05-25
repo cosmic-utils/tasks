@@ -1,70 +1,10 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   viewBox="0 0 16 16"
-   id="svg2"
-   version="1.1"
-   inkscape:version="0.91 r13725"
-   sodipodi:docname="overflow-menu.svg">
-  <metadata
-     id="metadata10">
-    <rdf:RDF>
-      <cc:Work
-         rdf:about="">
-        <dc:format>image/svg+xml</dc:format>
-        <dc:type
-           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
-      </cc:Work>
-    </rdf:RDF>
-  </metadata>
-  <sodipodi:namedview
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1"
-     objecttolerance="10"
-     gridtolerance="10"
-     guidetolerance="10"
-     inkscape:pageopacity="0"
-     inkscape:pageshadow="2"
-     inkscape:window-width="1246"
-     inkscape:window-height="896"
-     id="namedview8"
-     showgrid="false"
-     showguides="true"
-     inkscape:guide-bbox="true"
-     inkscape:zoom="14.75"
-     inkscape:cx="17.251043"
-     inkscape:cy="2.7779489"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="svg2">
-    <inkscape:grid
-       type="xygrid"
-       id="grid3338" />
-  </sodipodi:namedview>
-  <defs
-     id="defs3051">
-    <style
-       type="text/css"
-       id="current-color-scheme">
-      .ColorScheme-Text {
-        color:#232629;
-      }
-      </style>
-  </defs>
-  <path
-     style="fill:currentColor;fill-opacity:1;stroke:none"
-     d="M 7,3 7,5 9,5 9,3 Z M 7,7 7,9 9,9 9,7 Z m 0,4 0,2 2,0 0,-2 z"
-     class="ColorScheme-Text"
-     id="path6"
-     inkscape:connector-curvature="0"
-     sodipodi:nodetypes="ccccccccccccccc" />
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_409_3577)">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M10 2C10 1.46957 9.78926 0.960858 9.41418 0.585785C9.03911 0.210712 8.53043 0 8 0C7.46957 0 6.96089 0.210712 6.58582 0.585785C6.21074 0.960858 6 1.46957 6 2C6 2.53043 6.21074 3.03914 6.58582 3.41422C6.96089 3.78929 7.46957 4 8 4C8.53043 4 9.03911 3.78929 9.41418 3.41422C9.78926 3.03914 10 2.53043 10 2ZM10 8C10 7.46957 9.78926 6.96086 9.41418 6.58578C9.03911 6.21071 8.53043 6 8 6C7.46957 6 6.96089 6.21071 6.58582 6.58578C6.21074 6.96086 6 7.46957 6 8C6 8.53043 6.21074 9.03914 6.58582 9.41422C6.96089 9.78929 7.46957 10 8 10C8.53043 10 9.03911 9.78929 9.41418 9.41422C9.78926 9.03914 10 8.53043 10 8ZM10 14C10 13.4696 9.78926 12.9609 9.41418 12.5858C9.03911 12.2107 8.53043 12 8 12C7.46957 12 6.96089 12.2107 6.58582 12.5858C6.21074 12.9609 6 13.4696 6 14C6 14.5304 6.21074 15.0391 6.58582 15.4142C6.96089 15.7893 7.46957 16 8 16C8.53043 16 9.03911 15.7893 9.41418 15.4142C9.78926 15.0391 10 14.5304 10 14Z" fill="#232323"/>
+</g>
+<defs>
+<clipPath id="clip0_409_3577">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
 </svg>
