@@ -22,19 +22,38 @@ impl Markdown for Task {
             self.title
         );
 
-        let sub_tasks = self.sub_tasks.iter().fold(String::new(), |acc, sub_task| {
-            format!(
-                "{}  - [{}] {}\n",
-                acc,
-                if sub_task.status == Status::Completed {
-                    "x"
-                } else {
-                    " "
-                },
-                sub_task.title
-            )
-        });
-        task.push_str(&sub_tasks);
+        // Recursively format sub-tasks with proper indentation
+        if !self.sub_tasks.is_empty() {
+            task.push_str(&format_sub_tasks(&self.sub_tasks, 1));
+        }
+
         task
     }
+}
+
+// Helper function to recursively format sub-tasks with proper indentation
+fn format_sub_tasks(sub_tasks: &[Task], indent_level: usize) -> String {
+    let mut result = String::new();
+    let indent = "  ".repeat(indent_level);
+
+    for sub_task in sub_tasks {
+        // Add the sub-task with proper indentation
+        result.push_str(&format!(
+            "{}- [{}] {}\n",
+            indent,
+            if sub_task.status == Status::Completed {
+                "x"
+            } else {
+                " "
+            },
+            sub_task.title
+        ));
+
+        // Recursively process nested sub-tasks if any
+        if !sub_task.sub_tasks.is_empty() {
+            result.push_str(&format_sub_tasks(&sub_task.sub_tasks, indent_level + 1));
+        }
+    }
+
+    result
 }

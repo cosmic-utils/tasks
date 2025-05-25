@@ -40,6 +40,7 @@ pub mod localize;
 pub mod markdown;
 pub mod menu;
 pub mod settings;
+pub mod style;
 
 pub struct Tasks {
     core: Core,
@@ -111,19 +112,9 @@ impl Tasks {
                     if let Some(entity) = entity {
                         self.details.priority_model.activate(entity);
                     }
-                    self.details.subtasks.clear();
-                    self.details.sub_task_input_ids.clear();
-                    self.details.task = Some(task.clone());
+                    self.details.task = task.clone();
                     self.details.text_editor_content =
                         widget::text_editor::Content::with_text(&task.notes);
-                    if let Ok(sub_tasks) = LocalStorage::sub_tasks(&task) {
-                        sub_tasks.into_iter().for_each(|task| {
-                            let id = self.details.subtasks.insert(task);
-                            self.details
-                                .sub_task_input_ids
-                                .insert(id, widget::Id::unique());
-                        });
-                    }
 
                     tasks.push(self.update(Message::Application(
                         ApplicationAction::ToggleContextPage(ContextPage::TaskDetails),
@@ -149,13 +140,15 @@ impl Tasks {
         let details_tasks = self.details.update(message);
         for details_task in details_tasks {
             match details_task {
-                details::Task::OpenCalendarDialog => {
+                details::Output::OpenCalendarDialog => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
                         DialogAction::Open(DialogPage::Calendar(CalendarModel::now())),
                     ))));
                 }
-                details::Task::Focus(id) => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Focus(id))))
+                details::Output::RefreshTask(task) => {
+                    tasks.push(self.update(Message::Content(content::Message::RefreshTask(
+                        task.clone(),
+                    ))));
                 }
             }
         }
@@ -366,9 +359,19 @@ impl Tasks {
                     self.context_page = context_page;
                     self.core.window.show_context = true;
                 }
+                tasks.push(
+                    self.update(Message::Content(content::Message::ContextMenuOpen(
+                        self.core.window.show_context,
+                    ))),
+                );
             }
             ApplicationAction::ToggleContextDrawer => {
-                self.core.window.show_context = !self.core.window.show_context
+                self.core.window.show_context = !self.core.window.show_context;
+                tasks.push(
+                    self.update(Message::Content(content::Message::ContextMenuOpen(
+                        self.core.window.show_context,
+                    ))),
+                );
             }
             ApplicationAction::Dialog(dialog_action) => self.update_dialog(tasks, dialog_action),
             ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),

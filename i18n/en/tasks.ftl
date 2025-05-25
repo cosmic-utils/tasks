@@ -13,6 +13,7 @@ priority = Priority
 due-date = Due date
 reminder = Reminder
 notes = Notes
+add-notes = Add notes
 
 # Empty
 no-tasks = No tasks

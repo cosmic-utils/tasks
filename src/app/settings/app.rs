@@ -41,7 +41,7 @@ pub fn settings() -> Settings {
         .client_decorations(true)
         .theme(TasksConfig::config().app_theme.theme())
         .size_limits(Limits::NONE.min_width(350.0).min_height(180.0))
-        .size(Size::new(700.0, 750.0))
+        .size(Size::new(850.0, 700.0))
         .debug(false)
 }
 
