@@ -35,7 +35,6 @@ impl Status {
             Status::Completed => "COMPLETED",
         }
     }
-    /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "NOT_STARTED" => Some(Self::NotStarted),

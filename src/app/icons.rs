@@ -34,7 +34,6 @@ impl IconCache {
             };
         }
 
-        // Menu icons
         bundle!("edit-symbolic", 14);
         bundle!("settings-symbolic", 14);
         bundle!("tabs-stack-symbolic", 14);
