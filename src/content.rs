@@ -34,10 +34,8 @@ pub struct Content {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    // New Task Actions
     TaskAdd,
 
-    // Task Actions
     TaskExpand(DefaultKey),
     TaskAddSubTask(DefaultKey),
     TaskComplete(DefaultKey, bool),
@@ -48,7 +46,6 @@ pub enum Message {
     TaskTitleSubmit(DefaultKey),
     TaskTitleUpdate(DefaultKey, String),
 
-    // Sub-Task Actions
     SubTaskExpand(DefaultKey),
     SubTaskAddSubTask(DefaultKey),
     SubTaskComplete(DefaultKey, bool),
@@ -58,10 +55,8 @@ pub enum Message {
     SubTaskTitleUpdate(DefaultKey, String),
     SubTaskOpenDetails(DefaultKey),
 
-    // Header Actions
     ToggleHideCompleted,
 
-    // Input Actions
     SetList(Option<List>),
     SetTasks(Vec<models::Task>),
     SetConfig(config::TasksConfig),
@@ -76,9 +71,7 @@ pub enum Output {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TaskAction {
     AddSubTask(DefaultKey),
-    /// Task key ID
     Edit(DefaultKey),
-    /// Task key ID + optional sub-task key ID
     Delete(DefaultKey),
 }
 
@@ -97,9 +90,7 @@ impl MenuAction for TaskAction {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SubTaskAction {
     AddSubTask(DefaultKey),
-    /// Task key ID
     Edit(DefaultKey),
-    /// Task key ID + optional sub-task key ID
     Delete(DefaultKey),
 }
 
@@ -163,7 +154,6 @@ impl Content {
             return self.empty(list);
         }
 
-        // Only render top-level tasks (not subtasks)
         let items = self
             .tasks
             .iter()
@@ -251,7 +241,6 @@ impl Content {
         .on_submit(move |_| Message::TaskTitleSubmit(id))
         .on_input(move |text| Message::TaskTitleUpdate(id, text));
 
-        // Main task row
         let row = widget::row::with_capacity(4)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
@@ -262,7 +251,6 @@ impl Content {
             .push_maybe(expand_button)
             .push(more_button);
 
-        // Recursively render subtasks if expanded
         let mut column = widget::column::with_capacity(2).push(row);
 
         if task.expanded && !sub_tasks.is_empty() {
@@ -271,7 +259,6 @@ impl Content {
                 .iter()
                 .filter(|(_, sub_task)| task.sub_tasks.iter().any(|st| st.id == sub_task.id))
                 .map(|(sub_id, sub_task)| {
-                    // Indent subtasks
                     widget::container(self.sub_task_view(sub_id, sub_task))
                         .padding([0, 0, 0, spacing.space_l])
                         .into()
@@ -356,7 +343,6 @@ impl Content {
         .on_submit(move |_| Message::SubTaskTitleSubmit(id))
         .on_input(move |text| Message::SubTaskTitleUpdate(id, text));
 
-        // Main task row
         let row = widget::row::with_capacity(4)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
@@ -367,7 +353,6 @@ impl Content {
             .push_maybe(expand_button)
             .push(more_button);
 
-        // Recursively render subtasks if expanded
         let mut column = widget::column::with_capacity(2).push(row);
 
         if task.expanded && !sub_tasks.is_empty() {
@@ -376,7 +361,6 @@ impl Content {
                 .iter()
                 .filter(|(_, sub_task)| task.sub_tasks.iter().any(|st| st.id == sub_task.id))
                 .map(|(sub_id, sub_task)| {
-                    // Indent subtasks
                     widget::container(self.sub_task_view(sub_id, sub_task))
                         .padding([0, 0, 0, spacing.space_l])
                         .into()

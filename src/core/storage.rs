@@ -75,16 +75,17 @@ impl LocalStorage {
         for entry in path.read_dir()? {
             let entry = entry?;
             let path = entry.path();
-            let content = std::fs::read_to_string(&path)?;
-            let mut task: Task = ron::from_str(&content)?;
-            // Check for nested sub-task folders
-            if let Some(stem) = path.file_stem() {
-                let folder_path = path.parent().unwrap().join(stem);
-                if folder_path.is_dir() {
-                    task.sub_tasks = Self::sub_tasks(&task)?;
+            if path.is_file() {
+                let content = std::fs::read_to_string(&path)?;
+                let mut task: Task = ron::from_str(&content)?;
+                if let Some(stem) = path.file_stem() {
+                    let folder_path = path.parent().unwrap().join(stem);
+                    if folder_path.is_dir() {
+                        task.sub_tasks = Self::sub_tasks(&task)?;
+                    }
                 }
+                tasks.push(task);
             }
-            tasks.push(task);
         }
         Ok(tasks)
     }
@@ -128,7 +129,14 @@ impl LocalStorage {
         let path = task.file_path();
         if path.exists() {
             std::fs::remove_file(path)?;
-            std::fs::remove_dir_all(task.sub_tasks_path())?;
+            if task.sub_tasks_path().exists() {
+                std::fs::remove_dir_all(task.sub_tasks_path())?;
+            }
+            let mut entries = std::fs::read_dir(&task.path)?;
+            let entry = entries.next();
+            if entry.is_none() {
+                std::fs::remove_dir_all(&task.path)?;
+            }
             Ok(())
         } else {
             Err(Error::Tasks(TasksError::TaskNotFound))
