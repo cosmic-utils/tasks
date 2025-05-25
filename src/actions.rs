@@ -62,7 +62,7 @@ impl MenuAction for Action {
                 DialogPage::New(String::new()),
             ))),
             Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
-                DialogPage::Icon(None, String::new()),
+                DialogPage::Icon(None, String::new(), String::new()),
             ))),
             Action::RenameList => Message::Application(ApplicationAction::Dialog(
                 DialogAction::Open(DialogPage::Rename(None, String::new())),

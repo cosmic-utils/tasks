@@ -1818,20 +1818,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "freedesktop-icons"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95f87364ea709292a3b3f74014ce3ee78412c89807eea75a358c8e029b000994"
-dependencies = [
- "dirs 5.0.1",
- "ini_core",
- "once_cell",
- "thiserror 1.0.69",
- "tracing",
- "xdg",
-]
-
-[[package]]
 name = "fsevent-sys"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5177,7 +5163,6 @@ dependencies = [
  "chrono",
  "cli-clipboard",
  "dirs 5.0.1",
- "freedesktop-icons",
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
@@ -5186,7 +5171,6 @@ dependencies = [
  "ron 0.8.1",
  "rust-embed",
  "serde",
- "serde_json",
  "slotmap",
  "sqlx",
  "thiserror 1.0.69",
