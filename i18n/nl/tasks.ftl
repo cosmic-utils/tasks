@@ -13,12 +13,14 @@ priority = Prioriteit
 due-date = Vervaldatum
 reminder = Herinnering
 notes = Opmerkingen
+add-notes = Opmerking toevoegen
 
 # Empty
 no-tasks = Geen taken
 no-tasks-suggestion = Voeg een taak toe via het onderstaande tekstveld
 no-list-selected = Geen lijst geselecteerd
 no-list-suggestion = Selecteer of maak een nieuwe lijst aan
+
 sub-tasks = Subtaken
 add-sub-task = Subtaak toevoegen
 
@@ -88,3 +90,8 @@ menu-about = Over Tasks...
 repository = Repository
 support = Ondersteuning
 website = Website
+
+## Error
+cause = Oorzaak
+oops-something-wrong = Oeps! Er ging iets fout.
+error-title = Tasks: Foutmelding
