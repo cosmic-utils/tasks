@@ -226,7 +226,7 @@ impl Tasks {
                             tasks
                                 .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
                         }
-                        DialogPage::Icon(entity, name) => {
+                        DialogPage::Icon(entity, name, _) => {
                             let data = if let Some(entity) = entity {
                                 self.nav_model.data::<List>(entity)
                             } else {
@@ -324,7 +324,11 @@ impl Tasks {
                 }
                 NavMenuAction::SetIcon(entity) => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Icon(Some(entity), String::new())),
+                        DialogAction::Open(DialogPage::Icon(
+                            Some(entity),
+                            String::new(),
+                            String::new(),
+                        )),
                     ))));
                 }
                 NavMenuAction::Export(entity) => {

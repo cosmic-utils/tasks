@@ -20,7 +20,7 @@ pub enum DialogAction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogPage {
     New(String),
-    Icon(Option<segmented_button::Entity>, String),
+    Icon(Option<segmented_button::Entity>, String, String), // Added search string
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
     Calendar(CalendarModel),
@@ -95,18 +95,35 @@ impl DialogPage {
                 .secondary_action(widget::button::standard(fl!("cancel")).on_press(
                     Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                 )),
-            DialogPage::Icon(entity, icon) => {
+            DialogPage::Icon(entity, icon, search) => {
+                let search_lower = search.to_lowercase();
                 let icon_buttons = crate::app::icons::get_all_icon_handles(20)
                     .iter()
+                    .filter(|(name, _)| name.to_lowercase().contains(&search_lower))
                     .map(|(name, icon)| {
                         widget::button::icon(icon.clone())
                             .medium()
                             .on_press(Message::Application(ApplicationAction::Dialog(
-                                DialogAction::Update(DialogPage::Icon(*entity, name.clone())),
+                                DialogAction::Update(DialogPage::Icon(
+                                    *entity,
+                                    name.clone(),
+                                    search.clone(),
+                                )),
                             )))
                             .into()
                     })
                     .collect();
+
+                let search_input =
+                    widget::text_input("Search icons...", search.as_str()).on_input({
+                        let entity = *entity;
+                        let icon = icon.clone();
+                        move |s| {
+                            Message::Application(ApplicationAction::Dialog(DialogAction::Update(
+                                DialogPage::Icon(entity, icon.clone(), s),
+                            )))
+                        }
+                    });
 
                 let dialog = widget::dialog()
                     .title(fl!("icon-select"))
@@ -118,12 +135,17 @@ impl DialogPage {
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                     ))
                     .control(
-                        widget::container(widget::scrollable(
-                            widget::row()
-                                .push(widget::flex_row(icon_buttons))
-                                .push(widget::horizontal_space()),
-                        ))
-                        .height(Length::Fixed(300.0)),
+                        widget::column::with_children(vec![
+                            search_input.into(),
+                            widget::container(widget::scrollable(
+                                widget::row()
+                                    .push(widget::flex_row(icon_buttons))
+                                    .push(widget::horizontal_space()),
+                            ))
+                            .height(Length::Fixed(300.0))
+                            .into(),
+                        ])
+                        .spacing(spacing.space_xxs),
                     );
 
                 dialog
