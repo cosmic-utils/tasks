@@ -43,7 +43,7 @@ impl List {
             file_path,
             name: name.to_string(),
             description: String::new(),
-            icon: Some(emojis::get_by_shortcode("pencil").unwrap().to_string()),
+            icon: Some("view-list-symbolic".to_string()),
             hide_completed: false,
         }
     }

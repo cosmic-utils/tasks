@@ -84,15 +84,12 @@ impl Tasks {
     }
 
     fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
+        let icon =
+            crate::app::icons::get_icon(list.icon.as_deref().unwrap_or("view-list-symbolic"), 16);
         self.nav_model
             .insert()
-            .text(format!(
-                "{} {}",
-                list.icon
-                    .clone()
-                    .unwrap_or(emojis::get_by_shortcode("pencil").unwrap().to_string()),
-                list.name.clone()
-            ))
+            .text(list.name.clone())
+            .icon(icon)
             .data(list.clone())
     }
 
@@ -229,7 +226,7 @@ impl Tasks {
                             tasks
                                 .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
                         }
-                        DialogPage::Icon(entity, icon) => {
+                        DialogPage::Icon(entity, name) => {
                             let data = if let Some(entity) = entity {
                                 self.nav_model.data::<List>(entity)
                             } else {
@@ -237,11 +234,12 @@ impl Tasks {
                             };
                             if let Some(list) = data {
                                 let entity = self.nav_model.active();
-                                let title = format!("{} {}", icon.clone(), list.name.clone());
-                                self.nav_model.text_set(entity, title);
+                                self.nav_model.text_set(entity, list.name.clone());
+                                self.nav_model
+                                    .icon_set(entity, crate::app::icons::get_icon(&name, 16));
                             }
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.icon = Some(icon);
+                                list.icon = Some(name);
                                 let list = list.clone();
                                 if let Err(err) = self.storage.update_list(&list) {
                                     tracing::error!("Error updating list: {err}");

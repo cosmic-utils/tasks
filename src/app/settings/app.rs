@@ -67,6 +67,7 @@ pub fn tracing() {
 
 pub fn icons() {
     ICON_CACHE.get_or_init(|| Mutex::new(IconCache::new()));
+    crate::app::icons::cache_all_icons_in_background(vec![14, 16, 18, 20, 32]);
 }
 
 pub fn migrate(prev_app_ids: &[&str]) {

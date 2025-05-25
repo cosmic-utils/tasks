@@ -139,14 +139,15 @@ impl Content {
             hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
         }
 
-        let default_icon = emojis::get_by_shortcode("pencil").unwrap().to_string();
-        let icon = list.icon.clone().unwrap_or(default_icon);
-
+        let icon = crate::app::icons::get_icon(
+            list.icon.as_deref().unwrap_or("view-list-symbolic"),
+            spacing.space_m,
+        );
         widget::row::with_capacity(3)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
-            .push(widget::text(icon).size(spacing.space_m))
+            .push(icon)
             .push(widget::text::title3(&list.name).width(Length::Fill))
             .push(hide_completed_button)
             .into()
