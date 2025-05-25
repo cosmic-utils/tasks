@@ -31,6 +31,8 @@ pub struct Content {
     input: String,
     storage: LocalStorage,
     context_menu_open: bool,
+    search_bar_visible: bool,
+    search_query: String,
 }
 
 #[derive(Debug, Clone)]
@@ -64,6 +66,9 @@ pub enum Message {
     RefreshTask(models::Task),
     Empty,
     ContextMenuOpen(bool),
+
+    ToggleSearchBar,
+    SearchQueryChanged(String),
 }
 
 pub enum Output {
@@ -124,6 +129,8 @@ impl Content {
             config: config::TasksConfig::config(),
             storage,
             context_menu_open: false,
+            search_bar_visible: false,
+            search_query: String::new(),
         }
     }
 
@@ -139,42 +146,68 @@ impl Content {
             hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
         }
 
+        let search_button = widget::button::icon(icons::get_handle("edit-find-symbolic", 18))
+            .selected(self.search_bar_visible)
+            .padding(spacing.space_xxs)
+            .on_press(Message::ToggleSearchBar);
+
         let icon = crate::app::icons::get_icon(
             list.icon.as_deref().unwrap_or("view-list-symbolic"),
             spacing.space_m,
         );
-        widget::row::with_capacity(3)
+        widget::row::with_capacity(4)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
             .push(icon)
-            .push(widget::text::title3(&list.name).width(Length::Fill))
+            .push(widget::text::body(&list.name).size(24).width(Length::Fill))
             .push(hide_completed_button)
+            .push(search_button)
             .into()
     }
 
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        if self.tasks.is_empty() {
+        let mut column = widget::column::with_capacity(3);
+        column = column.push(self.list_header(list));
+
+        if self.search_bar_visible {
+            column = column.push(
+                widget::text_input(fl!("search-tasks"), &self.search_query)
+                    .on_input(Message::SearchQueryChanged)
+                    .width(Length::Fill)
+                    .padding([spacing.space_xxs, spacing.space_xxs]),
+            );
+        }
+
+        let filtered_tasks: Vec<_> = if self.search_bar_visible && !self.search_query.is_empty() {
+            self.tasks
+                .iter()
+                .filter(|(_, task)| {
+                    task.title
+                        .to_lowercase()
+                        .contains(&self.search_query.to_lowercase())
+                })
+                .map(|(id, task)| self.task_view(id, task))
+                .collect()
+        } else {
+            self.tasks
+                .iter()
+                .map(|(id, task)| self.task_view(id, task))
+                .collect()
+        };
+
+        if filtered_tasks.is_empty() && self.search_query.is_empty() {
             return self.empty(list);
         }
 
-        let items = self
-            .tasks
-            .iter()
-            .map(|(id, task)| self.task_view(id, task))
-            .collect::<Vec<_>>();
+        let items = widget::column::with_children(filtered_tasks).spacing(spacing.space_s);
 
-        let items = widget::column::with_children(items)
-            .spacing(spacing.space_s)
-            .padding([spacing.space_none, spacing.space_xxs]);
-
-        widget::column::with_capacity(2)
-            .push(self.list_header(list))
+        column
             .push(items)
-            .padding([spacing.space_none, spacing.space_m])
-            .spacing(spacing.space_xs)
+            .padding([spacing.space_none, spacing.space_l])
+            .spacing(spacing.space_s)
             .apply(widget::container)
             .height(Length::Shrink)
             .apply(widget::scrollable)
@@ -461,6 +494,15 @@ impl Content {
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = Vec::new();
         match message {
+            Message::ToggleSearchBar => {
+                self.search_bar_visible = !self.search_bar_visible;
+                if !self.search_bar_visible {
+                    self.search_query.clear();
+                }
+            }
+            Message::SearchQueryChanged(query) => {
+                self.search_query = query;
+            }
             Message::Empty => return tasks,
             Message::ContextMenuOpen(open) => {
                 self.context_menu_open = open;
