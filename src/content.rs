@@ -137,10 +137,15 @@ impl Content {
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
+        let hide_completed_active = list.hide_completed || self.config.hide_completed;
         let mut hide_completed_button =
             widget::button::icon(icons::get_handle("check-round-outline-symbolic", 18))
-                .selected(list.hide_completed || self.config.hide_completed)
+                .selected(hide_completed_active)
                 .padding(spacing.space_xxs);
+
+        if hide_completed_active {
+            hide_completed_button = hide_completed_button.class(cosmic::style::Button::Suggested);
+        }
 
         if !self.config.hide_completed {
             hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
@@ -181,22 +186,15 @@ impl Content {
             );
         }
 
-        let filtered_tasks: Vec<_> = if self.search_bar_visible && !self.search_query.is_empty() {
-            self.tasks
-                .iter()
-                .filter(|(_, task)| {
-                    task.title
-                        .to_lowercase()
-                        .contains(&self.search_query.to_lowercase())
-                })
-                .map(|(id, task)| self.task_view(id, task))
-                .collect()
-        } else {
-            self.tasks
-                .iter()
-                .map(|(id, task)| self.task_view(id, task))
-                .collect()
-        };
+        let filtered_tasks: Vec<_> = self.tasks.iter()
+            .filter(|(_, task)| {
+                // Search filter
+                (!self.search_bar_visible || self.search_query.is_empty() || task.title.to_lowercase().contains(&self.search_query.to_lowercase()))
+                // Hide completed filter
+                && (!list.hide_completed || task.status != Status::Completed)
+            })
+            .map(|(id, task)| self.task_view(id, task))
+            .collect();
 
         if filtered_tasks.is_empty() && self.search_query.is_empty() {
             return self.empty(list);
