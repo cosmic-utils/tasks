@@ -4,6 +4,7 @@ about = About
 
 # Content
 add-new-task = Add new task
+search-tasks = Search tasks
 
 # Details
 title = Title
