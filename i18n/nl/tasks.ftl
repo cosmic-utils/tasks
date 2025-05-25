@@ -85,6 +85,7 @@ delete = Verwijderen
 view = Beeld
 menu-settings = Instellingen...
 menu-about = Over Tasks...
+hide-completed = Voltooide taken verbergen
 
 ## About
 repository = Repository
