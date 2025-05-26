@@ -32,6 +32,23 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.2.0" date="2025-05-25">
+        <description>
+            <p>Powerful new features! 🚀</p>
+            <ul>
+                <li>✨ <em>Sub-tasks support</em> - Break down complex tasks into manageable sub-tasks</li>
+                <li>🔍 <em>Search functionality</em> - Quickly find tasks and icons with integrated search bars</li>
+                <li>📊 <em>Task sorting</em> - Organize your tasks with flexible sorting options</li>
+                <li>🎨 <em>Expanded icon library</em> - Hundreds of new symbolic icons to personalize your lists</li>
+                <li>🌍 <em>Enhanced internationalization</em> - Improved translations including new Dutch and Bulgarian support</li>
+                <li>🔧 <em>Better task management</em> - Enhanced UI for the tasks list</li>
+                <li>⌨️ <em>Improved keyboard shortcuts</em> - Fixed key bindings for better accessibility</li>
+                <li>🎯 <em>Toggle completed tasks</em> - Hide or show completed tasks with a convenient toggle</li>
+                <li>📋 <em>Enhanced export options</em> - Context menu for exporting lists data</li>
+                <li>🐛 <em>Bug fixes and performance improvements</em> - Smoother experience with various fixes</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.1.1" date="2024-11-06">
         <description>
             <p>Text editor for notes 🎉</p>
@@ -58,11 +75,27 @@
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png</image>
-      <caption>Light mode</caption>
+      <caption>Main application interface</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png</image>
-      <caption>Dark mode</caption>
+      <caption>Main application interface</caption>
+    </screenshot>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/details-light.png</image>
+      <caption>Task details</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/details-dark.png</image>
+      <caption>Task details</caption>
+    </screenshot>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/new-list-light.png</image>
+      <caption>Create a new list</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/new-list-dark.png</image>
+      <caption>Create a new list</caption>
     </screenshot>
   </screenshots>
   <categories>
