@@ -1,62 +1,67 @@
-tasks = Ficheiros COSMIC
-empty-folder = Pasta vazia
-empty-folder-hidden = Pasta vazia (tem ficheiros ocultos)
-filesystem = Sistema de ficheiros
-home = Pasta Pessoal
+tasks = Tarefas
 trash = Lixo
+about = Sobre
 
-# New File/Folder Dialog
-create-new-file = Criar novo ficheiro
-create-new-folder = Criar nova pasta
-file-name = Nome do ficheiro
-folder-name = Nome da pasta
-file-already-exists = Já existe um ficheiro com esse nome.
-folder-already-exists = Já existe uma pasta com esse nome.
-name-hidden = Os nomes começados por "." serão ocultados.
-name-invalid = O nome não pode ser "{$filename}".
-name-no-slashes = O nome não pode conter barras.
+# Content
+add-new-task = Adicionar nova tarefa
+search-tasks = Procurar tarefas
 
-# Open/Save Dialog
+# Details
+title = Título
+details = Detalhes
+favorite = Favorito
+priority = Prioridade
+due-date = Data de conclusão
+reminder = Lembrete
+notes = Notas
+add-notes = Adicionar notas
+
+# Empty
+no-tasks = Nenhuma tarefa
+no-tasks-suggestion = Tente adicionar uma tarefa com o campo de texto abaixo
+no-list-selected = Nenhuma lista selecionada
+no-list-suggestion = Crie ou selecione uma nova lista para começar
+
+sub-tasks = Subtarefas
+add-sub-task = Adicionar subtarefa
+
+# New List Dialog
+create-list = Criar nova lista
+
+# Rename List Dialog
+rename-list = Renomear lista
+
+# Rename List Dialog
+delete-list = A lista selecionada será excluída
+delete-list-confirm = Tem certeza de que deseja excluir esta lista?
+
+# Icon Dialog
+icon = Definir ícone
+icon-select = Selecionar ícone
+icon-select-body = Escolha um ícone para a lista
+search-icons = Procurar ícones...
+
+# Date Dialog
+select-date = Selecionar data
+
+# Export Dialog
+export = Exportar
+
+# Dialogs
 cancel = Cancelar
-open = Abrir
-open-file = Abrir ficheiro
-open-folder = Abrir pasta
-open-multiple-files = Abrir vários ficheiros
-open-multiple-folders = Abrir várias pastas
+ok = OK
+copy = Copiar
+confirm = Confirmar
 save = Guardar
-save-file = Guardar ficheiro
-
-# Rename Dialog
-rename-file = Renomear ficheiro
-rename-folder = Renomear pasta
-
-# Replace Dialog
-replace = Substituir
-replace-title = {$filename} já existe neste local.
-replace-warning = Substituí-lo pelo que está a guardar? Se o substituir, o seu conteúdo será substituído.
-
-# List view
-name = Nome
-modified = Modificado
-size = Tamanho
+list-name = Nome da lista
 
 # Context Pages
 
 ## About
 git-description = Git commit {$hash} em {$date}
 
-## Operations
-operations = Operações
-pending = Pendentes
-failed = Falhadas
-complete = Concluídas
-
 ## Settings
 settings = Definições
-settings-tab = Separador
-settings-show-hidden = Mostrar ficheiros ocultos
-icon-size-list = Tamanho dos ícones (lista)
-icon-size-grid = Tamanho dos ícones (grelha)
 
 ### Appearance
 appearance = Aparência
@@ -65,33 +70,38 @@ match-desktop = Acompanhar o ambiente de trabalho
 dark = Escuro
 light = Claro
 
-# Context menu
-new-file = Novo ficheiro
-new-folder = Nova pasta
-open-with = Abrir com
-move-to-trash = Mover para o lixo
-restore-from-trash = Restaurar do lixo
-
 # Menu
 
 ## File
 file = Ficheiro
-new-tab = Novo separador
 new-window = Nova janela
-rename = Renomear
-close-tab = Fechar separador
+new-list = Nova lista
 quit = Sair
 
 ## Edit
 edit = Editar
-cut = Cortar
-copy = Copiar
-paste = Colar
-select-all = Selecionar tudo
+rename = Renomear
+delete = Eliminar
 
 ## View
 view = Ver
-grid-view = Visão de grelha
-list-view = Visão de lista
-menu-settings = Definições...
-menu-about = Acerca do Ficheiros COSMIC...
+menu-settings = Definições
+menu-about = Sobre o Tarefas...
+hide-completed = Ocultar concluídas
+
+## About
+repository = Repositório
+support = Suporte
+website = Website
+
+## Error
+cause = Causa
+oops-something-wrong = Oops! Algo correu mal.
+error-title = Tarefas - Erro
+
+# Sort Menu
+sort = Ordenar
+sort-name-asc = Nome A-Z
+sort-name-desc = Nome Z-A
+sort-date-asc = Data de adição (Antigo para Novo)
+sort-date-desc = Data de adição (Novo para Antigo)

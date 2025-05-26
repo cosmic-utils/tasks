@@ -4,6 +4,7 @@ about = Über
 
 # Content
 add-new-task = Neue Aufgabe hinzufügen
+search-tasks = Aufgaben suchen
 
 # Details
 title = Titel
@@ -13,6 +14,7 @@ priority = Priorität
 due-date = Fälligkeitsdatum
 reminder = Erinnerung
 notes = Notizen
+add-notes = Notizen hinzufügen
 
 # Empty
 no-tasks = Keine Aufgaben
@@ -37,6 +39,7 @@ delete-list-confirm = Soll diese Liste gelöscht werden?
 icon = Symbolauswahl
 icon-select = Symbol auswählen
 icon-select-body = Wähle ein Symbol für die Liste
+search-icons = Symbole suchen...
 
 # Date Dialog
 select-date = Wähle ein Datum
@@ -82,8 +85,19 @@ delete = Löschen
 
 ## View
 view = Ansicht
-menu-settings = Einstellungen...
+menu-settings = Einstellungen
 menu-about = Über Tasks...
+hide-completed = Abgeschlossene ausblenden
+
+# Error
+cause = Ursache
+oops-something-wrong = Ups! Etwas ist schiefgelaufen.
+error-title = Tasks - Fehler
+
+# Help
+repository = Repository
+support = Support
+website = Website
 
 # Sort Menu
 sort = Sortieren

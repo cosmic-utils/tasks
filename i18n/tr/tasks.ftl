@@ -1,9 +1,10 @@
-tasks = COSMIC Görevler
+tasks = Görevler
 trash = Çöp
 about = Hakkında
 
 # Content
 add-new-task = Yeni görev ekle
+search-tasks = Görevleri ara
 
 # Details
 title = Başlık
@@ -13,6 +14,7 @@ priority = Öncelikli
 due-date = Son tarih
 reminder = Hatırlatıcı
 notes = Notlar
+add-notes = Not ekle
 
 # Empty
 no-tasks = Görev yok
@@ -37,6 +39,7 @@ delete-list-confirm = Bu listeyi silmek istediğinize emin misiniz?
 icon = Simge belirle
 icon-select = Simge seç
 icon-select-body = Liste için bir simge seçin
+search-icons = Simge ara...
 
 # Date Dialog
 select-date = Bir tarih belirleyin
@@ -82,5 +85,23 @@ delete = Sil
 
 ## View
 view = Görünüm
-menu-settings = Ayarlar...
-menu-about = COSMIC Görevler Hakkında...
+menu-settings = Ayarlar
+menu-about = Görevler Hakkında...
+hide-completed = Tamamlananları gizle
+
+## About
+repository = Depo
+support = Destek
+website = Web sitesi
+
+## Error
+cause = Sebep
+oops-something-wrong = Oops! Bir şeyler ters gitti.
+error-title = Görevler - Hata
+
+# Sort Menu
+sort = Sırala
+sort-name-asc = İsim A-Z
+sort-name-desc = İsim Z-A
+sort-date-asc = Eklenme tarihi (Eskiden Yeniye)
+sort-date-desc = Eklenme tarihi (Yeniden Eskiye)

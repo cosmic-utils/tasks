@@ -1,9 +1,10 @@
-tasks = Задачи COSMIC
+tasks = Задачи
 trash = Корзина
-about = О программе
+about = О Задачах
 
 # Content
 add-new-task = Добавить новую задачу
+search-tasks = Искать задачи
 
 # Details
 title = Заголовок
@@ -13,6 +14,7 @@ priority = Приоритетность
 due-date = Срок выполнения
 reminder = Напоминание
 notes = Примечания
+add-notes = Добавить примечания
 
 # Empty
 no-tasks = Нет задач
@@ -36,7 +38,8 @@ delete-list-confirm = Вы уверены, что хотите удалить э
 # Icon Dialog
 icon = Установить значок
 icon-select = Выберите значок
-icon-select-body = Choose an icon for the list
+icon-select-body = Выберите значок для списка
+search-icons = Искать значки...
 
 # Date Dialog
 select-date = Выберите дату
@@ -82,5 +85,23 @@ delete = Удалить
 
 ## View
 view = Вид
-menu-settings = Параметры...
-menu-about = О Задачах COSMIC...
+menu-settings = Параметры
+menu-about = О Задачах...
+hide-completed = Скрыть выполненные
+
+## About
+repository = Репозиторий
+support = Поддержка
+website = Веб-сайт
+
+## Error
+cause = Причина
+oops-something-wrong = Упс! Что-то пошло не так.
+error-title = Задачи - Ошибка
+
+# Sort Menu
+sort = Сортировать
+sort-name-asc = Имя A-Я
+sort-name-desc = Имя Я-A
+sort-date-asc = Дата добавления (Старое к Новому)
+sort-date-desc = Дата добавления (Новое к Старому)

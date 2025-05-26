@@ -1,39 +1,59 @@
-tasks = COSMICファイル
-empty-folder = 空のフォルダ
-empty-folder-hidden = 空のフォルダ（隠しファイルあり）
-filesystem = ファイルシステム
-home = ホーム
+tasks = ファイル
 trash = ゴミ
+about = このアプリについて
 
-# New File/Folder Dialog
-create-new-file = 新しいファイルを作成
-create-new-folder = 新しいフォルダを作成
-file-name = ファイル名
-folder-name = フォルダ名
-file-already-exists = 同じ名前のファイルがすでに存在します。
-folder-already-exists = 同じ名前のフォルダがすでに存在します。
-name-hidden = 「.」で始まる名前は隠られます。
-name-invalid = 「{$filename}」という名前は使用できません。
-name-no-slashes = 「/」は名前に含められません。
+# Content
+add-new-task = 新しいタスクを追加
+search-tasks = タスクを検索
 
-# Open/Save Dialog
+# Details
+title = タイトル
+details = 詳細
+favorite = お気に入り
+priority = 優先度
+due-date = 期限
+reminder = リマインダー
+notes = メモ
+add-notes = メモを追加
+
+# Empty
+no-tasks = タスクがありません
+no-tasks-suggestion = 下のテキストフィールドでタスクを追加してみてください
+no-list-selected = リストが選択されていません
+no-list-suggestion = 新しいリストを作成または選択して始めてください
+
+sub-tasks = サブタスク
+add-sub-task = サブタスクを追加
+
+# New List Dialog
+create-list = 新しいリストを作成
+
+# Rename List Dialog
+rename-list = リスト名を変更
+
+# Rename List Dialog
+delete-list = 選択したリストが削除されます
+delete-list-confirm = このリストを削除してもよろしいですか？
+
+# Icon Dialog
+icon = アイコンを設定
+icon-select = アイコンを選択
+icon-select-body = リストのアイコンを選択
+search-icons = アイコンを検索...
+
+# Date Dialog
+select-date = 日付を選択
+
+# Export Dialog
+export = エクスポート
+
+# Dialogs
 cancel = キャンセル
-open = 開く
-open-file = ファイルを開く
-open-folder = フォルダを開く
-open-multiple-files = 複数ファイルを開く
-open-multiple-folders = 複数フォルダを開く
+ok = OK
+copy = コピー
+confirm = 確認
 save = 保存
-save-file = ファイルを保存
-
-# Rename Dialog
-rename-file = ファイル名を変更
-rename-folder = フォルダ名を変更
-
-# Replace Dialog
-replace = 置き換える
-replace-title = {$filename}はすでにこの場所に存在します。
-replace-warning = 保存するファイルで置き換えますか？置き換えると、内容を上書きます。
+list-name = リスト名
 
 # List view
 name = 名前
@@ -43,7 +63,7 @@ size = サイズ
 # Context Pages
 
 ## About
-git-description = {$date}に{$hash}といGitコミット
+git-description = {$date}に{$hash}というGitコミット
 
 ## Operations
 operations = 操作
@@ -65,32 +85,38 @@ match-desktop = システム設定に従う
 dark = ダーク
 light = ライト
 
-# Context menu
-new-file = 新しいファイル
-new-folder = 新しいフォルダ
-move-to-trash = ゴミ箱に移動
-restore-from-trash = ゴミ箱から復元
-
 # Menu
 
 ## File
 file = ファイル
-new-tab = 新しいタブ
 new-window = 新しいウィンドウ
-rename = 名前を変更
-close-tab = タブを閉じる
+new-list = 新しいリスト
 quit = 終了
 
 ## Edit
 edit = 編集
-cut = 切り取り
-copy = コピー
-paste = 貼り付け
-select-all = すべてを選択
+rename = 名前を変更
+delete = 削除
 
 ## View
 view = 表示
-grid-view = グリッドの表示
-list-view = リストの表示
-menu-settings = 設定...
+menu-settings = 設定
 menu-about = COSMICファイルについて...
+hide-completed = 完了したタスクを非表示
+
+## About
+repository = リポジトリ
+support = サポート
+website = ウェブサイト
+
+## Error
+cause = 原因
+oops-something-wrong = おっと！問題が発生しました。
+error-title = タスク - エラー
+
+# Sort Menu
+sort = 並べ替え
+sort-name-asc = 名前 A-Z
+sort-name-desc = 名前 Z-A
+sort-date-asc = 追加日（古い順）
+sort-date-desc = 追加日（新しい順）

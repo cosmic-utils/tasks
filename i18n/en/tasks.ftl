@@ -85,7 +85,7 @@ delete = Delete
 
 ## View
 view = View
-menu-settings = Settings...
+menu-settings = Settings
 menu-about = About Tasks...
 hide-completed = Hide completed
 

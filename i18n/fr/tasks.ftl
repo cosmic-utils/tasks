@@ -4,6 +4,7 @@ about = À propos
 
 # Content
 add-new-task = Ajouter une nouvelle tâche
+search-tasks = Rechercher des tâches
 
 # Details
 title = Titre
@@ -13,6 +14,7 @@ priority = Priorité
 due-date = Échéance
 reminder = Rappel
 notes = Notes
+add-notes = Ajouter des notes
 
 # Empty
 no-tasks = Aucune tâche
@@ -37,6 +39,7 @@ delete-list-confirm = Voulez-vous supprimer cette liste?
 icon = Changer l'icone
 icon-select = Choisissez une icone
 icon-select-body = Choisissez une icone pour la liste
+search-icons = Rechercher des icônes...
 
 # Date Dialog
 select-date = Choisissez une date
@@ -82,7 +85,7 @@ delete = Supprimer
 
 ## View
 view = Affichage
-menu-settings = Préférences...
+menu-settings = Préférences
 menu-about = À propos de Tâches...
 hide-completed = Cacher les tâches achevées
 

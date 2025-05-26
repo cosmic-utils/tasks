@@ -3,7 +3,8 @@ trash = Prullenbak
 about = Over
 
 # Content
-add-new-task = Nieuwe taak toevoegen 
+add-new-task = Nieuwe taak toevoegen
+search-tasks = Taken zoeken
 
 # Details
 title = Titel
@@ -38,6 +39,7 @@ delete-list-confirm = Weet u zeker dat u deze lijst wilt wissen?
 icon = Pictogram instellen
 icon-select = Een pictogram selecteren
 icon-select-body = Een pictogram voor de lijst selecteren
+search-icons = Pictogrammen zoeken...
 
 # Date Dialog
 select-date = Kies een datum
@@ -83,7 +85,7 @@ delete = Verwijderen
 
 ## View
 view = Beeld
-menu-settings = Instellingen...
+menu-settings = Instellingen
 menu-about = Over Tasks...
 hide-completed = Voltooide taken verbergen
 
@@ -96,3 +98,10 @@ website = Website
 cause = Oorzaak
 oops-something-wrong = Oeps! Er ging iets fout.
 error-title = Tasks: Foutmelding
+
+# Sort Menu
+sort = Sorteren
+sort-name-asc = Naam A-Z
+sort-name-desc = Naam Z-A
+sort-date-asc = Datum toegevoegd (Oud naar Nieuw)
+sort-date-desc = Datum toegevoegd (Nieuw naar Oud)

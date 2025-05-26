@@ -1,9 +1,10 @@
-tasks = COSMIC Zadaci
+tasks = Zadaci
 trash = Otpad
-about = O programu
+about = O Zadaćima
 
 # Content
 add-new-task = Dodaj novi zadatak
+search-tasks = Pretraži zadatke
 
 # Details
 title = Naslov
@@ -13,10 +14,11 @@ priority = Prioritet
 due-date = Rok
 reminder = Podsetnik
 notes = Napomene
+add-notes = Dodaj napomene
 
 # Empty
 no-tasks = Nema zadataka
-no-tasks-suggestion = Pokušajte da dodate zadatak pomoću polja za tekst ispod
+no-tasks-suggestion = Pokušajte da dodate zadatak pomoću polja za tekst ispod
 no-list-selected = Nije izabran spisak
 no-list-suggestion = Napravite ili izaberite novi spisak da biste započeli
 
@@ -30,20 +32,25 @@ create-list = Napravi novi spisak
 rename-list = Preimenuj spisak
 
 # Rename List Dialog
-delete-list = Izabrani spisak će biti obrisan
+delete-list = Izabrani spisak će biti obrisan
 delete-list-confirm = Da li ste sigurni da želite da izbrišete ovaj spisak?
 
 # Icon Dialog
 icon = Postavi ikonicu
 icon-select = Izaberite ikonicu
 icon-select-body = Izaberite ikonicu za spisak
+search-icons = Pretraži ikonice...
 
 # Date Dialog
 select-date = Izaberite datum
 
+# Export Dialog
+export = Izvezi
+
 # Dialogs
 cancel = Poništi
 ok = U redu
+copy = Kopiraj
 confirm = Potvrdi
 save = Sačuvaj
 list-name = Ime spiska
@@ -78,5 +85,23 @@ delete = Izbriši
 
 ## View
 view = Prikaz
-menu-settings = Podešavanja...
-menu-about = O COSMIC Zadacima...
+menu-settings = Podešavanja
+menu-about = O Zadaćima...
+hide-completed = Sakrij završene
+
+## About
+repository = Repozitorijum
+support = Podrška
+website = Vebsajt
+
+## Error
+cause = Uzrok
+oops-something-wrong = Ups! Nešto nije u redu.
+error-title = Zadaci - Greška
+
+# Sort Menu
+sort = Sortiraj
+sort-name-asc = Naziv A-Š
+sort-name-desc = Naziv Š-A
+sort-date-asc = Datum dodavanja (Staro ka Novom)
+sort-date-desc = Datum dodavanja (Novo ka Starom)

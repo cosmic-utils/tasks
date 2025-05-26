@@ -4,6 +4,7 @@ about = Acerca de
 
 # Content
 add-new-task = Añadir nueva tarea
+search-tasks = Buscar tareas
 
 # Details
 title = Título
@@ -13,6 +14,7 @@ priority = Prioridad
 due-date = Fecha de vencimiento
 reminder = Recordatorio
 notes = Notas
+add-notes = Añadir notas
 
 # Empty
 no-tasks = No hay tareas
@@ -37,6 +39,7 @@ delete-list-confirm = ¿Estas seguro de que deseas eliminar esta lista?
 icon = Establecer icono
 icon-select = Seleccionar un icono
 icon-select-body = Seleccionar un icono para la lista de tareas
+search-icons = Buscar iconos...
 
 # Date Dialog
 select-date = Selecciona una fecha
@@ -81,8 +84,21 @@ delete = Eliminar
 view = Ver
 menu-settings = Ajustes
 menu-about = Acerca de Tareas
+hide-completed = Ocultar completadas
 
 ## About
 repository = Repositorio
 support = Soporte
 website = Sitio web
+
+## Error
+cause = Causa
+oops-something-wrong = ¡Vaya! Algo salió mal.
+error-title = Tareas - Error
+
+# Sort Menu
+sort = Ordenar
+sort-name-asc = Nombre A-Z
+sort-name-desc = Nombre Z-A
+sort-date-asc = Fecha de añadido (Antiguo a Nuevo)
+sort-date-desc = Fecha de añadido (Nuevo a Antiguo)
