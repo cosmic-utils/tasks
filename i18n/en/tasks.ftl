@@ -39,6 +39,7 @@ delete-list-confirm = Are you sure you want to delete this list?
 icon = Set icon
 icon-select = Select an icon
 icon-select-body = Choose an icon for the list
+search-icons = Search icons...
 
 # Date Dialog
 select-date = Select a date
