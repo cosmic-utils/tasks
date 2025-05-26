@@ -450,6 +450,7 @@ impl Content {
         let spacing = theme::active().cosmic().spacing;
         row(vec![
             widget::text_input(fl!("add-new-task"), &self.input)
+                .id(widget::Id::new("new-task-input"))
                 .on_input(Message::TaskTitleInput)
                 .on_submit(|_| Message::TaskAdd)
                 .width(Length::Fill)
@@ -606,6 +607,7 @@ impl Content {
                     match self.storage.update_task(task) {
                         Ok(_) => {
                             self.task_editing.insert(id, false);
+                            tasks.push(Output::Focus(widget::Id::new("new-task-input")));
                         }
                         Err(error) => tracing::error!("Failed to update task: {:?}", error),
                     }
@@ -680,6 +682,7 @@ impl Content {
                     match self.storage.update_task(task) {
                         Ok(_) => {
                             self.sub_task_editing.insert(id, false);
+                            tasks.push(Output::Focus(widget::Id::new("new-task-input")));
                         }
                         Err(error) => tracing::error!("Failed to update sub-task: {:?}", error),
                     }
