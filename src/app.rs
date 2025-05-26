@@ -205,15 +205,10 @@ impl Tasks {
                                 self.nav_model.active_data_mut::<List>()
                             };
                             if let Some(list) = data {
-                                let title = if let Some(icon) = &list.icon {
-                                    format!("{} {}", icon.clone(), &name)
-                                } else {
-                                    name.clone()
-                                };
-                                list.name.clone_from(&name);
+                                list.name.clone_from(&name.clone());
                                 let list = list.clone();
                                 self.nav_model
-                                    .text_set(self.nav_model.active(), title.clone());
+                                    .text_set(self.nav_model.active(), name.clone());
                                 if let Err(err) = self.storage.update_list(&list) {
                                     tracing::error!("Error updating list: {err}");
                                 }

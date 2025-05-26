@@ -114,8 +114,9 @@ impl DialogPage {
                     })
                     .collect();
 
-                let search_input =
-                    widget::text_input("Search icons...", search.as_str()).on_input({
+                let search_input = widget::text_input("Search icons...", search.as_str())
+                    .id(text_input_id.clone())
+                    .on_input({
                         let entity = *entity;
                         let icon = icon.clone();
                         move |s| {
