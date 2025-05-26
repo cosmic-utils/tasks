@@ -95,3 +95,10 @@ website = Site web
 cause = Raison
 oops-something-wrong = Oups! Il y a un problème.
 error-title = Tâches - Erreur
+
+# Sort Menu
+sort = Trier
+sort-name-asc = Nom A-Z
+sort-name-desc = Nom Z-A
+sort-date-asc = Date d'ajout (Ancien au Nouveau)
+sort-date-desc = Date d'ajout (Nouveau à l'Ancien)

@@ -86,3 +86,10 @@ menu-about = Acerca de Tareas
 repository = Repositorio
 support = Soporte
 website = Sitio web
+
+# Sort Menu
+sort = Ordenar
+sort-name-asc = Nombre A-Z
+sort-name-desc = Nombre Z-A
+sort-date-asc = Fecha de añadido (Antiguo a Nuevo)
+sort-date-desc = Fecha de añadido (Nuevo a Antiguo)

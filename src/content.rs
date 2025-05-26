@@ -33,6 +33,15 @@ pub struct Content {
     context_menu_open: bool,
     search_bar_visible: bool,
     search_query: String,
+    sort_type: SortType,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum SortType {
+    NameAsc,
+    NameDesc,
+    DateAsc,
+    DateDesc,
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +78,7 @@ pub enum Message {
 
     ToggleSearchBar,
     SearchQueryChanged(String),
+    SetSort(SortType),
 }
 
 pub enum Output {
@@ -131,6 +141,7 @@ impl Content {
             context_menu_open: false,
             search_bar_visible: false,
             search_query: String::new(),
+            sort_type: SortType::DateAsc,
         }
     }
 
@@ -186,7 +197,24 @@ impl Content {
             );
         }
 
-        let filtered_tasks: Vec<_> = self.tasks.iter()
+        let mut tasks_vec: Vec<_> = self.tasks.iter().collect();
+        match self.sort_type {
+            SortType::NameAsc => {
+                tasks_vec.sort_by(|a, b| a.1.title.to_lowercase().cmp(&b.1.title.to_lowercase()))
+            }
+            SortType::NameDesc => {
+                tasks_vec.sort_by(|a, b| b.1.title.to_lowercase().cmp(&a.1.title.to_lowercase()))
+            }
+            SortType::DateAsc => {
+                tasks_vec.sort_by(|a, b| a.1.created_date_time.cmp(&b.1.created_date_time))
+            }
+            SortType::DateDesc => {
+                tasks_vec.sort_by(|a, b| b.1.created_date_time.cmp(&a.1.created_date_time))
+            }
+        }
+
+        let filtered_tasks: Vec<_> = tasks_vec
+            .into_iter()
             .filter(|(_, task)| {
                 // Search filter
                 (!self.search_bar_visible || self.search_query.is_empty() || task.title.to_lowercase().contains(&self.search_query.to_lowercase()))
@@ -753,6 +781,9 @@ impl Content {
                         tracing::error!("Failed to update sub-task: {:?}", error);
                     }
                 }
+            }
+            Message::SetSort(sort_type) => {
+                self.sort_type = sort_type;
             }
         }
         tasks

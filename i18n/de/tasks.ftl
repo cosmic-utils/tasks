@@ -84,3 +84,10 @@ delete = Löschen
 view = Ansicht
 menu-settings = Einstellungen...
 menu-about = Über Tasks...
+
+# Sort Menu
+sort = Sortieren
+sort-name-asc = Name A-Z
+sort-name-desc = Name Z-A
+sort-date-asc = Hinzugefügt (Alt zu Neu)
+sort-date-desc = Hinzugefügt (Neu zu Alt)

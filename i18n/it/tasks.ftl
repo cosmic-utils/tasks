@@ -95,3 +95,10 @@ grid-view = Griglia
 list-view = Lista
 menu-settings = Impostazioni...
 menu-about = Informazioni su Tasks...
+
+# Sort Menu
+sort = Ordinamento
+sort-name-asc = Nome A-Z
+sort-name-desc = Nome Z-A
+sort-date-asc = Data aggiunta (Vecchio a Nuovo)
+sort-date-desc = Data aggiunta (Nuovo a Vecchio)

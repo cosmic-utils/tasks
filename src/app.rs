@@ -372,6 +372,26 @@ impl Tasks {
             }
             ApplicationAction::Dialog(dialog_action) => self.update_dialog(tasks, dialog_action),
             ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
+            ApplicationAction::SortByNameAsc => {
+                tasks.push(self.update(Message::Content(content::Message::SetSort(
+                    content::SortType::NameAsc,
+                ))));
+            }
+            ApplicationAction::SortByNameDesc => {
+                tasks.push(self.update(Message::Content(content::Message::SetSort(
+                    content::SortType::NameDesc,
+                ))));
+            }
+            ApplicationAction::SortByDateAsc => {
+                tasks.push(self.update(Message::Content(content::Message::SetSort(
+                    content::SortType::DateAsc,
+                ))));
+            }
+            ApplicationAction::SortByDateDesc => {
+                tasks.push(self.update(Message::Content(content::Message::SetSort(
+                    content::SortType::DateDesc,
+                ))));
+            }
         }
     }
 
