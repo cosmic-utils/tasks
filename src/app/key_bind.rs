@@ -24,9 +24,9 @@ pub fn key_binds() -> HashMap<KeyBind, Action> {
     }
 
     bind!([Ctrl], Key::Character("n".into()), NewList);
-    bind!([], Key::Named(Named::Delete), DeleteList);
+    bind!([Ctrl], Key::Named(Named::Delete), DeleteList);
     bind!([Ctrl], Key::Character("r".into()), RenameList);
-    bind!([Shift], Key::Character("I".into()), Icon);
+    bind!([Ctrl], Key::Character("I".into()), Icon);
     bind!([Ctrl], Key::Character("w".into()), WindowClose);
     bind!([Ctrl, Shift], Key::Character("n".into()), WindowNew);
     bind!([Ctrl], Key::Character(",".into()), Settings);
