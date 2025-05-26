@@ -89,3 +89,10 @@ menu-about = Относно „Задачи“...
 repository = Хранилище
 support = Поддръжка
 website = Уебсайт
+
+# Sort Menu
+sort = Сортиране
+sort-name-asc = Име А-Я
+sort-name-desc = Име Я-А
+sort-date-asc = Дата на добавяне (Старо към Ново)
+sort-date-desc = Дата на добавяне (Ново към Старо)

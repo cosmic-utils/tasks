@@ -96,6 +96,18 @@ pub fn menu_bar<'a>(
                 ],
             ),
         ),
+        Tree::with_children(
+            root(fl!("sort")),
+            items(
+                key_binds,
+                vec![
+                    Item::Button(fl!("sort-name-asc"), None, Action::SortByNameAsc),
+                    Item::Button(fl!("sort-name-desc"), None, Action::SortByNameDesc),
+                    Item::Button(fl!("sort-date-asc"), None, Action::SortByDateAsc),
+                    Item::Button(fl!("sort-date-desc"), None, Action::SortByDateDesc),
+                ],
+            ),
+        ),
     ])
     .item_height(ItemHeight::Dynamic(40))
     .item_width(ItemWidth::Uniform(260))

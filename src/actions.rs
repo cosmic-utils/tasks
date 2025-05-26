@@ -20,6 +20,10 @@ pub enum Action {
     RenameList,
     Icon,
     ToggleHideCompleted(bool),
+    SortByNameAsc,
+    SortByNameDesc,
+    SortByDateAsc,
+    SortByDateDesc,
 }
 
 #[derive(Debug, Clone)]
@@ -36,6 +40,10 @@ pub enum ApplicationAction {
     ToggleContextDrawer,
     ToggleContextPage(ContextPage),
     ToggleHideCompleted(bool),
+    SortByNameAsc,
+    SortByNameDesc,
+    SortByDateAsc,
+    SortByDateDesc,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +81,10 @@ impl MenuAction for Action {
             Action::ToggleHideCompleted(value) => {
                 Message::Application(ApplicationAction::ToggleHideCompleted(*value))
             }
+            Action::SortByNameAsc => Message::Application(ApplicationAction::SortByNameAsc),
+            Action::SortByNameDesc => Message::Application(ApplicationAction::SortByNameDesc),
+            Action::SortByDateAsc => Message::Application(ApplicationAction::SortByDateAsc),
+            Action::SortByDateDesc => Message::Application(ApplicationAction::SortByDateDesc),
         }
     }
 }
