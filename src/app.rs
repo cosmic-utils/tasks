@@ -467,7 +467,7 @@ impl Application for Tasks {
         let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(Self::APP_ID)
-            .version("0.1.1")
+            .version("0.2.0")
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
             .links([
