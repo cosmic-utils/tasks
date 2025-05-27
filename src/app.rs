@@ -533,6 +533,12 @@ impl Application for Tasks {
         })
     }
 
+    fn dialog(&self) -> Option<Element<Message>> {
+        let dialog_page = self.dialog_pages.front()?;
+        let dialog = dialog_page.view(&self.dialog_text_input);
+        Some(dialog.into())
+    }
+
     fn header_start(&self) -> Vec<Element<Self::Message>> {
         vec![menu::menu_bar(&self.key_binds, &self.config)]
     }
@@ -599,41 +605,6 @@ impl Application for Tasks {
         app::Task::batch(tasks)
     }
 
-    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
-        let mut tasks = vec![];
-        match message {
-            Message::Open(url) => {
-                if let Err(err) = open::that_detached(url) {
-                    tracing::error!("{err}")
-                }
-            }
-            Message::Content(message) => {
-                self.update_content(&mut tasks, message);
-            }
-            Message::Details(message) => {
-                self.update_details(&mut tasks, message);
-            }
-            Message::Tasks(tasks_action) => {
-                self.update_tasks(&mut tasks, tasks_action);
-            }
-            Message::Application(application_action) => {
-                self.update_app(&mut tasks, application_action);
-            }
-        }
-
-        app::Task::batch(tasks)
-    }
-
-    fn view(&self) -> Element<Self::Message> {
-        self.content.view().map(Message::Content)
-    }
-
-    fn dialog(&self) -> Option<Element<Message>> {
-        let dialog_page = self.dialog_pages.front()?;
-        let dialog = dialog_page.view(&self.dialog_text_input);
-        Some(dialog.into())
-    }
-
     fn subscription(&self) -> Subscription<Self::Message> {
         struct ConfigSubscription;
         struct ThemeSubscription;
@@ -683,5 +654,34 @@ impl Application for Tasks {
         subscriptions.push(self.content.subscription().map(Message::Content));
 
         Subscription::batch(subscriptions)
+    }
+
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
+        let mut tasks = vec![];
+        match message {
+            Message::Open(url) => {
+                if let Err(err) = open::that_detached(url) {
+                    tracing::error!("{err}")
+                }
+            }
+            Message::Content(message) => {
+                self.update_content(&mut tasks, message);
+            }
+            Message::Details(message) => {
+                self.update_details(&mut tasks, message);
+            }
+            Message::Tasks(tasks_action) => {
+                self.update_tasks(&mut tasks, tasks_action);
+            }
+            Message::Application(application_action) => {
+                self.update_app(&mut tasks, application_action);
+            }
+        }
+
+        app::Task::batch(tasks)
+    }
+
+    fn view(&self) -> Element<Self::Message> {
+        self.content.view().map(Message::Content)
     }
 }

@@ -7,15 +7,13 @@ use cosmic::{
 use std::sync::Mutex;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{
-    app::{
-        config::{self, TasksConfig},
-        icons::{IconCache, ICON_CACHE},
-        localize::localize,
-        Tasks,
-    },
-    core::storage::LocalStorage,
-};
+use crate::{app::{
+    config::{self, TasksConfig},
+    icons::{IconCache, ICON_CACHE},
+    localize::localize,
+    Tasks,
+}, core::storage::LocalStorage};
+use crate::core::migration::{migrate_data, migrate_data_dir};
 
 #[derive(Clone, Debug)]
 pub struct Flags {
@@ -28,7 +26,11 @@ pub fn init() {
     localize();
     icons();
     tracing();
-    migrate(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
+    migrate_data_dir(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
+    match migrate_data() {
+        Ok(()) => tracing::info!("Data migration completed successfully."),
+        Err(error) => tracing::error!("Data migration failed: {:?}", error)
+    }
 }
 
 pub fn storage() -> Result<LocalStorage, crate::LocalStorageError> {
@@ -68,17 +70,4 @@ pub fn tracing() {
 pub fn icons() {
     ICON_CACHE.get_or_init(|| Mutex::new(IconCache::new()));
     crate::app::icons::cache_all_icons_in_background(vec![14, 16, 18, 20, 32]);
-}
-
-pub fn migrate(prev_app_ids: &[&str]) {
-    for prev_app_id in prev_app_ids.iter() {
-        let prev = dirs::data_local_dir().unwrap().join(prev_app_id);
-        let new = dirs::data_local_dir().unwrap().join(Tasks::APP_ID);
-        if prev.exists() {
-            match std::fs::rename(prev, new) {
-                Ok(()) => tracing::info!("migrated data to new directory"),
-                Err(err) => tracing::error!("error migrating data: {:?}", err),
-            }
-        }
-    }
 }

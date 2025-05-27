@@ -9,6 +9,7 @@ use crate::app::Tasks;
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct List {
     pub id: String,
+    #[serde(default)]
     pub file_path: PathBuf,
     pub name: String,
     pub description: String,

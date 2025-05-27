@@ -12,6 +12,7 @@ use super::{Priority, Recurrence, Status};
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Task {
     pub id: String,
+    #[serde(default)]
     pub path: PathBuf,
     pub title: String,
     pub favorite: bool,
@@ -24,8 +25,8 @@ pub struct Task {
     pub due_date: Option<DateTime<Utc>>,
     pub reminder_date: Option<DateTime<Utc>>,
     pub recurrence: Recurrence,
+    #[serde(default)]
     pub expanded: bool,
-    #[serde(skip)]
     pub sub_tasks: Vec<Task>,
     pub deletion_date: Option<DateTime<Utc>>,
     pub created_date_time: DateTime<Utc>,
