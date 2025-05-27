@@ -10,8 +10,6 @@ pub enum Error {
     RonDeserialization(#[from] ron::de::Error),
     #[error("Sqlx error: {0}")]
     Sqlx(#[from] sqlx::Error),
-    #[error("Libset error: {0}")]
-    Libset(#[from] libset::Error),
     #[error("{0}")]
     Tasks(#[from] TasksError),
     #[error("{0}")]
