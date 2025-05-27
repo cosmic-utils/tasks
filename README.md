@@ -27,6 +27,14 @@ cd tasks
 cargo build
 ```
 
+# Flatpak
+To build the cargo sources for the Flatpak manifest:
+
+```
+python3 ./flatpak/flatpak-cargo-generator.py ./Cargo.lock -o ./flatpak/cargo-sources.json
+appstreamcli validate --pedantic --explain res/dev.edfloreshz.Tasks.metainfo.xml
+```
+
 ## Dependencies
 - [libcosmic](https://github.com/pop-os/libcosmic?tab=readme-ov-file#building)
 

@@ -32,20 +32,20 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
-    <release version="0.2.0" date="2025-05-25">
+    <release version="0.2.0" date="2025-05-27">
         <description>
             <p>Powerful new features! 🚀</p>
             <ul>
-                <li>✨ <em>Sub-tasks support</em> - Break down complex tasks into manageable sub-tasks</li>
-                <li>🔍 <em>Search functionality</em> - Quickly find tasks and icons with integrated search bars</li>
-                <li>📊 <em>Task sorting</em> - Organize your tasks with flexible sorting options</li>
-                <li>🎨 <em>Expanded icon library</em> - Hundreds of new symbolic icons to personalize your lists</li>
-                <li>🌍 <em>Enhanced internationalization</em> - Improved translations including new Dutch and Bulgarian support</li>
-                <li>🔧 <em>Better task management</em> - Enhanced UI for the tasks list</li>
-                <li>⌨️ <em>Improved keyboard shortcuts</em> - Fixed key bindings for better accessibility</li>
-                <li>🎯 <em>Toggle completed tasks</em> - Hide or show completed tasks with a convenient toggle</li>
-                <li>📋 <em>Enhanced export options</em> - Context menu for exporting lists data</li>
-                <li>🐛 <em>Bug fixes and performance improvements</em> - Smoother experience with various fixes</li>
+                <li>✨ <em>Sub-tasks support</em></li>
+                <li>🔍 <em>Search functionality</em></li>
+                <li>📊 <em>Task sorting</em></li>
+                <li>🎨 <em>Expanded icon library</em></li>
+                <li>🌍 <em>Enhanced internationalization</em></li>
+                <li>🔧 <em>Better task management</em></li>
+                <li>⌨️ <em>Improved keyboard shortcuts</em></li>
+                <li>🎯 <em>Hide completed tasks</em></li>
+                <li>📋 <em>Enhanced export options</em></li>
+                <li>🐛 <em>Bug fixes and performance improvements</em></li>
             </ul>
         </description>
     </release>
