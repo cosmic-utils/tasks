@@ -249,8 +249,13 @@ impl Tasks {
                                 .update(details::Message::SetDueDate(date.selected));
                         }
                         DialogPage::Export(content) => {
-                            let mut clipboard = ClipboardContext::new().unwrap();
-                            clipboard.set_contents(content).unwrap();
+                            let Ok(mut clipboard) = ClipboardContext::new() else {
+                                tracing::error!("Clipboard is not available");
+                                return;
+                            };
+                            if let Err(error) = clipboard.set_contents(content) {
+                                tracing::error!("Error setting clipboard contents: {error}");
+                            }
                         }
                     }
                 }
