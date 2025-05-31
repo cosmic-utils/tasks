@@ -158,9 +158,7 @@ impl Content {
             hide_completed_button = hide_completed_button.class(cosmic::style::Button::Suggested);
         }
 
-        if !self.config.hide_completed {
-            hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
-        }
+        hide_completed_button = hide_completed_button.on_press(Message::ToggleHideCompleted);
 
         let search_button = widget::button::icon(icons::get_handle("edit-find-symbolic", 18))
             .selected(self.search_bar_visible)
@@ -219,7 +217,7 @@ impl Content {
                 // Search filter
                 (!self.search_bar_visible || self.search_query.is_empty() || task.title.to_lowercase().contains(&self.search_query.to_lowercase()))
                 // Hide completed filter
-                && (!list.hide_completed || task.status != Status::Completed)
+                && (!(list.hide_completed || self.config.hide_completed) || task.status != Status::Completed)
             })
             .map(|(id, task)| self.task_view(id, task))
             .collect();
