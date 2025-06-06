@@ -466,9 +466,10 @@ impl Content {
         .width(Length::Fill);
 
         widget::column::with_capacity(2)
-            .spacing(spacing.space_xxs)
             .push(self.list_header(list))
             .push(container)
+            .padding([spacing.space_none, spacing.space_l])
+            .spacing(spacing.space_s)
             .into()
     }
 
