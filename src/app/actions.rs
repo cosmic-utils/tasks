@@ -1,8 +1,10 @@
 use crate::{
-    app::Message,
-    context::ContextPage,
-    core::models::List,
-    dialog::{DialogAction, DialogPage},
+    app::{
+        context::ContextPage,
+        dialog::{DialogAction, DialogPage},
+        Message,
+    },
+    storage::models::List,
 };
 use cosmic::{
     iced::keyboard::{Key, Modifiers},

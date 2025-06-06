@@ -6,7 +6,7 @@ use cosmic::{
     widget::menu::key_bind::{KeyBind, Modifier},
 };
 
-use crate::app::Action;
+use crate::app::actions::Action;
 
 pub fn key_binds() -> HashMap<KeyBind, Action> {
     let mut key_binds = HashMap::new();

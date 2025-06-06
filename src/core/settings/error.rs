@@ -5,7 +5,7 @@ use cosmic::{
 };
 
 use crate::{
-    app::{config::TasksConfig, icons},
+    core::{config::TasksConfig, icons},
     fl,
 };
 

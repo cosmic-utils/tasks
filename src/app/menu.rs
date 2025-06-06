@@ -8,12 +8,12 @@ use cosmic::{
 };
 
 use crate::{
-    app::icons,
     app::{Action, Message},
+    core::icons,
     fl,
 };
 
-use super::config::TasksConfig;
+use crate::core::config::TasksConfig;
 
 pub fn menu_bar<'a>(
     key_binds: &HashMap<KeyBind, Action>,

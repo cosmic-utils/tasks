@@ -1,3 +1,12 @@
+pub mod actions;
+pub mod context;
+pub mod dialog;
+pub mod error;
+mod flags;
+pub mod markdown;
+pub mod menu;
+
+pub use flags::*;
 use std::{
     any::TypeId,
     collections::{HashMap, VecDeque},
@@ -23,24 +32,23 @@ use cosmic::{
 };
 
 use crate::{
-    actions::{Action, ApplicationAction, NavMenuAction, TasksAction},
-    app::{config::CONFIG_VERSION, key_bind::key_binds},
-    content::{self, Content},
-    context::ContextPage,
-    core::{models::List, storage::LocalStorage},
-    details::{self, Details},
-    dialog::{DialogAction, DialogPage},
+    app::{
+        actions::{Action, ApplicationAction, NavMenuAction, TasksAction},
+        context::ContextPage,
+        dialog::{DialogAction, DialogPage},
+    },
+    core::{
+        config::{self, CONFIG_VERSION},
+        icons,
+        key_bind::key_binds,
+    },
     fl,
+    pages::{
+        content::{self, Content},
+        details::{self, Details},
+    },
+    storage::{models::List, LocalStorage},
 };
-
-pub mod config;
-pub mod icons;
-mod key_bind;
-pub mod localize;
-pub mod markdown;
-pub mod menu;
-pub mod settings;
-pub mod style;
 
 pub struct Tasks {
     core: Core,
@@ -454,7 +462,7 @@ impl Tasks {
 
 impl Application for Tasks {
     type Executor = cosmic::executor::Default;
-    type Flags = crate::settings::app::Flags;
+    type Flags = crate::app::Flags;
     type Message = Message;
     const APP_ID: &'static str = "dev.edfloreshz.Tasks";
 

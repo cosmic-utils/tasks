@@ -11,12 +11,12 @@ use cosmic::{
 };
 
 use crate::{
-    app::icons,
-    core::{
-        models::{self, Priority},
-        storage::LocalStorage,
-    },
+    core::icons,
     fl,
+    storage::{
+        models::{self, Priority},
+        LocalStorage,
+    },
 };
 
 pub struct Details {
@@ -114,7 +114,7 @@ impl Details {
                 widget::column::with_children(vec![
                     widget::text::body(fl!("title")).into(),
                     widget::text_input(fl!("title"), &self.task.title)
-                        .style(crate::app::style::text_input())
+                        .style(crate::core::style::text_input())
                         .on_input(Message::SetTitle)
                         .size(13)
                         .into(),
@@ -136,7 +136,7 @@ impl Details {
                     widget::segmented_control::horizontal(&self.priority_model)
                         .button_alignment(Alignment::Center)
                         .width(Length::Shrink)
-                        .style(crate::app::style::segmented_control())
+                        .style(crate::core::style::segmented_control())
                         .on_activate(Message::PriorityActivate),
                 ),
             )
@@ -159,7 +159,7 @@ impl Details {
                 widget::column::with_children(vec![
                     widget::text::body(fl!("notes")).into(),
                     widget::text_editor(&self.text_editor_content)
-                        .class(crate::app::style::text_editor())
+                        .class(crate::core::style::text_editor())
                         .padding(spacing.space_xxs)
                         .placeholder(fl!("add-notes"))
                         .height(100.0)

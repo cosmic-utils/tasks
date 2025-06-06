@@ -1,11 +1,11 @@
-use std::fs;
-use std::io::Write;
+use crate::app::Tasks;
+use crate::storage::models::{List, Task};
+use crate::Error;
 use cosmic::Application;
 use ron::de::from_str;
 use ron::ser::to_string;
-use crate::app::Tasks;
-use crate::core::models::{List, Task};
-use crate::Error;
+use std::fs;
+use std::io::Write;
 
 pub fn migrate_data_dir(prev_app_ids: &[&str]) {
     for prev_app_id in prev_app_ids.iter() {
@@ -22,12 +22,11 @@ pub fn migrate_data_dir(prev_app_ids: &[&str]) {
 
 pub fn migrate_data() -> Result<(), Error> {
     let data_path = dirs::data_local_dir()
-        .ok_or(Error::Io(
-            std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "XDG data directory not found",
-            ),
-        ))?.join(Tasks::APP_ID);
+        .ok_or(Error::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "XDG data directory not found",
+        )))?
+        .join(Tasks::APP_ID);
 
     let lists_dir = data_path.join("lists");
     if lists_dir.exists() {
@@ -86,4 +85,3 @@ pub fn migrate_data() -> Result<(), Error> {
     }
     Ok(())
 }
-

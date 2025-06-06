@@ -1,8 +1,11 @@
+pub mod migration;
+pub mod models;
+
 use std::path::PathBuf;
 
 use crate::{
     app::markdown::Markdown,
-    core::models::{List, Task},
+    storage::models::{List, Task},
     Error, LocalStorageError, TasksError,
 };
 

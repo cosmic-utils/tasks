@@ -6,7 +6,7 @@ use cosmic::{
     widget::{self, calendar::CalendarModel, segmented_button},
 };
 
-use crate::{actions::ApplicationAction, app::Message, fl};
+use crate::{app::actions::ApplicationAction, app::Message, fl};
 
 #[derive(Debug, Clone)]
 pub enum DialogAction {
@@ -20,7 +20,7 @@ pub enum DialogAction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogPage {
     New(String),
-    Icon(Option<segmented_button::Entity>, String, String), // Added search string
+    Icon(Option<segmented_button::Entity>, String, String),
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
     Calendar(CalendarModel),
@@ -97,7 +97,7 @@ impl DialogPage {
                 )),
             DialogPage::Icon(entity, icon, search) => {
                 let search_lower = search.to_lowercase();
-                let icon_buttons = crate::app::icons::get_all_icon_handles(20)
+                let icon_buttons = crate::core::icons::get_all_icon_handles(20)
                     .iter()
                     .filter(|(name, _)| name.to_lowercase().contains(&search_lower))
                     .map(|(name, icon)| {
@@ -128,7 +128,7 @@ impl DialogPage {
 
                 let dialog = widget::dialog()
                     .title(fl!("icon-select"))
-                    .icon(crate::app::icons::get_icon(icon, 32))
+                    .icon(crate::core::icons::get_icon(icon, 32))
                     .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
                         Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
                     )))

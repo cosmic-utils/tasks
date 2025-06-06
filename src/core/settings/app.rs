@@ -1,26 +1,23 @@
 use cosmic::{
     app::Settings,
-    cosmic_config,
     iced::{Limits, Size},
     Application,
 };
 use std::sync::Mutex;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{app::{
-    config::{self, TasksConfig},
-    icons::{IconCache, ICON_CACHE},
-    localize::localize,
-    Tasks,
-}, core::storage::LocalStorage};
-use crate::core::migration::{migrate_data, migrate_data_dir};
-
-#[derive(Clone, Debug)]
-pub struct Flags {
-    pub config_handler: Option<cosmic_config::Config>,
-    pub config: config::TasksConfig,
-    pub storage: LocalStorage,
-}
+use crate::{
+    app::Tasks,
+    core::{
+        config::TasksConfig,
+        icons::{IconCache, ICON_CACHE},
+        localize::localize,
+    },
+    storage::{
+        migration::{migrate_data, migrate_data_dir},
+        LocalStorage,
+    },
+};
 
 pub fn init() {
     localize();
@@ -29,7 +26,7 @@ pub fn init() {
     migrate_data_dir(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
     match migrate_data() {
         Ok(()) => tracing::info!("Data migration completed successfully."),
-        Err(error) => tracing::error!("Data migration failed: {:?}", error)
+        Err(error) => tracing::error!("Data migration failed: {:?}", error),
     }
 }
 
@@ -47,16 +44,6 @@ pub fn settings() -> Settings {
         .debug(false)
 }
 
-pub fn flags(storage: LocalStorage) -> Flags {
-    let (config_handler, config) = (TasksConfig::config_handler(), TasksConfig::config());
-
-    Flags {
-        config_handler,
-        config,
-        storage,
-    }
-}
-
 pub fn tracing() {
     tracing_subscriber::registry()
         .with(
@@ -69,5 +56,5 @@ pub fn tracing() {
 
 pub fn icons() {
     ICON_CACHE.get_or_init(|| Mutex::new(IconCache::new()));
-    crate::app::icons::cache_all_icons_in_background(vec![14, 16, 18, 20, 32]);
+    crate::core::icons::cache_all_icons_in_background(vec![14, 16, 18, 20, 32]);
 }

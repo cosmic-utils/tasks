@@ -12,11 +12,11 @@ use cosmic::{
 };
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
-use crate::{app::config, core::storage::LocalStorage};
 use crate::{
-    app::icons,
-    core::models::{self, List, Status},
+    core::{config, icons},
     fl,
+    storage::models::{self, List, Status},
+    storage::LocalStorage,
 };
 
 pub struct Content {
@@ -165,7 +165,7 @@ impl Content {
             .padding(spacing.space_xxs)
             .on_press(Message::ToggleSearchBar);
 
-        let icon = crate::app::icons::get_icon(
+        let icon = crate::core::icons::get_icon(
             list.icon.as_deref().unwrap_or("view-list-symbolic"),
             spacing.space_m,
         );
