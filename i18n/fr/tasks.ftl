@@ -4,7 +4,7 @@ about = À propos
 
 # Content
 add-new-task = Ajouter une nouvelle tâche
-search-tasks = Rechercher des tâches
+search-tasks = Recherche
 
 # Details
 title = Titre
@@ -14,7 +14,7 @@ priority = Priorité
 due-date = Échéance
 reminder = Rappel
 notes = Notes
-add-notes = Ajouter des notes
+add-notes = Ajouter une note
 
 # Empty
 no-tasks = Aucune tâche
@@ -39,7 +39,7 @@ delete-list-confirm = Voulez-vous supprimer cette liste?
 icon = Changer l'icone
 icon-select = Choisissez une icone
 icon-select-body = Choisissez une icone pour la liste
-search-icons = Rechercher des icônes...
+search-icons = Recherche
 
 # Date Dialog
 select-date = Choisissez une date
@@ -101,7 +101,7 @@ error-title = Tâches - Erreur
 
 # Sort Menu
 sort = Trier
-sort-name-asc = Nom A-Z
-sort-name-desc = Nom Z-A
-sort-date-asc = Date d'ajout (Ancien au Nouveau)
-sort-date-desc = Date d'ajout (Nouveau à l'Ancien)
+sort-name-asc = Ordre alphabétique
+sort-name-desc = Ordre alphabétique invérsé
+sort-date-asc = Date d'ajout (du plus ancien au plus récent)
+sort-date-desc = Date d'ajout (du plus récent au plus ancien)
