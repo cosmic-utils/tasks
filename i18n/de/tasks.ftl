@@ -5,6 +5,7 @@ about = Über
 # Content
 add-new-task = Neue Aufgabe hinzufügen
 search-tasks = Aufgaben suchen
+task-count = {$count} Aufgaben
 
 # Details
 title = Titel

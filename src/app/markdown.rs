@@ -22,11 +22,6 @@ impl Markdown for Task {
             self.title
         );
 
-        // Recursively format sub-tasks with proper indentation
-        if !self.sub_tasks.is_empty() {
-            task.push_str(&format_sub_tasks(&self.sub_tasks, 1));
-        }
-
         task
     }
 }
@@ -49,10 +44,7 @@ fn format_sub_tasks(sub_tasks: &[Task], indent_level: usize) -> String {
             sub_task.title
         ));
 
-        // Recursively process nested sub-tasks if any
-        if !sub_task.sub_tasks.is_empty() {
-            result.push_str(&format_sub_tasks(&sub_task.sub_tasks, indent_level + 1));
-        }
+        
     }
 
     result

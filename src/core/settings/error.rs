@@ -79,6 +79,7 @@ impl Application for View {
     }
 }
 
+#[allow(dead_code)]
 pub fn settings() -> Settings {
     Settings::default()
         .antialiasing(true)

@@ -3,8 +3,9 @@ trash = Basura
 about = Acerca de
 
 # Content
-add-new-task = Añadir nueva tarea
+add-new-task = Agregar nueva tarea
 search-tasks = Buscar tareas
+task-count = {$count} tareas
 
 # Details
 title = Título

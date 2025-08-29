@@ -4,7 +4,7 @@ use cosmic::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::app::Tasks;
+use crate::app::TasksApp;
 
 pub const CONFIG_VERSION: u64 = 1;
 
@@ -16,7 +16,7 @@ pub struct TasksConfig {
 
 impl TasksConfig {
     pub fn config_handler() -> Option<Config> {
-        Config::new(Tasks::APP_ID, CONFIG_VERSION).ok()
+        Config::new(TasksApp::APP_ID, CONFIG_VERSION).ok()
     }
 
     pub fn config() -> TasksConfig {

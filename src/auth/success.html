@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tasks - Authorized</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .message-box {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2rem 3rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+    .message-box svg {
+      width: 120px;
+      height: auto;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+    }
+    .message-box h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .message-box p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="message-box">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="checkGradient" x1="0%" y1="50%" x2="100%" y2="50%">
+          <stop offset="0%" stop-color="#FFFFFF" />
+          <stop offset="100%" stop-color="#E0E7FF" />
+        </defs>
+      </defs>
+      <!-- Checkmark circle -->
+      <circle cx="32" cy="32" r="30" fill="url(#checkGradient)" stroke="#667eea" stroke-width="2"/>
+      <!-- Checkmark -->
+      <path
+        d="M20 32l8 8 16-16"
+        stroke="#667eea"
+        stroke-width="4"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+
+    <h1>Authorization Complete!</h1>
+    <p>You can close this window now. The Tasks app will continue automatically.</p>
+  </div>
+</body>
+</html>

@@ -26,6 +26,10 @@ pub enum TasksError {
     ListNotFound,
     #[error("List already exists")]
     ExistingList,
+    #[error("List ID not found in task")]
+    ListIdNotFound,
+    #[error("API error  ")]
+    ApiError,
 }
 
 #[derive(Debug, Error)]
@@ -38,6 +42,8 @@ pub enum LocalStorageError {
     ListsDirectoryCreationFailed(std::io::Error),
     #[error("The tasks directory could not be created")]
     TasksDirectoryCreationFailed(std::io::Error),
+    #[error("Authentication failed: {0}")]
+    AuthenticationFailed(String),
 }
 
 impl LocalStorageError {

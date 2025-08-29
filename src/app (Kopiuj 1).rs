@@ -90,54 +90,20 @@ impl TasksApp {
         ))
         .into()
     }
-    // fn clear_lists(&mut self) {
-    //     self.nav_model.clear();
-    // }
-
-    fn update_lists(&mut self, lists: Vec<List>) {
-        for list in lists {
-            let mut found = false;
-            let mut entity_found: Option<Entity> = None;
-            for entity in self.nav_model.iter() {
-                if let Some(data) = self.nav_model.data::<List>(entity) {
-                    if data.id == list.id {
-                        found = true;
-                        entity_found = Some(entity);
-                    }
-                }
-            }
-            if !found {
-                self.create_nav_item(&list);
-            } else {
-                // Create text with task count if there are tasks
-                let text = if list.number_of_tasks > 0 {
-                    format!("({}) {}", list.number_of_tasks, list.name)
-                } else {
-                    list.name.clone()
-                };
-                self.nav_model.text_set(entity_found.unwrap(), text);
-                self.nav_model.icon_set(
-                    entity_found.unwrap(),
-                    crate::app::icons::get_icon(
-                        list.icon.as_deref().unwrap_or("view-list-symbolic"),
-                        16,
-                    ),
-                );
-            }
-        }
+    fn clear_lists(&mut self) {
+        self.nav_model.clear();
     }
-
     fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
         let icon =
             crate::app::icons::get_icon(list.icon.as_deref().unwrap_or("view-list-symbolic"), 16);
-
+        
         // Create text with task count if there are tasks
         let text = if list.number_of_tasks > 0 {
-            format!("({}) {}", list.number_of_tasks, list.name)
+            format!("{} ({})", list.name, list.number_of_tasks)
         } else {
             list.name.clone()
         };
-
+        
         self.nav_model
             .insert()
             .text(text)
@@ -174,31 +140,11 @@ impl TasksApp {
                 }
                 content::Output::ToggleHideCompleted(list) => {
                     if let Some(data) = self.nav_model.active_data_mut::<List>() {
-                        data.hide_completed = list.hide_completed;   
-                        // Convert to async operation
-                        let storage = self.storage.clone();
-                        let future = async move { storage.tasks(&list).await };
-                        tasks.push(self.spawn_storage_operation( 
-                            future,
-                            |t| Message::Content(content::Message::SetTasks(t)), 
-                            |error| {
-                                tracing::error!("Error updating list hide completed: {}", error);
-                                Message::Content(content::Message::Empty)
-                            }, 
-                        ));
+                        data.hide_completed = list.hide_completed;
+                        if let Err(err) = self.storage.update_list(&list) {
+                            tracing::error!("Error updating list: {err}");
+                        }
                     }
-                }
-                content::Output::CreateTaskAsync(task) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::CreateTaskAsync(task))));
-                }
-                content::Output::UpdateTaskAsync(task) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::UpdateTaskAsync(task))));
-                }
-                content::Output::DeleteTaskAsync(task) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::DeleteTaskAsync(task))));
-                }
-                content::Output::FetchTasksAsync(list) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::FetchTasksAsync(list))));
                 }
             }
         }
@@ -222,30 +168,8 @@ impl TasksApp {
                         task.clone(),
                     ))));
                 }
-                details::Output::UpdateTaskAsync(task) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::UpdateTaskAsync(task))));
-                }
             }
         }
-    }
-
-    /// Helper function to spawn async storage operations
-    pub fn spawn_storage_operation<F, T>(
-        &self,
-        future: F,
-        success_message: impl FnOnce(T) -> Message + Send + 'static,
-        error_message: impl FnOnce(String) -> Message + Send + 'static,
-    ) -> cosmic::Task<cosmic::Action<Message>>
-    where
-        F: std::future::Future<Output = Result<T, crate::Error>> + Send + 'static,
-        T: Send + 'static,
-    {
-        cosmic::task::future(async move {
-            cosmic::Action::App(match future.await {
-                Ok(result) => success_message(result),
-                Err(error) => error_message(error.to_string()),
-            })
-        })
     }
 
     fn update_dialog(
@@ -284,17 +208,16 @@ impl TasksApp {
                     match dialog_page {
                         DialogPage::New(name) => {
                             let list = List::new(&name);
-                            // Convert to async operation
-                            let storage = self.storage.clone();
-                            let future = async move { storage.create_list(&list).await };
-                            tasks.push(self.spawn_storage_operation(
-                                future,
-                                |list| Message::Tasks(TasksAction::AddList(list)),
-                                |error| {
-                                    tracing::error!("Error creating list: {}", error);
-                                    Message::Content(content::Message::Empty)
-                                },
-                            ));
+                            match self.storage.create_list(&list) {
+                                Ok(list) => {
+                                    tasks.push(
+                                        self.update(Message::Tasks(TasksAction::AddList(list))),
+                                    );
+                                }
+                                Err(err) => {
+                                    tracing::error!("Error creating list: {err}");
+                                }
+                            }
                         }
                         DialogPage::Rename(entity, name) => {
                             let data = if let Some(entity) = entity {
@@ -307,18 +230,9 @@ impl TasksApp {
                                 let list = list.clone();
                                 self.nav_model
                                     .text_set(self.nav_model.active(), name.clone());
-                                // Convert to async operation
-                                let storage = self.storage.clone();
-                                let list_clone = list.clone();
-                                let future = async move { storage.update_list(&list_clone).await };
-                                tasks.push(self.spawn_storage_operation(
-                                    future,
-                                    |_| Message::Content(content::Message::Empty),
-                                    |error| {
-                                        tracing::error!("Error updating list: {}", error);
-                                        Message::Content(content::Message::Empty)
-                                    },
-                                ));
+                                if let Err(err) = self.storage.update_list(&list) {
+                                    tracing::error!("Error updating list: {err}");
+                                }
                                 tasks.push(self.update(Message::Content(
                                     content::Message::SetList(Some(list)),
                                 )));
@@ -343,18 +257,9 @@ impl TasksApp {
                             if let Some(list) = self.nav_model.active_data_mut::<List>() {
                                 list.icon = Some(name);
                                 let list = list.clone();
-                                // Convert to async operation
-                                let storage = self.storage.clone();
-                                let list_clone = list.clone();
-                                let future = async move { storage.update_list(&list_clone).await };
-                                tasks.push(self.spawn_storage_operation(
-                                    future,
-                                    |_| Message::Content(content::Message::Empty),
-                                    |error| {
-                                        tracing::error!("Error updating list: {}", error);
-                                        Message::Content(content::Message::Empty)
-                                    },
-                                ));
+                                if let Err(err) = self.storage.update_list(&list) {
+                                    tracing::error!("Error updating list: {err}");
+                                }
                                 tasks.push(self.update(Message::Content(
                                     content::Message::SetList(Some(list)),
                                 )));
@@ -449,25 +354,19 @@ impl TasksApp {
                 }
                 NavMenuAction::Export(entity) => {
                     if let Some(list) = self.nav_model.data::<List>(entity) {
-                        // Convert to async operation
-                        let storage = self.storage.clone();
-                        let list_clone = list.clone();
-                        let future = async move { storage.tasks(&list_clone).await };
-                        let list_for_export = list.clone();
-                        tasks.push(self.spawn_storage_operation(
-                            future,
-                            move |data| {
-                                let exported_markdown =
-                                    LocalStorage::export_list(&list_for_export, &data);
-                                Message::Application(ApplicationAction::Dialog(DialogAction::Open(
-                                    DialogPage::Export(exported_markdown),
-                                )))
-                            },
-                            move |error| {
-                                tracing::error!("Error fetching tasks: {}", error);
-                                Message::Content(content::Message::Empty)
-                            },
-                        ));
+                        match self.storage.tasks(list) {
+                            Ok(data) => {
+                                let exported_markdown = LocalStorage::export_list(list, &data);
+                                tasks.push(self.update(Message::Application(
+                                    ApplicationAction::Dialog(DialogAction::Open(
+                                        DialogPage::Export(exported_markdown),
+                                    )),
+                                )));
+                            }
+                            Err(err) => {
+                                tracing::error!("Error fetching tasks: {err}");
+                            }
+                        }
                     }
                 }
                 NavMenuAction::Delete(entity) => {
@@ -528,47 +427,19 @@ impl TasksApp {
         tasks_action: TasksAction,
     ) {
         match tasks_action {
-            TasksAction::FetchLists => {
-                // Convert to async operation
-                tasks.push(self.update(Message::Tasks(TasksAction::FetchListsAsync)));
-            }
-            TasksAction::FetchListsAsync => {
-                let mut storage = self.storage.clone();
-                let future = async move { storage.lists().await };
-                tasks.push(self.spawn_storage_operation(
-                    future,
-                    |lists| Message::Tasks(TasksAction::ListsFetched(Ok(lists))),
-                    |error| Message::Tasks(TasksAction::ListsFetched(Err(error))),
-                ));
-            }
-            TasksAction::ListsFetched(result) => {
-                match result {
-                    Ok(lists) => {
-                        self.update_lists(lists);
-                        // for list in lists {
-                        //     self.create_nav_item(&list);
-                        // }
-                        if self.nav_model.active_data_mut::<List>().is_none(){
-                            let Some(entity) = self.nav_model.iter().next() else {
-                                return;
-                            };
-                            self.nav_model.activate(entity);
-                            let task = self.on_nav_select(entity);
-                            tasks.push(task);
-                        }
-                        
-                    }
-                    Err(error) => {
-                        tracing::error!("Error fetching lists: {}", error);
-                    }
+            TasksAction::FetchLists => match self.storage.lists() {
+                Ok(lists) => {
+                    tasks.push(self.update(Message::Tasks(TasksAction::PopulateLists(lists))));
                 }
-            }
+                Err(err) => {
+                    tracing::error!("Error fetching lists: {err}");
+                }
+            },
             TasksAction::PopulateLists(lists) => {
-                //self.clear_lists();
-                // for list in lists {
-                //     self.create_nav_item(&list);
-                // }
-                self.update_lists(lists);
+                self.clear_lists();
+                for list in lists {
+                    self.create_nav_item(&list);
+                }
                 let Some(entity) = self.nav_model.iter().next() else {
                     return;
                 };
@@ -591,116 +462,13 @@ impl TasksApp {
                     self.nav_model.active_data::<List>()
                 };
                 if let Some(list) = data {
-                    // Convert to async operation
-                    tasks.push(
-                        self.update(Message::Tasks(TasksAction::DeleteListAsync(list.clone()))),
-                    );
+                    if let Err(err) = self.storage.delete_list(list) {
+                        tracing::error!("Error deleting list: {err}");
+                    }
+
+                    tasks.push(self.update(Message::Content(content::Message::SetList(None))));
                 }
                 self.nav_model.remove(self.nav_model.active());
-            }
-            TasksAction::CreateTaskAsync(task) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.create_task(&task).await };
-                tasks.push(self.spawn_storage_operation(
-                    future,
-                    |task| Message::Tasks(TasksAction::TaskCreated(Ok(task))),
-                    |error| Message::Tasks(TasksAction::TaskCreated(Err(error))),
-                ));
-            }
-            TasksAction::TaskCreated(result) => {
-                match result {
-                    Ok(task) => {
-                        // Handle successful task creation
-                        tasks.push(
-                            self.update(Message::Content(content::Message::TaskCreated(task))),
-                        );
-                    }
-                    Err(error) => {
-                        tracing::error!("Failed to create task: {}", error);
-                    }
-                }
-            }
-            TasksAction::UpdateTaskAsync(task) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.update_task(&task).await };
-                tasks.push(self.spawn_storage_operation(
-                    future,
-                    |_| Message::Tasks(TasksAction::TaskUpdated(Ok(()))),
-                    |error| Message::Tasks(TasksAction::TaskUpdated(Err(error))),
-                ));
-            }
-            TasksAction::TaskUpdated(result) => {
-                match result {
-                    Ok(_) => {
-                        // Task updated successfully
-                        tracing::info!("Task updated successfully");
-                    }
-                    Err(error) => {
-                        tracing::error!("Failed to update task: {}", error);
-                    }
-                }
-            }
-            TasksAction::DeleteTaskAsync(task) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.delete_task(&task).await };
-                tasks.push(self.spawn_storage_operation(
-                    future,
-                    |_| Message::Tasks(TasksAction::TaskDeleted(Ok(()))),
-                    |error| Message::Tasks(TasksAction::TaskDeleted(Err(error))),
-                ));
-            }
-            TasksAction::TaskDeleted(result) => {
-                match result {
-                    Ok(_) => {
-                        // Task deleted successfully
-                        tracing::info!("Task deleted successfully");
-                    }
-                    Err(error) => {
-                        tracing::error!("Failed to delete task: {}", error);
-                    }
-                }
-            }
-            TasksAction::DeleteListAsync(list) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.delete_list(&list).await };
-                tasks.push(self.spawn_storage_operation(
-                    future,
-                    |_| Message::Tasks(TasksAction::ListDeleted(Ok(()))),
-                    |error| Message::Tasks(TasksAction::ListDeleted(Err(error))),
-                ));
-            }
-            TasksAction::ListDeleted(result) => match result {
-                Ok(_) => {
-                    tracing::info!("List deleted successfully");
-                }
-                Err(error) => {
-                    tracing::error!("Failed to delete list: {}", error);
-                }
-            },
-
-            // NEW: Add these cases
-            TasksAction::FetchTasksAsync(list) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.tasks(&list).await };
-                tasks.push(self.spawn_storage_operation(
-                    future,
-                    |tasks| Message::Tasks(TasksAction::TasksFetched(Ok(tasks))),
-                    |error| Message::Tasks(TasksAction::TasksFetched(Err(error))),
-                ));
-            }
-
-            TasksAction::TasksFetched(result) => {
-                match result {
-                    Ok(task_list) => {
-                        // Send tasks to content page
-                        tasks.push(
-                            self.update(Message::Content(content::Message::SetTasks(task_list))),
-                        );
-                    }
-                    Err(error) => {
-                        tracing::error!("Failed to fetch tasks: {}", error);
-                    }
-                }
             }
         }
     }
@@ -923,7 +691,7 @@ impl Application for TasksApp {
                     tracing::error!("{err}")
                 }
             }
-            //for
+            //for 
             Message::Content(message) => {
                 self.update_content(&mut tasks, message);
             }

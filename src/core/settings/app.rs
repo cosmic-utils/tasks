@@ -4,17 +4,17 @@ use cosmic::{
     Application,
 };
 use std::sync::Mutex;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::{
-    app::Tasks,
+    app::TasksApp,
     core::{
         config::TasksConfig,
         icons::{IconCache, ICON_CACHE},
         localize::localize,
     },
     storage::{
-        migration::{migrate_data, migrate_data_dir},
+        
         LocalStorage,
     },
 };
@@ -23,15 +23,11 @@ pub fn init() {
     localize();
     icons();
     tracing();
-    migrate_data_dir(&["com.system76.CosmicTasks", "dev.edfloreshz.Orderly"]);
-    match migrate_data() {
-        Ok(()) => tracing::info!("Data migration completed successfully."),
-        Err(error) => tracing::error!("Data migration failed: {:?}", error),
-    }
+    
 }
 
 pub fn storage() -> Result<LocalStorage, crate::LocalStorageError> {
-    LocalStorage::new(Tasks::APP_ID)
+    LocalStorage::new(TasksApp::APP_ID)
 }
 
 pub fn settings() -> Settings {
@@ -45,13 +41,17 @@ pub fn settings() -> Settings {
 }
 
 pub fn tracing() {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    let filter = EnvFilter::from_default_env()
+    .add_directive("wgpu_core=error".parse().unwrap())
+    .add_directive("naga=error".parse().unwrap())
+    .add_directive("cosmic_text=error".parse().unwrap())
+    .add_directive("sctk=error".parse().unwrap())
+    .add_directive("wgpu_hal=error".parse().unwrap())
+.add_directive("iced_wgpu=error".parse().unwrap());
+
+tracing_subscriber::fmt()
+.with_env_filter(filter)
+.init();
 }
 
 pub fn icons() {

@@ -1,7 +1,6 @@
-pub mod migration;
 pub mod models;
 
-use std::path::PathBuf;
+use std::sync::{Mutex, MutexGuard};
 
 use crate::{
     app::markdown::Markdown,
@@ -9,171 +8,291 @@ use crate::{
     Error, LocalStorageError, TasksError,
 };
 
+
+
+use tracing::{debug, error, info};
+
+use crate::integration::ms_todo::{http_client::MsTodoHttpClient, models::*};
+
+use crate::auth::ms_todo_auth::MsTodoAuth;
+
+
+
 #[derive(Debug, Clone)]
 pub struct LocalStorage {
-    paths: LocalStoragePaths,
+    http_client: MsTodoHttpClient,
+    auth: MsTodoAuth,
 }
 
-#[derive(Debug, Clone)]
-pub struct LocalStoragePaths {
-    lists: PathBuf,
-}
 
 impl LocalStorage {
-    pub fn new(application_id: &str) -> Result<Self, LocalStorageError> {
-        let base_path = dirs::data_local_dir()
-            .ok_or(LocalStorageError::XdgLocalDirNotFound)?
-            .join(application_id);
-        let lists_path = base_path.join("lists");
-        let tasks_path = base_path.join("tasks");
-        if !base_path.exists() {
-            std::fs::create_dir_all(&base_path)
-                .map_err(LocalStorageError::LocalStorageDirectoryCreationFailed)?;
+    pub fn new(_application_id: &str) -> Result<Self, LocalStorageError> {
+        // For MS Graph, we need to get the auth token
+        // This is a simplified approach - in practice, you'd want to get this from the auth system
+        let auth = MsTodoAuth::new().map_err(|e| {
+            LocalStorageError::LocalStorageDirectoryCreationFailed(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        })?;
+
+        if !auth.has_valid_tokens() {
+            return Err(LocalStorageError::LocalStorageDirectoryCreationFailed(
+                std::io::Error::new(std::io::ErrorKind::Other, "No valid tokens"),
+            ));
         }
-        if !lists_path.exists() {
-            std::fs::create_dir_all(&lists_path)
-                .map_err(LocalStorageError::ListsDirectoryCreationFailed)?;
-        }
-        if !tasks_path.exists() {
-            std::fs::create_dir_all(&tasks_path)
-                .map_err(LocalStorageError::TasksDirectoryCreationFailed)?;
-        }
-        let storage = Self {
-            paths: LocalStoragePaths { lists: lists_path },
+
+        Ok(Self {
+            http_client: MsTodoHttpClient::new(),
+            auth: auth,
+        })
+    }
+
+    /// Get a valid access token, refreshing if necessary
+    fn get_valid_token(&self) -> Result<String, LocalStorageError> {
+        self.auth.get_access_token().map_err(|e| {
+            LocalStorageError::LocalStorageDirectoryCreationFailed(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        })
+    }
+
+    pub async fn tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+        let url =if list.hide_completed {
+            format!("/me/todo/lists/{}/tasks?$filter=status ne 'completed'&$orderby=createdDateTime desc", list.id)
+        } else {
+            format!("/me/todo/lists/{}/tasks?$orderby=createdDateTime desc", list.id)
         };
 
-        Ok(storage)
-    }
+        let response: TodoTaskCollection = self
+            .http_client
+            .get(
+                &url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
 
-    pub fn tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
-        let mut tasks = vec![];
-        let path = list.tasks_path();
-        if !path.exists() {
-            return Ok(tasks);
-        }
-        for entry in path.read_dir()? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                let content = std::fs::read_to_string(&path)?;
-                let mut task: Task = ron::from_str(&content)?;
-                if let Some(stem) = path.file_stem() {
-                    let folder_path = path.parent().unwrap().join(stem);
-                    if folder_path.is_dir() {
-                        task.sub_tasks = Self::sub_tasks(&task)?;
-                    }
-                }
-                tasks.push(task);
-            }
-        }
+                error!("❌ Failed to get tasks via API: {}   for url {}", _e, url);
+                Error::Tasks(TasksError::ApiError)
+            })?;
+
+        // Convert TodoTask[] → Task[] with proper path construction
+        let tasks: Vec<Task> = response.value
+            .into_iter()
+            .map(|todo_task| {
+                crate::integration::ms_todo::mapping::todo_task_to_task_with_path(
+                    todo_task, &list.id,
+                )
+            })
+            .collect();
+
+        Ok(tasks)
+    }
+    pub async fn get_active_tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        let response: TodoTaskCollection = self
+            .http_client
+            .get(
+                &format!("/me/todo/lists/{}/tasks?$filter=status ne 'completed'", list.id),
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        // Convert TodoTask[] → Task[] with proper path construction
+        let tasks: Vec<Task> = response.value
+            .into_iter()
+            .map(|todo_task| {
+                crate::integration::ms_todo::mapping::todo_task_to_task_with_path(
+                    todo_task, &list.id,
+                )
+            })
+            .collect();
+
         Ok(tasks)
     }
 
-    pub fn sub_tasks(task: &Task) -> Result<Vec<Task>, Error> {
-        let mut tasks = vec![];
-        let path = task.sub_tasks_path();
-        if !path.exists() {
-            return Ok(tasks);
-        }
-        for entry in path.read_dir()? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                let content = std::fs::read_to_string(&path)?;
-                let mut task: Task = ron::from_str(&content)?;
-                if let Some(stem) = path.file_stem() {
-                    let folder_path = path.parent().unwrap().join(stem);
-                    if folder_path.is_dir() {
-                        task.sub_tasks = Self::sub_tasks(&task)?;
-                    }
-                }
-                tasks.push(task);
-            }
-        }
-        Ok(tasks)
+    #[allow(dead_code)]
+    pub fn sub_tasks(_task: &Task) -> Result<Vec<Task>, Error> {
+        // Skip sub-tasks for now as requested
+        Ok(Vec::new())
     }
 
-    pub fn lists(&self) -> Result<Vec<List>, Error> {
-        let mut lists = vec![];
-        for entry in self.paths.lists.read_dir()? {
-            let entry = entry?;
-            let path = entry.path();
-            let content = std::fs::read_to_string(&path)?;
-            let list = ron::from_str(&content)?;
-            lists.push(list);
+    pub async fn lists(&mut self) -> Result<Vec<List>, Error> {
+
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
+
+        // Use $expand to get tasks and $count for non-completed task count
+        let response: TodoTaskListCollection = self
+            .http_client
+            .get(
+                "/me/todo/lists",
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
+
+        // Convert TodoTaskList[] → List[]
+        debug!("Response: {:?}", response);
+        let mut lists = Vec::new();
+        for tl in response.value {
+            let mut l = tl.into();
+            let tasks = self.get_active_tasks(&l).await.unwrap_or_default();
+
+            l.number_of_tasks = tasks.len() as u32;
+
+            lists.push(l);
         }
+        lists.sort_by(|a, b| a.well_known_list_name.cmp(&b.well_known_list_name).then(a.name.cmp(&b.name)));
         Ok(lists)
     }
 
-    pub fn create_task(&self, task: &Task) -> Result<Task, Error> {
-        let path = task.file_path();
-        if !path.exists() {
-            std::fs::create_dir_all(&task.path)?;
-            let content = ron::to_string(&task)?;
-            std::fs::write(path, content)?;
-            Ok(task.clone())
-        } else {
-            Err(Error::Tasks(TasksError::ExistingTask))
-        }
+    pub async fn create_task(&self, task: &Task) -> Result<Task, Error> {
+        let list_id = task.list_id.clone().unwrap_or_default();
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::ExistingTask))?;
+
+        info!("🔧 Creating task '{}' in list '{}'", task.title, list_id);
+
+        info!("🔧 Task ID: {}", task.id);
+
+        let request = CreateTodoTaskRequest::from(task);
+        debug!(
+            "Calling API to create task , {}",
+            &format!("/me/todo/lists/{}/tasks", list_id)
+        );
+        let response: TodoTask = self
+            .http_client
+            .post(
+                &format!("/me/todo/lists/{}/tasks", list_id),
+                &request,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|e| {
+                error!("❌ Failed to create task via API: {}", e);
+                Error::Tasks(TasksError::ApiError)
+            })?;
+
+        info!("✅ Task created successfully via API, ID: {}", response.id);
+
+        // Convert TodoTask → Task with proper path construction
+        let new_task =
+            crate::integration::ms_todo::mapping::todo_task_to_task_with_path(response, &list_id);
+
+        Ok(new_task)
     }
 
-    pub fn update_task(&self, task: &Task) -> Result<(), Error> {
-        let path = task.file_path();
-        if path.exists() {
-            let content = ron::to_string(&task)?;
-            std::fs::write(path, content)?;
-            Ok(())
-        } else {
-            Err(Error::Tasks(TasksError::TaskNotFound))
-        }
+    pub async fn update_task(&self, task: &Task) -> Result<(), Error> {
+        let list_id = task.list_id.clone().unwrap_or_default();
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        let request = UpdateTodoTaskRequest::from(task);
+
+        // PATCH returns the updated TodoTask
+        let _: TodoTask = self
+            .http_client
+            .patch::<UpdateTodoTaskRequest, TodoTask>(
+                &format!("/me/todo/lists/{}/tasks/{}", list_id, task.id),
+                &request,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        Ok(())
     }
 
-    pub fn delete_task(&self, task: &Task) -> Result<(), Error> {
-        let path = task.file_path();
-        if path.exists() {
-            std::fs::remove_file(path)?;
-            if task.sub_tasks_path().exists() {
-                std::fs::remove_dir_all(task.sub_tasks_path())?;
-            }
-            let mut entries = std::fs::read_dir(&task.path)?;
-            let entry = entries.next();
-            if entry.is_none() {
-                std::fs::remove_dir_all(&task.path)?;
-            }
-            Ok(())
-        } else {
-            Err(Error::Tasks(TasksError::TaskNotFound))
-        }
+    pub async fn delete_task(&self, task: &Task) -> Result<(), Error> {
+        let list_id = task.list_id.clone().unwrap_or_default();
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        self.http_client
+            .delete(
+                &format!("/me/todo/lists/{}/tasks/{}", list_id, task.id),
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        Ok(())
     }
 
-    pub fn create_list(&self, list: &List) -> Result<List, Error> {
-        if !list.file_path.exists() {
-            let content = ron::to_string(&list)?;
-            std::fs::write(&list.file_path, content)?;
-            Ok(list.clone())
-        } else {
-            Err(Error::Tasks(TasksError::ExistingList))
-        }
+    pub async fn create_list(&self, list: &List) -> Result<List, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::ExistingList))?;
+
+        let request = CreateTodoTaskListRequest::from(list);
+
+        let response: TodoTaskList = self
+            .http_client
+            .post(
+                "/me/todo/lists",
+                &request,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::ExistingList))?;
+
+        // Convert TodoTaskList → List
+        Ok(response.into())
     }
 
-    pub fn update_list(&self, list: &List) -> Result<(), Error> {
-        if list.file_path.exists() {
-            let content = ron::to_string(&list)?;
-            std::fs::write(&list.file_path, content)?;
-            Ok(())
-        } else {
-            Err(Error::Tasks(TasksError::ListNotFound))
-        }
+    pub async fn update_list(&self, list: &List) -> Result<(), Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
+
+        let request = UpdateTodoTaskListRequest::from(list);
+
+        
+        let url = format!("/me/todo/lists/{}", list.id);
+        
+        // Use TodoTaskList as the response type since PATCH returns the updated list
+        let _: TodoTaskList = self
+            .http_client
+            .patch::<UpdateTodoTaskListRequest, TodoTaskList>(
+                &url, 
+                &request,
+                &format!("Bearer {}", auth_token),
+            )
+            .await.map_err(|e| {
+                error!("❌ Failed to update list via API: {}", e);
+                crate::app::error::Error::Tasks(TasksError::ApiError)}
+            )?;
+
+        Ok(())
     }
 
-    pub fn delete_list(&self, list: &List) -> Result<(), Error> {
-        if list.file_path.exists() {
-            std::fs::remove_file(&list.file_path)?;
-            std::fs::remove_dir_all(list.tasks_path())?;
-            Ok(())
-        } else {
-            Err(Error::Tasks(TasksError::ListNotFound))
-        }
+    pub async fn delete_list(&self, list: &List) -> Result<(), Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
+
+        self.http_client
+            .delete(
+                &format!("/me/todo/lists/{}", list.id),
+                &format!("Bearer {}", auth_token),
+            )
+            .await.map_err(|e| crate::app::error::Error::Tasks(TasksError::ApiError))?;
+
+        Ok(())
     }
 
     pub fn export_list(list: &List, tasks: &[Task]) -> String {

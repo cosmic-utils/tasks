@@ -4,7 +4,7 @@ use crate::{
         dialog::{DialogAction, DialogPage},
         Message,
     },
-    storage::models::List,
+    storage::models::{List, Task},
 };
 use cosmic::{
     iced::keyboard::{Key, Modifiers},
@@ -54,6 +54,21 @@ pub enum TasksAction {
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
     FetchLists,
+    
+    // New async variants
+    FetchListsAsync,                    // Trigger async list fetch
+    ListsFetched(Result<Vec<List>, String>), // Lists result
+    CreateTaskAsync(Task),              // Create remote task
+    TaskCreated(Result<Task, String>),  // Creation result
+    UpdateTaskAsync(Task),              // Update remote task
+    TaskUpdated(Result<(), String>),    // Update result
+    DeleteTaskAsync(Task),              // Delete remote task
+    TaskDeleted(Result<(), String>),    // Deletion result
+    DeleteListAsync(List),              // Delete remote list
+    ListDeleted(Result<(), String>),    // List deletion result
+    
+    FetchTasksAsync(List),              // Fetch tasks for a list
+    TasksFetched(Result<Vec<Task>, String>), // Tasks result
 }
 
 impl MenuAction for Action {

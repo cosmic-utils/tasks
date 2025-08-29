@@ -5,6 +5,7 @@ about = About
 # Content
 add-new-task = Add new task
 search-tasks = Search tasks
+task-count = {$count} tasks
 
 # Details
 title = Title

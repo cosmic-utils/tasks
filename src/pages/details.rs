@@ -39,6 +39,7 @@ pub enum Message {
 pub enum Output {
     OpenCalendarDialog,
     RefreshTask(models::Task),
+    UpdateTaskAsync(models::Task),
 }
 
 impl Details {
@@ -98,10 +99,8 @@ impl Details {
             }
         }
 
-        if let Err(e) = self.storage.update_task(&self.task) {
-            tracing::error!("Failed to update task: {}", e);
-        }
-        tasks.push(Output::RefreshTask(self.task.clone()));
+        // Trigger async task update
+        tasks.push(Output::UpdateTaskAsync(self.task.clone()));
         tasks
     }
 

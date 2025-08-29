@@ -13,6 +13,17 @@ slotmap = "1.0.7"
 ron = "0.10.1"
 thiserror = "2.0.12"
 tracing = "0.1.40"
+anyhow = "1.0.99"
+base64 = "0.22.1"
+sha2 = "0.10.9"
+rand = "0.9.2"
+tiny_http = "0.12.0"
+url = "2.5.4"
+webbrowser = "1.0.5"
+env_logger = "0.11.8"
+serde_json = "1.0.143"
+reqwest = { version = "0.12.23", features = ["blocking", "json"] }
+keyring = "2.0"
 
 [dependencies.tracing-subscriber]
 version = "0.3.19"
@@ -43,6 +54,11 @@ features = ["serde"]
 [dependencies.uuid]
 version = "1.2.1"
 features = ["v4"]
+
+[features]
+default = ["ms_graph"]
+ms_graph = []
+local_storage = []
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
