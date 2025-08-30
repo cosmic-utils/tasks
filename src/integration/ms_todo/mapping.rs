@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use dirs;
 
 use crate::storage::models::{List, Task, Priority, Status};
+use crate::storage::models::task::ChecklistSyncStatus;
 use super::models::{
     TodoTaskList, TodoTask, ChecklistItem,
     CreateTodoTaskListRequest, CreateTodoTaskRequest, UpdateTodoTaskRequest,
@@ -105,6 +106,10 @@ impl From<TodoTask> for Task {
             recurrence: Default::default(), // Skip recurrence for now
             expanded: false,                     // UI state, not stored
             
+            // Checklist fields
+            checklist_items: Vec::new(), // Will be populated separately via API calls
+            checklist_sync_status: ChecklistSyncStatus::Synced,
+            
             deletion_date: None,                 // Not supported in MS Graph
             created_date_time: todo_task.createdDateTime
                 .and_then(|dt| DateTime::parse_from_rfc3339(&dt).ok())
@@ -161,52 +166,40 @@ impl From<&Task> for UpdateTodoTaskRequest {
 // Sub-task (ChecklistItem) Mappings
 // ============================================================================
 
-impl From<&Task> for CreateChecklistItemRequest {
-    fn from(task: &Task) -> Self {
+impl From<&crate::storage::models::ChecklistItem> for CreateChecklistItemRequest {
+    fn from(item: &crate::storage::models::ChecklistItem) -> Self {
         Self {
-            displayName: task.title.clone(),
-            isChecked: Some(task.status == Status::Completed),
+            displayName: item.display_name.clone(),
+            isChecked: Some(item.is_checked),
         }
     }
 }
 
-impl From<ChecklistItem> for Task {
+impl From<ChecklistItem> for crate::storage::models::ChecklistItem {
     fn from(item: ChecklistItem) -> Self {
-        Self {
-            id: item.id,                         // Use MS Graph ID
-            
-            title: item.displayName,
-            favorite: false,                     // Not supported in MS Graph
-            today: false,                        // Not supported in MS Graph
-            status: if item.isChecked { Status::Completed } else { Status::NotStarted },
-            priority: Priority::Normal,          // Default for sub-tasks
-            tags: Vec::new(),                    // No tags for sub-tasks
-            notes: String::new(),                // No notes for sub-tasks
-            completion_date: if item.isChecked {
-                Some(Utc::now()) // Approximate completion time
-            } else {
-                None
-            },
-            due_date: None,                      // No due date for sub-tasks
-            reminder_date: None,                 // No reminders for sub-tasks
-            recurrence: Default::default(),      // No recurrence for sub-tasks
-            expanded: false,                     // UI state
-            
-            deletion_date: None,                 // Not supported
-            created_date_time: DateTime::parse_from_rfc3339(&item.createdDateTime)
-                .map(|dt| dt.with_timezone(&Utc))
-                .unwrap_or_else(|_| Utc::now()),
-            last_modified_date_time: Utc::now(), // Approximate
-            list_id: None,
-        }
+        Self::from_ms_graph(
+            item.id.clone(),
+            item.displayName.clone(),
+            item.isChecked,
+            item.createdDateTime.clone(),
+            item.checkedDateTime.clone(),
+        ).unwrap_or_else(|_| {
+            // Fallback to local creation if parsing fails
+            let mut local_item = crate::storage::models::ChecklistItem::new(item.displayName.clone());
+            local_item.id = item.id.clone();
+            if item.isChecked {
+                local_item.check();
+            }
+            local_item
+        })
     }
 }
 
-impl From<&Task> for UpdateChecklistItemRequest {
-    fn from(task: &Task) -> Self {
+impl From<&crate::storage::models::ChecklistItem> for UpdateChecklistItemRequest {
+    fn from(item: &crate::storage::models::ChecklistItem) -> Self {
         Self {
-            displayName: Some(task.title.clone()),
-            isChecked: Some(task.status == Status::Completed),
+            displayName: Some(item.display_name.clone()),
+            isChecked: Some(item.is_checked),
         }
     }
 }

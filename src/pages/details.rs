@@ -14,7 +14,7 @@ use crate::{
     core::icons,
     fl,
     storage::{
-        models::{self, Priority},
+        models::{self, Priority, ChecklistItem},
         LocalStorage,
     },
 };
@@ -174,6 +174,38 @@ impl Details {
                     spacing.space_none,
                 ]),
             )
+            // Add simple checklist display
+            .add(
+                widget::column::with_children(vec![
+                    widget::text::body("Checklist").into(),
+                    // Show completion percentage if there are items
+                    if !self.task.checklist_items.is_empty() {
+                        widget::text::caption(format!(
+                            "{}% complete ({} of {})",
+                            self.task.checklist_completion_percentage() as i32,
+                            self.task.checklist_items.iter().filter(|item| item.is_checked).count(),
+                            self.task.checklist_items.len()
+                        )).into()
+                    } else {
+                        widget::text::caption("No checklist items yet").into()
+                    },
+                    // Display checklist items
+                    {
+                        let mut items_column = widget::column::with_capacity(self.task.checklist_items.len());
+                        for item in &self.task.checklist_items {
+                            items_column = items_column.push(self.view_checklist_item_simple(item));
+                        }
+                        items_column.into()
+                    },
+                ])
+                .spacing(spacing.space_xxs)
+                .padding([
+                    spacing.space_s,
+                    spacing.space_none,
+                    spacing.space_s,
+                    spacing.space_none,
+                ]),
+            )
             .into()])
         .padding([
             spacing.space_none,
@@ -182,5 +214,21 @@ impl Details {
             spacing.space_s,
         ])
         .into();
+    }
+
+    fn view_checklist_item_simple<'a>(&self, item: &'a ChecklistItem) -> Element<'a, Message> {
+        let spacing = theme::active().cosmic().spacing;
+        
+        // Simple view mode - just show checkbox and text
+        widget::row::with_children(vec![
+            widget::checkbox("", item.is_checked)
+                .into(),
+            widget::text::body(&item.display_name)
+                .size(13)
+                .into(),
+        ])
+        .spacing(spacing.space_xxs)
+        .align_y(Alignment::Center)
+        .into()
     }
 }

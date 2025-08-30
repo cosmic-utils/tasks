@@ -702,6 +702,11 @@ impl TasksApp {
                     }
                 }
             }
+            // Handle checklist actions (placeholder for now)
+            _ => {
+                // TODO: Implement checklist action handling
+                tracing::debug!("Checklist action not yet implemented: {:?}", tasks_action);
+            }
         }
     }
 }
