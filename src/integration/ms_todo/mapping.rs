@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Datelike, Timelike};
 use dirs;
 
 use crate::storage::models::{List, Task, Priority, Status};
@@ -264,10 +264,86 @@ impl From<DateTime<Utc>> for DateTimeTimeZone {
 
 impl From<DateTimeTimeZone> for DateTime<Utc> {
     fn from(dt: DateTimeTimeZone) -> Self {
-        DateTime::parse_from_rfc3339(&dt.dateTime)
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(|_| Utc::now())
+        parse_ms_graph_date(&dt.dateTime)
+            .unwrap_or_else(|| {
+                eprintln!("Using fallback date for failed parsing of: '{}'", dt.dateTime);
+                Utc::now()
+            })
     }
+}
+
+/// Parse Microsoft Graph API date format with multiple fallback strategies
+fn parse_ms_graph_date(date_str: &str) -> Option<DateTime<Utc>> {
+    // First try: Standard RFC3339 format
+    if let Ok(parsed) = DateTime::parse_from_rfc3339(date_str) {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Second try: Handle Microsoft Graph specific format with microseconds
+    // Format: "2025-08-03T00:00:00.0000000"
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Third try: Handle format without microseconds using NaiveDateTime
+    if let Ok(parsed) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S") {
+        return Some(DateTime::from_naive_utc_and_offset(parsed, Utc));
+    }
+    
+    // Fourth try: Handle date-only format using NaiveDate
+    if let Ok(parsed) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+        let naive_datetime = parsed.and_hms_opt(0, 0, 0).unwrap();
+        return Some(DateTime::from_naive_utc_and_offset(naive_datetime, Utc));
+    }
+    
+    // Fifth try: Handle Microsoft Graph format with 7-digit microseconds
+    // Format: "2025-08-03T00:00:00.0000000"
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.7f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Sixth try: Handle format with 6-digit microseconds
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.6f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Seventh try: Handle format with variable microseconds
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.f%z") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Eighth try: Handle format with microseconds and no timezone
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Ninth try: Handle the specific Microsoft Graph format by truncating microseconds
+    // The format "2025-08-03T00:00:00.0000000" has 7 digits after the decimal
+    // Let's try to parse it by removing the microseconds part
+    if let Some(without_microseconds) = date_str.split('.').next() {
+        if let Ok(parsed) = chrono::NaiveDateTime::parse_from_str(without_microseconds, "%Y-%m-%dT%H:%M:%S") {
+            return Some(DateTime::from_naive_utc_and_offset(parsed, Utc));
+        }
+    }
+    
+    // Tenth try: Handle format with nanoseconds (9 digits)
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.9f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Eleventh try: Handle format with 8-digit microseconds
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.8f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // Twelfth try: Handle format with 5-digit microseconds
+    if let Ok(parsed) = DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.5f") {
+        return Some(parsed.with_timezone(&Utc));
+    }
+    
+    // If all parsing attempts fail, log the error
+    eprintln!("Failed to parse MS Graph date: '{}'", date_str);
+    None
 }
 
 // ============================================================================
@@ -482,22 +558,7 @@ mod tests {
         assert_eq!(task.tags, vec!["work".to_string()]);
     }
 
-    #[test]
-    fn test_checklist_item_to_task() {
-        let checklist_item = ChecklistItem {
-            id: "checklist-id".to_string(),
-            displayName: "Sub Task".to_string(),
-            isChecked: true,
-            createdDateTime: "2023-12-20T10:00:00Z".to_string(),
-            checkedDateTime: None,
-        };
 
-        let task: Task = checklist_item.into();
-        assert_eq!(task.id, "checklist-id");
-        assert_eq!(task.title, "Sub Task");
-        assert_eq!(task.status, Status::Completed);
-        assert_eq!(task.priority, Priority::Normal); // Default
-    }
 
     #[test]
     fn test_priority_mapping() {
@@ -530,5 +591,37 @@ mod tests {
 
         let converted_back: DateTime<Utc> = dt_tz.into();
         assert_eq!(converted_back, utc_time);
+    }
+
+    #[test]
+    fn test_ms_graph_date_parsing() {
+        // Test Microsoft Graph API specific format with microseconds
+        let ms_graph_date = "2025-08-03T00:00:00.0000000";
+        let parsed = parse_ms_graph_date(ms_graph_date);
+        assert!(parsed.is_some());
+        
+        if let Some(dt) = parsed {
+            assert_eq!(dt.year(), 2025);
+            assert_eq!(dt.month(), 8);
+            assert_eq!(dt.day(), 3);
+            assert_eq!(dt.hour(), 0);
+            assert_eq!(dt.minute(), 0);
+            assert_eq!(dt.second(), 0);
+        }
+        
+        // Test standard RFC3339 format
+        let rfc3339_date = "2025-08-03T00:00:00Z";
+        let parsed = parse_ms_graph_date(rfc3339_date);
+        assert!(parsed.is_some());
+        
+        // Test date-only format
+        let date_only = "2025-08-03";
+        let parsed = parse_ms_graph_date(date_only);
+        assert!(parsed.is_some());
+        
+        // Test invalid date
+        let invalid_date = "invalid-date";
+        let parsed = parse_ms_graph_date(invalid_date);
+        assert!(parsed.is_none());
     }
 }

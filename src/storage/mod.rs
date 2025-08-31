@@ -201,6 +201,8 @@ impl LocalStorage {
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
 
         let request = UpdateTodoTaskRequest::from(task);
+        info!("Request Json: {}", serde_json::to_string_pretty(&request).unwrap());
+        info!("Request url: {}", &format!("/me/todo/lists/{}/tasks/{}", list_id, task.id));
 
         // PATCH returns the updated TodoTask
         let _: TodoTask = self
