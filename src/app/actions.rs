@@ -4,7 +4,7 @@ use crate::{
         dialog::{DialogAction, DialogPage},
         Message,
     },
-    storage::models::{List, Task},
+    storage::models::{List, Task, ChecklistItem},
 };
 use cosmic::{
     iced::keyboard::{Key, Modifiers},
@@ -69,6 +69,18 @@ pub enum TasksAction {
     
     FetchTasksAsync(List),              // Fetch tasks for a list
     TasksFetched(Result<Vec<Task>, String>), // Tasks result
+    
+    // Checklist actions
+    AddChecklistItemAsync(String),           // item title
+    ChecklistItemAdded(Result<ChecklistItem, String>), // Creation result
+    UpdateChecklistItemAsync(String, String), // item_id, new_title
+    ChecklistItemUpdated(Result<ChecklistItem, String>), // Update result
+    ToggleChecklistItemAsync(String),        // item_id
+    ChecklistItemToggled(Result<ChecklistItem, String>), // Toggle result
+    DeleteChecklistItemAsync(String),        // item_id
+    ChecklistItemDeleted(Result<String, String>), // Deletion result
+    FetchChecklistItemsAsync(String),        // task_id
+    ChecklistItemsFetched(Result<Vec<ChecklistItem>, String>), // Fetch result
 }
 
 impl MenuAction for Action {

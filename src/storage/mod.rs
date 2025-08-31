@@ -300,4 +300,130 @@ impl LocalStorage {
         let tasks_markdown: String = tasks.iter().map(Markdown::markdown).collect();
         format!("{markdown}\n{tasks_markdown}")
     }
+
+    // ============================================================================
+    // Checklist Operations
+    // ============================================================================
+
+    /// Fetch checklist items for a task from MS Graph
+    pub async fn fetch_checklist_items(&self, task: &Task) -> Result<Vec<crate::storage::models::ChecklistItem>, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        // Extract list_id from task path or use stored list_id
+        let list_id = task.list_id.as_ref()
+            .ok_or_else(|| Error::Tasks(TasksError::TaskNotFound))?;
+
+        let url = format!("/me/todo/lists/{}/tasks/{}/checklistItems", list_id, task.id);
+
+        let response: crate::integration::ms_todo::models::ChecklistItemCollection = self
+            .http_client
+            .get(
+                &url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to fetch checklist items via API: {}", _e);
+                Error::Tasks(TasksError::ApiError)
+            })?;
+
+        // Convert MS Graph ChecklistItem[] → local ChecklistItem[]
+        let items: Vec<crate::storage::models::ChecklistItem> = response.value
+            .into_iter()
+            .map(|item| item.into())
+            .collect();
+
+        Ok(items)
+    }
+
+    /// Create a new checklist item via MS Graph
+    pub async fn create_checklist_item(&self, task: &Task, title: &str) -> Result<crate::storage::models::ChecklistItem, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        let list_id = task.list_id.as_ref()
+            .ok_or_else(|| Error::Tasks(TasksError::ApiError))?;
+
+        let request = crate::integration::ms_todo::models::CreateChecklistItemRequest {
+            displayName: title.to_string(),
+            isChecked: Some(false),
+        };
+
+        let url = format!("/me/todo/lists/{}/tasks/{}/checklistItems", list_id, task.id);
+
+        let response: crate::integration::ms_todo::models::ChecklistItem = self
+            .http_client
+            .post(
+                &url,
+                &request,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to create checklist item via API: {}", _e);
+                Error::Tasks(TasksError::ApiError)
+            })?;
+
+        Ok(response.into())
+    }
+
+    /// Update a checklist item via MS Graph
+    pub async fn update_checklist_item(&self, task: &Task, item_id: &str, title: &str, is_checked: bool) -> Result<crate::storage::models::ChecklistItem, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        let list_id = task.list_id.as_ref()
+            .ok_or_else(|| Error::Tasks(TasksError::ApiError))?;
+
+        let request = crate::integration::ms_todo::models::UpdateChecklistItemRequest {
+            displayName: Some(title.to_string()),
+            isChecked: Some(is_checked),
+        };
+
+        let url = format!("/me/todo/lists/{}/tasks/{}/checklistItems/{}", list_id, task.id, item_id);
+
+        let response: crate::integration::ms_todo::models::ChecklistItem = self
+            .http_client
+            .patch(
+                &url,
+                &request,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to update checklist item via API: {}", _e);
+                Error::Tasks(TasksError::ApiError)
+            })?;
+
+        Ok(response.into())
+    }
+
+    /// Delete a checklist item via MS Graph
+    pub async fn delete_checklist_item(&self, task: &Task, item_id: &str) -> Result<String, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        let list_id = task.list_id.as_ref()
+            .ok_or_else(|| Error::Tasks(TasksError::ApiError))?;
+
+        let url = format!("/me/todo/lists/{}/tasks/{}/checklistItems/{}", list_id, task.id, item_id);
+
+        self.http_client
+            .delete(
+                &url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to delete checklist item via API: {}", _e);
+                Error::Tasks(TasksError::ApiError)
+            })?;
+
+        Ok(item_id.to_string())
+    }
 }

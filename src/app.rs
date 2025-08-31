@@ -168,6 +168,11 @@ impl TasksApp {
                     self.details.text_editor_content =
                         widget::text_editor::Content::with_text(&task.notes);
 
+                    // Trigger checklist fetch after setting the task
+                    if !task.id.is_empty() {
+                        tasks.push(self.update(Message::Tasks(TasksAction::FetchChecklistItemsAsync(task.id.clone()))));
+                    }
+
                     tasks.push(self.update(Message::Application(
                         ApplicationAction::ToggleContextPage(ContextPage::TaskDetails),
                     )));
@@ -224,6 +229,22 @@ impl TasksApp {
                 }
                 details::Output::UpdateTaskAsync(task) => {
                     tasks.push(self.update(Message::Tasks(TasksAction::UpdateTaskAsync(task))));
+                }
+                // Handle checklist outputs
+                details::Output::AddChecklistItemAsync(title) => {
+                    tasks.push(self.update(Message::Tasks(TasksAction::AddChecklistItemAsync(title))));
+                }
+                details::Output::UpdateChecklistItemAsync(item_id, new_title) => {
+                    tasks.push(self.update(Message::Tasks(TasksAction::UpdateChecklistItemAsync(item_id, new_title))));
+                }
+                details::Output::ToggleChecklistItemAsync(item_id) => {
+                    tasks.push(self.update(Message::Tasks(TasksAction::ToggleChecklistItemAsync(item_id))));
+                }
+                details::Output::DeleteChecklistItemAsync(item_id) => {
+                    tasks.push(self.update(Message::Tasks(TasksAction::DeleteChecklistItemAsync(item_id))));
+                }
+                details::Output::FetchChecklistItems => {
+                    tasks.push(self.update(Message::Tasks(TasksAction::FetchChecklistItemsAsync(self.details.task.id.clone()))));
                 }
             }
         }
@@ -701,6 +722,213 @@ impl TasksApp {
                         tracing::error!("Failed to fetch tasks: {}", error);
                     }
                 }
+            }
+            // Handle checklist actions
+            TasksAction::AddChecklistItemAsync(title) => {
+                // Get current task from details
+                let task = self.details.task.clone();
+                let storage = self.storage.clone();
+                let future = async move { 
+                    // Create checklist item via MS Graph
+                    storage.create_checklist_item(&task, &title).await
+                };
+                tasks.push(self.spawn_storage_operation(
+                    future,
+                    |item| Message::Tasks(TasksAction::ChecklistItemAdded(Ok(item))),
+                    |error| Message::Tasks(TasksAction::ChecklistItemAdded(Err(error.to_string()))),
+                ));
+                // Clear the input immediately for better UX
+                self.details.new_checklist_item_text.clear();
+            }
+            TasksAction::ChecklistItemAdded(result) => {
+                match result {
+                    Ok(item) => {
+                        tracing::info!("Checklist item added successfully");
+                        // Add the new item to the local task and refresh
+                        let mut task = self.details.task.clone();
+                        task.checklist_items.push(item);
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        self.details.task = task;
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to add checklist item: {}", error);
+                        // Mark sync as failed
+                        let mut task = self.details.task.clone();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        self.details.task = task;
+                    }
+                }
+            }
+            TasksAction::UpdateChecklistItemAsync(item_id, new_title) => {
+                let task = self.details.task.clone();
+                let storage = self.storage.clone();
+                let future = async move { 
+                    // Get current checklist item to preserve checked state
+                    let current_item = task.checklist_items.iter()
+                        .find(|item| item.id == item_id)
+                        .cloned();
+                    
+                    if let Some(item) = current_item {
+                        // Update via MS Graph API
+                        storage.update_checklist_item(&task, &item_id, &new_title, item.is_checked).await
+                    } else {
+                        Err(crate::app::error::Error::Tasks(crate::app::error::TasksError::TaskNotFound))
+                    }
+                };
+                tasks.push(self.spawn_storage_operation(
+                    future,
+                    |updated_item| Message::Tasks(TasksAction::ChecklistItemUpdated(Ok(updated_item))),
+                    |error| Message::Tasks(TasksAction::ChecklistItemUpdated(Err(error.to_string()))),
+                ));
+            }
+            TasksAction::ChecklistItemUpdated(result) => {
+                match result {
+                    Ok(updated_item) => {
+                        tracing::info!("Checklist item updated successfully");
+                        // Update the local task with the updated item
+                        let mut task = self.details.task.clone();
+                        if let Some(item) = task.checklist_items.iter_mut().find(|item| item.id == updated_item.id) {
+                            *item = updated_item;
+                        }
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        self.details.task = task;
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to update checklist item: {}", error);
+                        // Mark sync as failed
+                        let mut task = self.details.task.clone();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        self.details.task = task;
+                    }
+                }
+            }
+            TasksAction::ToggleChecklistItemAsync(item_id) => {
+                let task = self.details.task.clone();
+                let storage = self.storage.clone();
+                let future = async move { 
+                    // Get current checklist item to toggle checked state
+                    let current_item = task.checklist_items.iter()
+                        .find(|item| item.id == item_id)
+                        .cloned();
+                    
+                    if let Some(item) = current_item {
+                        // Toggle via MS Graph API
+                        let new_checked_state = !item.is_checked;
+                        storage.update_checklist_item(&task, &item_id, &item.display_name, new_checked_state).await
+                    } else {
+                        Err(crate::app::error::Error::Tasks(crate::app::error::TasksError::TaskNotFound))
+                    }
+                };
+                tasks.push(self.spawn_storage_operation(
+                    future,
+                    |updated_item| Message::Tasks(TasksAction::ChecklistItemToggled(Ok(updated_item))),
+                    |error| Message::Tasks(TasksAction::ChecklistItemToggled(Err(error.to_string()))),
+                ));
+            }
+            TasksAction::ChecklistItemToggled(result) => {
+                match result {
+                    Ok(updated_item) => {
+                        tracing::info!("Checklist item toggled successfully");
+                        // Update the local task with the updated item
+                        let mut task = self.details.task.clone();
+                        if let Some(item) = task.checklist_items.iter_mut().find(|item| item.id == updated_item.id) {
+                            *item = updated_item;
+                        }
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        self.details.task = task;
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to toggle checklist item: {}", error);
+                        // Mark sync as failed
+                        let mut task = self.details.task.clone();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        self.details.task = task;
+                    }
+                }
+            }
+            TasksAction::DeleteChecklistItemAsync(item_id) => {
+                let task = self.details.task.clone();
+                let storage = self.storage.clone();
+                let future = async move { 
+                    // Delete via MS Graph API
+                    storage.delete_checklist_item(&task, &item_id).await
+                };
+                tasks.push(self.spawn_storage_operation(
+                    future,
+                    |item_id_recived| Message::Tasks(TasksAction::ChecklistItemDeleted(Ok(item_id_recived   ))),
+                    |error| Message::Tasks(TasksAction::ChecklistItemDeleted(Err(error.to_string()))),
+                ));
+            }
+            TasksAction::ChecklistItemDeleted(result) => {
+                match result {
+                    Ok(item_id_recived) => {
+                        tracing::info!("Checklist item deleted successfully");
+                        // Remove the item from local task immediately for better UX
+                        // We need to find which item was deleted by comparing with the current state
+                        // For now, we'll refresh the checklist items to ensure consistency
+                        if !self.details.task.id.is_empty() {
+                            
+                            //task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
+
+                        }
+                        let mut task = self.details.task.clone();
+                        task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        self.details.task = task;
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to delete checklist item: {}", error);
+                        // Mark sync as failed
+                        let mut task = self.details.task.clone();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        self.details.task = task;
+                    }
+                }
+            }
+            TasksAction::FetchChecklistItemsAsync(task_id) => {
+                tracing::info!("🔄 Fetching checklist items for task: {}", task_id);
+                let task = self.details.task.clone();
+                let storage = self.storage.clone();
+                let future = async move { 
+                    // Fetch checklist items via MS Graph API
+                    storage.fetch_checklist_items(&task).await
+                };
+                let task_id_clone = task_id.clone();
+                tasks.push(self.spawn_storage_operation(
+                    future,
+                    move |items| {
+                        tracing::info!("✅ Fetched {} checklist items for task: {}", items.len(), task_id_clone);
+                        Message::Tasks(TasksAction::ChecklistItemsFetched(Ok(items)))
+                    },
+                    move |error| {
+                        tracing::error!("❌ Failed to fetch checklist items for task {}: {}", task_id, error);
+                        Message::Tasks(TasksAction::ChecklistItemsFetched(Err(error)))
+                    },
+                ));
+            }
+            TasksAction::ChecklistItemsFetched(result) => {
+                match result {
+                    Ok(items) => {
+                        tracing::info!("✅ Successfully fetched {} checklist items", items.len());
+                        // Update the task with fetched checklist items
+                        let mut task = self.details.task.clone();
+                        task.checklist_items = items.clone();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        self.details.task = task;
+                        tracing::info!("🔄 Updated local task with {} checklist items", items.len());
+                    }
+                    Err(error) => {
+                        tracing::error!("❌ Failed to fetch checklist items: {}", error);
+                        // Mark sync as failed
+                        let mut task = self.details.task.clone();
+                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        self.details.task = task;
+                    }
+                }
+            }
+            // Handle any other actions
+            _ => {
+                tracing::debug!("Unhandled action: {:?}", tasks_action);
             }
         }
     }

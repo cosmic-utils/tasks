@@ -263,7 +263,7 @@ pub struct Extension {
 // ============================================================================
 
 /// Represents a Microsoft Todo checklist item (checklistItem)
-/// Based on: https://learn.microsoft.com/en-us/graph/api/todotask-list-checklistitems?view=graph-rest-1.0&tabs=http
+/// Based on: https://learn.microsoft.com/en-us/graph/api/resources/checklistitem?view=graph-rest-1.0
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[allow(non_snake_case)]
 pub struct ChecklistItem {
@@ -271,6 +271,7 @@ pub struct ChecklistItem {
     pub displayName: String,
     pub isChecked: bool,
     pub createdDateTime: String,
+    pub checkedDateTime: Option<String>,
 }
 
 /// Collection of checklist items
@@ -560,6 +561,7 @@ mod tests {
             displayName: "Test Checklist Item".to_string(),
             isChecked: false,
             createdDateTime: "2023-01-01T00:00:00Z".to_string(),
+            checkedDateTime: None,
         };
 
         assert_eq!(item.displayName, "Test Checklist Item");
@@ -575,12 +577,14 @@ mod tests {
                 displayName: "Item 1".to_string(),
                 isChecked: false,
                 createdDateTime: "2023-01-01T00:00:00Z".to_string(),
+                checkedDateTime: None,
             },
             ChecklistItem {
                 id: "item2".to_string(),
                 displayName: "Item 2".to_string(),
                 isChecked: true,
                 createdDateTime: "2023-01-01T00:00:00Z".to_string(),
+                checkedDateTime: None,
             },
         ];
 
