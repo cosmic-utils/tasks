@@ -74,9 +74,9 @@ pub enum TasksAction {
     AddChecklistItemAsync(String),           // item title
     ChecklistItemAdded(Result<ChecklistItem, String>), // Creation result
     UpdateChecklistItemAsync(String, String), // item_id, new_title
-    ChecklistItemUpdated(Result<(), String>), // Update result
+    ChecklistItemUpdated(Result<ChecklistItem, String>), // Update result
     ToggleChecklistItemAsync(String),        // item_id
-    ChecklistItemToggled(Result<(), String>), // Toggle result
+    ChecklistItemToggled(Result<ChecklistItem, String>), // Toggle result
     DeleteChecklistItemAsync(String),        // item_id
     ChecklistItemDeleted(Result<(), String>), // Deletion result
     FetchChecklistItemsAsync(String),        // task_id

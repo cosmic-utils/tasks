@@ -24,6 +24,9 @@ pub struct Details {
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub text_editor_content: widget::text_editor::Content,
     pub storage: LocalStorage,
+    // Checklist editing state
+    pub editing_checklist_item: Option<String>,
+    pub new_checklist_item_text: String,
 }
 
 #[derive(Debug, Clone)]
@@ -34,12 +37,27 @@ pub enum Message {
     PriorityActivate(Entity),
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
+    // Checklist messages
+    AddChecklistItem(String),
+    ToggleChecklistItem(String),
+    StartEditChecklistItem(String),
+    FinishEditChecklistItem(String, String),
+    CancelEditChecklistItem,
+    DeleteChecklistItem(String),
+    UpdateChecklistItemTitle(String, String),
+    UpdateNewChecklistItemText(String),
 }
 
 pub enum Output {
     OpenCalendarDialog,
     RefreshTask(models::Task),
     UpdateTaskAsync(models::Task),
+    // Checklist outputs
+    AddChecklistItemAsync(String),
+    UpdateChecklistItemAsync(String, String),
+    ToggleChecklistItemAsync(String),
+    DeleteChecklistItemAsync(String),
+    FetchChecklistItems,
 }
 
 impl Details {
@@ -67,18 +85,38 @@ impl Details {
             priority_model,
             text_editor_content: widget::text_editor::Content::new(),
             storage,
+            editing_checklist_item: None,
+            new_checklist_item_text: String::new(),
+        }
+    }
+
+    /// Set a new task and trigger checklist fetch
+    pub fn set_task(&mut self, task: models::Task) -> Vec<Output> {
+        self.task = task;
+        self.text_editor_content = widget::text_editor::Content::new();
+        // Note: We can't directly set text in text_editor, it will be populated when the task is loaded
+        
+        // Reset checklist editing state
+        self.editing_checklist_item = None;
+        self.new_checklist_item_text.clear();
+        
+        // Trigger checklist fetch if task has an ID
+        if !self.task.id.is_empty() {
+            vec![Output::FetchChecklistItems]
+        } else {
+            vec![]
         }
     }
 
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = vec![];
         match message {
-            Message::Editor(action) => {
-                self.text_editor_content.perform(action);
+            Message::Editor(ref action) => {
+                self.text_editor_content.perform(action.clone());
                 self.task.notes.clone_from(&self.text_editor_content.text());
             }
-            Message::SetTitle(title) => {
-                self.task.title.clone_from(&title);
+            Message::SetTitle(ref title) => {
+                self.task.title.clone_from(title);
             }
             Message::Favorite(favorite) => {
                 self.task.favorite = favorite;
@@ -97,10 +135,56 @@ impl Details {
                 let tz = Utc::now().timezone();
                 self.task.due_date = Some(tz.from_utc_datetime(&date.into()));
             }
+            // Checklist message handling
+            Message::AddChecklistItem(ref title) => {
+                if !title.trim().is_empty() {
+                    // Output async operation instead of local update
+                    tasks.push(Output::AddChecklistItemAsync(title.clone()));
+                }
+            }
+            Message::ToggleChecklistItem(ref item_id) => {
+                // Output async operation instead of local update
+                tasks.push(Output::ToggleChecklistItemAsync(item_id.clone()));
+            }
+            Message::StartEditChecklistItem(ref item_id) => {
+                self.editing_checklist_item = Some(item_id.clone());
+            }
+            Message::FinishEditChecklistItem(ref item_id, ref new_title) => {
+                if !new_title.trim().is_empty() {
+                    // Output async operation instead of local update
+                    tasks.push(Output::UpdateChecklistItemAsync(item_id.clone(), new_title.clone()));
+                }
+                self.editing_checklist_item = None;
+            }
+            Message::CancelEditChecklistItem => {
+                self.editing_checklist_item = None;
+            }
+            Message::DeleteChecklistItem(ref item_id) => {
+                // Output async operation instead of local update
+                tasks.push(Output::DeleteChecklistItemAsync(item_id.clone()));
+            }
+            Message::UpdateChecklistItemTitle(ref item_id, ref new_title) => {
+                // Output async operation instead of local update
+                tasks.push(Output::UpdateChecklistItemAsync(item_id.clone(), new_title.clone()));
+            }
+            Message::UpdateNewChecklistItemText(ref text) => {
+                self.new_checklist_item_text = text.clone();
+            }
         }
 
-        // Trigger async task update
-        tasks.push(Output::UpdateTaskAsync(self.task.clone()));
+        // Note: Checklist operations are handled separately via async outputs
+        // Only trigger task update for non-checklist operations
+        let is_checklist_operation = matches!(message, 
+            Message::AddChecklistItem(_) | 
+            Message::ToggleChecklistItem(_) | 
+            Message::FinishEditChecklistItem(_, _) | 
+            Message::DeleteChecklistItem(_) | 
+            Message::UpdateChecklistItemTitle(_, _)
+        );
+        
+        if !is_checklist_operation {
+            tasks.push(Output::UpdateTaskAsync(self.task.clone()));
+        }
         tasks
     }
 
@@ -174,7 +258,7 @@ impl Details {
                     spacing.space_none,
                 ]),
             )
-            // Add simple checklist display
+            // Add interactive checklist display
             .add(
                 widget::column::with_children(vec![
                     widget::text::body("Checklist").into(),
@@ -189,11 +273,17 @@ impl Details {
                     } else {
                         widget::text::caption("No checklist items yet").into()
                     },
+                    // Add new checklist item input
+                    widget::text_input("Add new checklist item...", &self.new_checklist_item_text)
+                        .on_input(Message::UpdateNewChecklistItemText)
+                        .on_submit(|text| Message::AddChecklistItem(text))
+                        .size(13)
+                        .into(),
                     // Display checklist items
                     {
                         let mut items_column = widget::column::with_capacity(self.task.checklist_items.len());
                         for item in &self.task.checklist_items {
-                            items_column = items_column.push(self.view_checklist_item_simple(item));
+                            items_column = items_column.push(self.view_checklist_item_interactive(item));
                         }
                         items_column.into()
                     },
@@ -216,19 +306,47 @@ impl Details {
         .into();
     }
 
-    fn view_checklist_item_simple<'a>(&self, item: &'a ChecklistItem) -> Element<'a, Message> {
+    fn view_checklist_item_interactive<'a>(&self, item: &'a ChecklistItem) -> Element<'a, Message> {
+        let is_editing = self.editing_checklist_item.as_ref() == Some(&item.id);
         let spacing = theme::active().cosmic().spacing;
-        
-        // Simple view mode - just show checkbox and text
-        widget::row::with_children(vec![
-            widget::checkbox("", item.is_checked)
-                .into(),
-            widget::text::body(&item.display_name)
-                .size(13)
-                .into(),
-        ])
-        .spacing(spacing.space_xxs)
-        .align_y(Alignment::Center)
-        .into()
+
+        if is_editing {
+            // Edit mode - use existing widgets
+            widget::row::with_children(vec![
+                widget::text_input("Item title", &item.display_name)
+                    .on_input(move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
+                    .on_submit(move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
+                    .size(13)
+                    .into(),
+                widget::button::suggested("✓")
+                    .on_press(Message::FinishEditChecklistItem(item.id.clone(), item.display_name.clone()))
+                    .into(),
+                widget::button::destructive("✗")
+                    .on_press(Message::CancelEditChecklistItem)
+                    .into(),
+            ])
+            .spacing(spacing.space_xxs)
+            .align_y(Alignment::Center)
+            .into()
+        } else {
+            // View mode - use existing widgets
+            widget::row::with_children(vec![
+                widget::checkbox("", item.is_checked)
+                    .on_toggle(move |_| Message::ToggleChecklistItem(item.id.clone()))
+                    .into(),
+                widget::text::body(&item.display_name)
+                    .size(13)
+                    .into(),
+                widget::button::icon(icons::get_handle("edit-symbolic", 16))
+                    .on_press(Message::StartEditChecklistItem(item.id.clone()))
+                    .into(),
+                widget::button::icon(icons::get_handle("edit-delete-symbolic", 16))
+                    .on_press(Message::DeleteChecklistItem(item.id.clone()))
+                    .into(),
+            ])
+            .spacing(spacing.space_xxs)
+            .align_y(Alignment::Center)
+            .into()
+        }
     }
 }
