@@ -62,6 +62,7 @@ mod tests {
             displayName: "Test Checklist Item".to_string(),
             isChecked: false,
             createdDateTime: "2023-01-01T00:00:00Z".to_string(),
+            checkedDateTime: None
         };
 
         assert_eq!(checklist_item.displayName, "Test Checklist Item");

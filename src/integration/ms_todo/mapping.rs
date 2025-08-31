@@ -427,6 +427,9 @@ mod tests {
             created_date_time: Utc.with_ymd_and_hms(2023, 12, 20, 10, 0, 0).unwrap(),
             last_modified_date_time: Utc.with_ymd_and_hms(2023, 12, 20, 10, 0, 0).unwrap(),
             list_id: Some("1".to_string()),
+            checklist_items: Vec::new(),
+            checklist_sync_status: ChecklistSyncStatus::Synced,
+            
         };
 
         let request: CreateTodoTaskRequest = (&task).into();
@@ -486,6 +489,7 @@ mod tests {
             displayName: "Sub Task".to_string(),
             isChecked: true,
             createdDateTime: "2023-12-20T10:00:00Z".to_string(),
+            checkedDateTime: None,
         };
 
         let task: Task = checklist_item.into();

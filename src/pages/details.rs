@@ -46,6 +46,7 @@ pub enum Message {
     DeleteChecklistItem(String),
     UpdateChecklistItemTitle(String, String),
     UpdateNewChecklistItemText(String),
+    EmptyInputMessage(String),
 }
 
 pub enum Output {
@@ -138,6 +139,7 @@ impl Details {
             // Checklist message handling
             Message::AddChecklistItem(ref title) => {
                 if !title.trim().is_empty() {
+                    self.new_checklist_item_text = title.clone();
                     // Output async operation instead of local update
                     tasks.push(Output::AddChecklistItemAsync(title.clone()));
                 }
@@ -170,6 +172,9 @@ impl Details {
             Message::UpdateNewChecklistItemText(ref text) => {
                 self.new_checklist_item_text = text.clone();
             }
+            Message::EmptyInputMessage(ref text) => {
+                // do nothing 
+            }
         }
 
         // Note: Checklist operations are handled separately via async outputs
@@ -179,7 +184,8 @@ impl Details {
             Message::ToggleChecklistItem(_) | 
             Message::FinishEditChecklistItem(_, _) | 
             Message::DeleteChecklistItem(_) | 
-            Message::UpdateChecklistItemTitle(_, _)
+            Message::UpdateChecklistItemTitle(_, _) | 
+            Message::EmptyInputMessage(_)
         );
         
         if !is_checklist_operation {
@@ -314,7 +320,7 @@ impl Details {
             // Edit mode - use existing widgets
             widget::row::with_children(vec![
                 widget::text_input("Item title", &item.display_name)
-                    .on_input(move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
+                    .on_input( move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
                     .on_submit(move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
                     .size(13)
                     .into(),
