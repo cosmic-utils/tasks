@@ -222,6 +222,11 @@ impl TasksApp {
                         DialogAction::Open(DialogPage::Calendar(CalendarModel::now())),
                     ))));
                 }
+                details::Output::OpenReminderCalendarDialog => {
+                    tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
+                        DialogAction::Open(DialogPage::ReminderCalendar(CalendarModel::now())),
+                    ))));
+                }
                 details::Output::RefreshTask(task) => {
                     tasks.push(self.update(Message::Content(content::Message::RefreshTask(
                         task.clone(),
@@ -384,6 +389,10 @@ impl TasksApp {
                         DialogPage::Calendar(date) => {
                             self.details
                                 .update(details::Message::SetDueDate(date.selected));
+                        }
+                        DialogPage::ReminderCalendar(date) => {
+                            self.details
+                                .update(details::Message::SetReminderDate(date.selected));
                         }
                         DialogPage::Export(content) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {

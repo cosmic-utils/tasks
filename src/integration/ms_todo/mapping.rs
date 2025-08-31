@@ -94,7 +94,6 @@ impl From<TodoTask> for Task {
             id: todo_task.id,                    // Use MS Graph ID
             
             title: todo_task.title,
-            favorite: false,                     // Not supported in MS Graph
             today: false,                        // Not supported in MS Graph
             status: todo_task.status.unwrap_or(Status::NotStarted.into()).into(),
             priority: todo_task.importance.unwrap_or(Priority::Normal.into()).into(),
@@ -110,7 +109,6 @@ impl From<TodoTask> for Task {
             checklist_items: Vec::new(), // Will be populated separately via API calls
             checklist_sync_status: ChecklistSyncStatus::Synced,
             
-            deletion_date: None,                 // Not supported in MS Graph
             created_date_time: todo_task.createdDateTime
                 .and_then(|dt| DateTime::parse_from_rfc3339(&dt).ok())
                 .map(|dt| dt.with_timezone(&Utc))
@@ -487,7 +485,6 @@ mod tests {
             id: "local-task-uuid".to_string(),
             
             title: "Test Task".to_string(),
-            favorite: true,
             today: true,
             status: Status::NotStarted,
             priority: Priority::High,
@@ -499,7 +496,6 @@ mod tests {
             recurrence: Default::default(),
             expanded: false,
             
-            deletion_date: None,
             created_date_time: Utc.with_ymd_and_hms(2023, 12, 20, 10, 0, 0).unwrap(),
             last_modified_date_time: Utc.with_ymd_and_hms(2023, 12, 20, 10, 0, 0).unwrap(),
             list_id: Some("1".to_string()),

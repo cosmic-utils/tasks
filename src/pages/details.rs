@@ -34,10 +34,11 @@ pub struct Details {
 pub enum Message {
     SetTitle(String),
     Editor(text_editor::Action),
-    Favorite(bool),
     PriorityActivate(Entity),
     OpenCalendarDialog,
     SetDueDate(NaiveDate),
+    OpenReminderCalendarDialog,
+    SetReminderDate(NaiveDate),
     // Checklist messages
     AddChecklistItem(String),
     ToggleChecklistItem(String),
@@ -52,6 +53,7 @@ pub enum Message {
 
 pub enum Output {
     OpenCalendarDialog,
+    OpenReminderCalendarDialog,
     RefreshTask(models::Task),
     UpdateTaskAsync(models::Task),
     // Checklist outputs
@@ -122,9 +124,6 @@ impl Details {
             Message::SetTitle(ref title) => {
                 self.task.title.clone_from(title);
             }
-            Message::Favorite(favorite) => {
-                self.task.favorite = favorite;
-            }
             Message::PriorityActivate(entity) => {
                 self.priority_model.activate(entity);
                 let priority = self.priority_model.data::<Priority>(entity);
@@ -138,6 +137,15 @@ impl Details {
             Message::SetDueDate(date) => {
                 let tz = Utc::now().timezone();
                 self.task.due_date = Some(tz.from_utc_datetime(&date.into()));
+                // Update today field when due date changes
+                self.task.update_today_field();
+            }
+            Message::OpenReminderCalendarDialog => {
+                tasks.push(Output::OpenReminderCalendarDialog);
+            }
+            Message::SetReminderDate(date) => {
+                let tz = Utc::now().timezone();
+                self.task.reminder_date = Some(tz.from_utc_datetime(&date.into()));
             }
             // Checklist message handling
             Message::AddChecklistItem(ref title) => {
@@ -226,10 +234,6 @@ impl Details {
                 .spacing(spacing.space_xxs),
             )
             .add(
-                widget::settings::item::builder(fl!("favorite"))
-                    .control(widget::checkbox("", self.task.favorite).on_toggle(Message::Favorite)),
-            )
-            .add(
                 widget::settings::item::builder(fl!("priority")).control(
                     widget::segmented_control::horizontal(&self.priority_model)
                         .button_alignment(Alignment::Center)
@@ -251,6 +255,21 @@ impl Details {
                         fl!("select-date")
                     })
                     .on_press(Message::OpenCalendarDialog),
+                ),
+            )
+            .add(
+                widget::settings::item::builder(fl!("reminder")).control(
+                    widget::button::text(if self.task.reminder_date.is_some() {
+                        self.task
+                            .reminder_date
+                            .as_ref()
+                            .unwrap()
+                            .format("%m-%d-%Y")
+                            .to_string()
+                    } else {
+                        fl!("select-date")
+                    })
+                    .on_press(Message::OpenReminderCalendarDialog),
                 ),
             )
             .add(

@@ -10,7 +10,6 @@ task-count = {$count} tasks
 # Details
 title = Title
 details = Details
-favorite = Favorite
 priority = Priority
 due-date = Due date
 reminder = Reminder

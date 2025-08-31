@@ -1,11 +1,6 @@
-use std::path::PathBuf;
-
 use chrono::{DateTime, Utc};
-use cosmic::Application;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::app::TasksApp;
 
 use super::{Priority, Recurrence, Status, ChecklistItem};
 
@@ -14,7 +9,6 @@ pub struct Task {
     pub id: String,
     
     pub title: String,
-    pub favorite: bool,
     pub today: bool,
     pub status: Status,
     pub priority: Priority,
@@ -33,7 +27,6 @@ pub struct Task {
     #[serde(default)]
     pub checklist_sync_status: ChecklistSyncStatus,
     
-    pub deletion_date: Option<DateTime<Utc>>,
     pub created_date_time: DateTime<Utc>,
     pub last_modified_date_time: DateTime<Utc>,
     pub  list_id: Option<String>
@@ -55,11 +48,10 @@ impl Default for ChecklistSyncStatus {
 impl Task {
     pub fn new(title: String, list_id : Option<String>) -> Self {
         let now = Utc::now();
-        Self {
+        let mut task = Self {
             id: Uuid::new_v4().to_string(),
             
             title,
-            favorite: false,
             today: false,
             status: Status::NotStarted,
             priority: Priority::Low,
@@ -75,11 +67,14 @@ impl Task {
             checklist_items: Vec::new(),
             checklist_sync_status: ChecklistSyncStatus::Synced,
             
-            deletion_date: None,
             created_date_time: now,
             last_modified_date_time: now,
             list_id: list_id,
-        }
+        };
+        
+        // Calculate today field based on due date
+        task.update_today_field();
+        task
     }
 
     /// Add a new checklist item
@@ -139,5 +134,20 @@ impl Task {
     /// Check if all checklist items are completed
     pub fn is_checklist_complete(&self) -> bool {
         !self.checklist_items.is_empty() && self.checklist_items.iter().all(|item| item.is_checked)
+    }
+
+    /// Check if the task is due today
+    pub fn is_due_today(&self) -> bool {
+        if let Some(due_date) = self.due_date {
+            let today = Utc::now().date_naive();
+            due_date.date_naive() == today
+        } else {
+            false
+        }
+    }
+
+    /// Update the today field based on due date
+    pub fn update_today_field(&mut self) {
+        self.today = self.is_due_today();
     }
 }
