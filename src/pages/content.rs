@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use chrono;
 
 use cosmic::{
     iced::{
@@ -248,43 +248,93 @@ impl Content {
     pub fn task_view<'a>(&'a self, id: DefaultKey, task: &'a models::Task) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        
-
+        // Checkbox for task completion
         let item_checkbox = widget::checkbox("", task.status == Status::Completed)
             .on_toggle(move |value| Message::TaskComplete(id, value));
 
-        let not_empty = false;
-        let icon = if task.expanded {
-            "go-up-symbolic"
-        } else {
-            "go-down-symbolic"
+        // Priority flag icon
+        let priority_icon = match task.priority {
+            models::Priority::Low => icons::get_icon("flag-outline-thin-symbolic", 16),
+            models::Priority::Normal => icons::get_icon("flag-outline-thick-symbolic", 16),
+            models::Priority::High => icons::get_icon("flag-filled-symbolic", 16),
         };
-        let expand_button = not_empty.then(|| {
-            widget::button::icon(icons::get_handle(icon, 18))
-                .padding(spacing.space_xxs)
-                .on_press(Message::TaskExpand(id))
-        });
-
-        let more_button = widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
-            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
-                .on_press(Message::Empty),
-            widget::menu::items(
-                &HashMap::new(),
-                vec![
-                    widget::menu::Item::Button(fl!("edit"), None, TaskAction::Edit(id)),
-                    
-                    widget::menu::Item::Button(fl!("delete"), None, TaskAction::Delete(id)),
-                ],
-            ),
-        )])
-        .item_height(widget::menu::ItemHeight::Dynamic(40))
-        .item_width(widget::menu::ItemWidth::Uniform(260))
-        .spacing(4.0);
-
-
-
         
 
+        // Due date with color coding
+        let due_date_widget: Element<Message> = if let Some(due_date) = task.due_date {
+            let now = chrono::Utc::now();
+            let due_date_naive = due_date.naive_utc().date();
+            let today = now.naive_utc().date();
+            
+            let theme = theme::active();
+            let (color, text) = if due_date_naive < today {
+                (theme.cosmic().destructive_color().into(), due_date_naive.format("%b %d").to_string())
+            } else if due_date_naive == today {
+                (theme.cosmic().warning_color().into(), due_date_naive.format("%b %d").to_string())
+            } else {
+                (theme.cosmic().palette.neutral_9.into(), due_date_naive.format("%b %d").to_string())
+            };
+
+            let calendar_icon = icons::get_icon("office-calendar-symbolic", 14);
+            widget::row::with_capacity(2)
+                .spacing(spacing.space_xxs)
+                .push(calendar_icon)
+                .push(widget::text(text).class(cosmic::style::Text::Color(color)))
+                .into()
+        } else {
+            widget::text::text("").into()
+        };
+
+        // Reminder date with color coding
+        let reminder_widget: Element<Message> = if let Some(reminder_date) = task.reminder_date {
+            let now = chrono::Utc::now();
+            let reminder_naive = reminder_date.naive_utc().date();
+            let today = now.naive_utc().date();
+            
+            let theme = theme::active();
+            let (color, text) = if reminder_naive < today {
+                (theme.cosmic().destructive_color().into(), reminder_naive.format("%b %d").to_string())
+            } else if reminder_naive == today {
+                (theme.cosmic().warning_color().into(), reminder_naive.format("%b %d").to_string())
+            } else {
+                (theme.cosmic().palette.neutral_9.into(), reminder_naive.format("%b %d").to_string())
+            };
+
+            let alarm_icon = icons::get_icon("alarm-symbolic", 14);
+            widget::row::with_capacity(2)
+                .spacing(spacing.space_xxs)
+                .push(alarm_icon)
+                .push(widget::text(text).class(cosmic::style::Text::Color(color)))
+                .into()
+        } else {
+            widget::text::text("").into()
+        };
+
+        // Notes (truncated to 255 chars)
+        let notes_widget: Element<Message> = if !task.notes.is_empty() {
+            let truncated_notes = if task.notes.len() > 255 {
+                format!("{}...", &task.notes[..255])
+            } else {
+                task.notes.clone()
+            };
+            widget::text(truncated_notes)
+                .size(12)
+                .class(cosmic::style::Text::Color(theme::active().cosmic().palette.neutral_6.into()))
+                .into()
+        } else {
+            widget::text::text("").into()
+        };
+
+        // Edit and Delete buttons
+        let edit_button = widget::button::icon(icons::get_handle("edit-symbolic", 16))
+            .padding(spacing.space_xxs)
+            .on_press(Message::TaskOpenDetails(id));
+
+        let delete_button = widget::button::icon(icons::get_handle("user-trash-symbolic", 16))
+            .padding(spacing.space_xxs)
+            .on_press(Message::TaskDelete(id));
+
+        // Task title input
         let task_item_text = widget::editable_input(
             "",
             &task.title,
@@ -297,19 +347,46 @@ impl Content {
         .on_submit(move |_| Message::TaskTitleSubmit(id))
         .on_input(move |text| Message::TaskTitleUpdate(id, text));
 
-        let row = widget::row::with_capacity(5)
+        // Main row with checkbox, priority, title, and action buttons
+        let main_row = widget::row::with_capacity(5)
             .align_y(Alignment::Center)
-            .spacing(spacing.space_xxxs)
+            .spacing(spacing.space_xxs)
             .padding([spacing.space_xxs, spacing.space_s])
             .push(item_checkbox)
-            .push(task_item_text)
-            .push_maybe(expand_button)
             
-            .push(more_button);
+            .push(task_item_text)
+            .push(edit_button)
+            .push(delete_button);
 
-        let mut column = widget::column::with_capacity(2).push(row);
+        // Info row with dates and notes
+        let info_row = widget::row::with_capacity(3)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_s)
+            .padding([spacing.space_none, spacing.space_s])
+            
+            .push(due_date_widget)
+            .push(reminder_widget)
+            .push(widget::Space::new(Length::Fill, Length::Fixed(4 as f32))); // Spacer
 
+        // Notes row
+        let notes_row: Element<Message> = if !task.notes.is_empty() {
+            widget::row::with_capacity(1)
+                .align_y(Alignment::Center)
+                .padding([spacing.space_none, spacing.space_s])
+                .push(notes_widget)
+                .into()
+        } else {
+            widget::text::text("").into()
+        };
 
+        // Main column containing all rows
+        let mut column = widget::column::with_capacity(3)
+            .push(main_row)
+            .push(info_row);
+
+        if !task.notes.is_empty() {
+            column = column.push(notes_row);
+        }
 
         column
             .padding(spacing.space_xxs)

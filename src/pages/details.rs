@@ -83,6 +83,7 @@ impl Details {
                     .data(Priority::High)
             })
             .build();
+        
 
         Self {
             task: models::Task::default(),
