@@ -387,12 +387,11 @@ impl TasksApp {
                             }
                         }
                         DialogPage::Calendar(date) => {
-                            self.details
-                                .update(details::Message::SetDueDate(date.selected));
+                            self.update_details(tasks, details::Message::SetDueDate(date.selected));
                         }
                         DialogPage::ReminderCalendar(date) => {
-                            self.details
-                                .update(details::Message::SetReminderDate(date.selected));
+                            self.update_details(tasks, details::Message::SetReminderDate(date.selected));
+                            
                         }
                         DialogPage::Export(content) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
@@ -664,6 +663,9 @@ impl TasksApp {
                     Ok(_) => {
                         // Task updated successfully
                         tracing::info!("Task updated successfully");
+                        if let Some(current_list) = self.nav_model.active_data::<List>() {
+                            tasks.push(self.update(Message::Tasks(TasksAction::FetchTasksAsync(current_list.clone()))));
+                        }
                     }
                     Err(error) => {
                         tracing::error!("Failed to update task: {}", error);

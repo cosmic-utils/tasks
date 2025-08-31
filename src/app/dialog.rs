@@ -153,6 +153,7 @@ impl DialogPage {
                 dialog
             }
             DialogPage::Calendar(date) => {
+                let date_clone = date.clone();
                 let dialog = widget::dialog()
                     .title(fl!("select-date"))
                     .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
@@ -172,8 +173,22 @@ impl DialogPage {
                                     ))),
                                 ))
                             },
-                            || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
-                            || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
+                            move || {
+                                // Previous month - update visible month, keep selected date
+                                let mut new_model = date_clone.clone();
+                                new_model.show_prev_month();
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::Calendar(new_model))
+                                ))
+                            },
+                            move || {
+                                // Next month - update visible month, keep selected date
+                                let mut new_model = date_clone.clone();
+                                new_model.show_next_month();
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::Calendar(new_model))
+                                ))
+                            },
                             chrono::Weekday::Mon,
                         ))
                         .width(Length::Fill)
@@ -183,6 +198,7 @@ impl DialogPage {
                 dialog
             }
             DialogPage::ReminderCalendar(date) => {
+                let date_clone = date.clone();
                 let dialog = widget::dialog()
                     .title(fl!("reminder"))
                     .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
@@ -202,8 +218,22 @@ impl DialogPage {
                                     ))),
                                 ))
                             },
-                            || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
-                            || Message::Application(ApplicationAction::Dialog(DialogAction::None)),
+                            move || {
+                                // Previous month - update visible month, keep selected date
+                                let mut new_model = date_clone.clone();
+                                new_model.show_prev_month();
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::ReminderCalendar(new_model))
+                                ))
+                            },
+                            move || {
+                                // Next month - update visible month, keep selected date
+                                let mut new_model = date_clone.clone();
+                                new_model.show_next_month();
+                                Message::Application(ApplicationAction::Dialog(
+                                    DialogAction::Update(DialogPage::ReminderCalendar(new_model))
+                                ))
+                            },
                             chrono::Weekday::Mon,
                         ))
                         .width(Length::Fill)
