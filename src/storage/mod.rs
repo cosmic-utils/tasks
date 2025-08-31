@@ -403,7 +403,7 @@ impl LocalStorage {
     }
 
     /// Delete a checklist item via MS Graph
-    pub async fn delete_checklist_item(&self, task: &Task, item_id: &str) -> Result<(), Error> {
+    pub async fn delete_checklist_item(&self, task: &Task, item_id: &str) -> Result<String, Error> {
         let auth_token = self
             .get_valid_token()
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
@@ -424,6 +424,6 @@ impl LocalStorage {
                 Error::Tasks(TasksError::ApiError)
             })?;
 
-        Ok(())
+        Ok(item_id.to_string())
     }
 }

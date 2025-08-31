@@ -78,7 +78,7 @@ pub enum TasksAction {
     ToggleChecklistItemAsync(String),        // item_id
     ChecklistItemToggled(Result<ChecklistItem, String>), // Toggle result
     DeleteChecklistItemAsync(String),        // item_id
-    ChecklistItemDeleted(Result<(), String>), // Deletion result
+    ChecklistItemDeleted(Result<String, String>), // Deletion result
     FetchChecklistItemsAsync(String),        // task_id
     ChecklistItemsFetched(Result<Vec<ChecklistItem>, String>), // Fetch result
 }

@@ -737,6 +737,8 @@ impl TasksApp {
                     |item| Message::Tasks(TasksAction::ChecklistItemAdded(Ok(item))),
                     |error| Message::Tasks(TasksAction::ChecklistItemAdded(Err(error.to_string()))),
                 ));
+                // Clear the input immediately for better UX
+                self.details.new_checklist_item_text.clear();
             }
             TasksAction::ChecklistItemAdded(result) => {
                 match result {
@@ -853,17 +855,24 @@ impl TasksApp {
                 };
                 tasks.push(self.spawn_storage_operation(
                     future,
-                    |_| Message::Tasks(TasksAction::ChecklistItemDeleted(Ok(()))),
+                    |item_id_recived| Message::Tasks(TasksAction::ChecklistItemDeleted(Ok(item_id_recived   ))),
                     |error| Message::Tasks(TasksAction::ChecklistItemDeleted(Err(error.to_string()))),
                 ));
             }
             TasksAction::ChecklistItemDeleted(result) => {
                 match result {
-                    Ok(_) => {
+                    Ok(item_id_recived) => {
                         tracing::info!("Checklist item deleted successfully");
-                        // Note: We can't remove from local task here since we don't have item_id in scope
-                        // The UI will be refreshed when the task is reloaded
+                        // Remove the item from local task immediately for better UX
+                        // We need to find which item was deleted by comparing with the current state
+                        // For now, we'll refresh the checklist items to ensure consistency
+                        if !self.details.task.id.is_empty() {
+                            
+                            //task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
+
+                        }
                         let mut task = self.details.task.clone();
+                        task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
                         task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
                         self.details.task = task;
                     }

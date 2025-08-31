@@ -27,6 +27,7 @@ pub struct Details {
     // Checklist editing state
     pub editing_checklist_item: Option<String>,
     pub new_checklist_item_text: String,
+    pub editing_checklist_item_title: String, // Temporary title during editing
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +89,7 @@ impl Details {
             storage,
             editing_checklist_item: None,
             new_checklist_item_text: String::new(),
+            editing_checklist_item_title: String::new(),
         }
     }
 
@@ -100,6 +102,7 @@ impl Details {
         // Reset checklist editing state
         self.editing_checklist_item = None;
         self.new_checklist_item_text.clear();
+        self.editing_checklist_item_title.clear();
         
         // Trigger checklist fetch if task has an ID
         if !self.task.id.is_empty() {
@@ -149,30 +152,36 @@ impl Details {
                 tasks.push(Output::ToggleChecklistItemAsync(item_id.clone()));
             }
             Message::StartEditChecklistItem(ref item_id) => {
+                // Find the current item and set its title as the editing title
+                if let Some(item) = self.task.checklist_items.iter().find(|item| item.id == *item_id) {
+                    self.editing_checklist_item_title = item.display_name.clone();
+                }
                 self.editing_checklist_item = Some(item_id.clone());
             }
-            Message::FinishEditChecklistItem(ref item_id, ref new_title) => {
-                if !new_title.trim().is_empty() {
+            Message::FinishEditChecklistItem(ref item_id, ref _new_title) => {
+                if !self.editing_checklist_item_title.trim().is_empty() {
                     // Output async operation instead of local update
-                    tasks.push(Output::UpdateChecklistItemAsync(item_id.clone(), new_title.clone()));
+                    tasks.push(Output::UpdateChecklistItemAsync(item_id.clone(), self.editing_checklist_item_title.clone()));
                 }
                 self.editing_checklist_item = None;
+                self.editing_checklist_item_title.clear();
             }
             Message::CancelEditChecklistItem => {
                 self.editing_checklist_item = None;
+                self.editing_checklist_item_title.clear();
             }
             Message::DeleteChecklistItem(ref item_id) => {
                 // Output async operation instead of local update
                 tasks.push(Output::DeleteChecklistItemAsync(item_id.clone()));
             }
-            Message::UpdateChecklistItemTitle(ref item_id, ref new_title) => {
-                // Output async operation instead of local update
-                tasks.push(Output::UpdateChecklistItemAsync(item_id.clone(), new_title.clone()));
+            Message::UpdateChecklistItemTitle(ref _item_id, ref new_title) => {
+                // Store the title locally during editing
+                self.editing_checklist_item_title = new_title.clone();
             }
             Message::UpdateNewChecklistItemText(ref text) => {
                 self.new_checklist_item_text = text.clone();
             }
-            Message::EmptyInputMessage(ref text) => {
+            Message::EmptyInputMessage(ref _text) => {
                 // do nothing 
             }
         }
@@ -312,20 +321,20 @@ impl Details {
         .into();
     }
 
-    fn view_checklist_item_interactive<'a>(&self, item: &'a ChecklistItem) -> Element<'a, Message> {
+    fn view_checklist_item_interactive<'a>(&'a self, item: &'a ChecklistItem) -> Element<'a, Message> {
         let is_editing = self.editing_checklist_item.as_ref() == Some(&item.id);
         let spacing = theme::active().cosmic().spacing;
 
         if is_editing {
             // Edit mode - use existing widgets
             widget::row::with_children(vec![
-                widget::text_input("Item title", &item.display_name)
-                    .on_input( move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
+                widget::text_input("Item title", &self.editing_checklist_item_title)
+                    .on_input(move |text| Message::UpdateChecklistItemTitle(item.id.clone(), text))
                     .on_submit(move |text| Message::FinishEditChecklistItem(item.id.clone(), text))
                     .size(13)
                     .into(),
                 widget::button::suggested("✓")
-                    .on_press(Message::FinishEditChecklistItem(item.id.clone(), item.display_name.clone()))
+                    .on_press(Message::FinishEditChecklistItem(item.id.clone(), self.editing_checklist_item_title.clone()))
                     .into(),
                 widget::button::destructive("✗")
                     .on_press(Message::CancelEditChecklistItem)
