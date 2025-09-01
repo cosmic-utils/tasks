@@ -1,6 +1,5 @@
 pub mod models;
 
-use std::sync::{Mutex, MutexGuard};
 
 use crate::{
     app::markdown::Markdown,

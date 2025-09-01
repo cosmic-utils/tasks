@@ -12,7 +12,7 @@ impl Markdown for List {
 
 impl Markdown for Task {
     fn markdown(&self) -> String {
-        let mut task = format!(
+        let task = format!(
             "- [{}] {}\n",
             if self.status == Status::Completed {
                 "x"

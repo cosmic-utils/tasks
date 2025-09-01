@@ -1,5 +1,4 @@
-use chrono::{DateTime, Utc, Datelike, Timelike};
-use dirs;
+use chrono::{DateTime, Utc};
 
 use crate::storage::models::{List, Task, Priority, Status};
 use crate::storage::models::task::ChecklistSyncStatus;
