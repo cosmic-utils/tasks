@@ -908,7 +908,7 @@ impl Application for TasksApp {
     type Executor = cosmic::executor::Default;
     type Flags = crate::app::Flags;
     type Message = Message;
-    const APP_ID: &'static str = "com.github.digit1024.MS_TODO_APP";
+    const APP_ID: &'static str = "com.github.digit1024.ms-todo-app";
 
     fn core(&self) -> &Core {
         &self.core

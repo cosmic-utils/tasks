@@ -1,6 +1,6 @@
 <div align="center">
   <br>
-  <img src="res/icons/hicolor/scalable/apps/com.github.digit1024.MS_TODO_APP.svg" width="150" />
+  <img src="res/icons/hicolor/scalable/apps/com.github.digit1024.ms-todo-app.svg" width="150" />
   <h1>MS TODO App</h1>
 
   <p>A Microsoft TODO management application for the COSMIC™ desktop</p>
@@ -10,7 +10,7 @@
   ![window-light.png](https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/window-light.png#gh-light-mode-only)
   ![window-dark.png](https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/window-dark.png#gh-dark-mode-only)
 
-  <a href='https://flathub.org/apps/com.github.digit1024.MS_TODO_APP'>
+  <a href='https://flathub.org/apps/com.github.digit1024.ms-todo-app'>
     <img width='200' alt='Get it on Flathub' src='https://flathub.org/api/badge?locale=en'/>
   </a>
 </div>
@@ -51,7 +51,7 @@ To build the cargo sources for the Flatpak manifest:
 
 ```bash
 python3 ./flatpak/flatpak-cargo-generator.py ./Cargo.lock -o ./flatpak/cargo-sources.json
-appstreamcli validate --pedantic --explain res/com.github.digit1024.MS_TODO_APP.metainfo.xml
+appstreamcli validate --pedantic --explain res/com.github.digit1024.ms-todo-app.metainfo.xml
 ```
 
 ## Dependencies

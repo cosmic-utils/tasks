@@ -1,5 +1,5 @@
 name := 'ms-todo-app'
-export APPID := 'com.github.digit1024.MS_TODO_APP'
+export APPID := 'com.github.digit1024.ms-todo-app'
 
 rootdir := ''
 prefix := '/usr'

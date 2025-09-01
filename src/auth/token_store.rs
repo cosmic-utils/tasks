@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use dirs;
 
-const APP_ID: &str = "com.github.digit1024.MS_TODO_APP";
+const APP_ID: &str = "com.github.digit1024.ms-todo-app";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthConfig {
