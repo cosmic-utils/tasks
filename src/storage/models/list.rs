@@ -1,9 +1,7 @@
 
-use cosmic::Application;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::app::TasksApp;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct List {
@@ -34,12 +32,7 @@ impl FromIterator<List> for List {
 impl List {
     pub fn new(name: &str) -> Self {
         let id = Uuid::new_v4().to_string();
-        let file_path = dirs::data_local_dir()
-            .unwrap()
-            .join(TasksApp::APP_ID)
-            .join("lists")
-            .join(&id)
-            .with_extension("ron");
+        
         Self {
             id,
             name: name.to_string(),

@@ -49,7 +49,7 @@ pub enum ApplicationAction {
 
 #[derive(Debug, Clone)]
 pub enum TasksAction {
-    PopulateLists(Vec<List>),
+    
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
     FetchLists,

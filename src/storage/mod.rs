@@ -291,7 +291,7 @@ impl LocalStorage {
                 &format!("/me/todo/lists/{}", list.id),
                 &format!("Bearer {}", auth_token),
             )
-            .await.map_err(|e| crate::app::error::Error::Tasks(TasksError::ApiError))?;
+            .await.map_err(|_e| crate::app::error::Error::Tasks(TasksError::ApiError))?;
 
         Ok(())
     }

@@ -76,52 +76,6 @@ impl Task {
         task.update_today_field();
         task
     }
-
-    /// Add a new checklist item
-    pub fn add_checklist_item(&mut self, title: String) -> &ChecklistItem {
-        let item = ChecklistItem::new(title);
-        self.checklist_items.push(item.clone());
-        self.checklist_sync_status = ChecklistSyncStatus::PendingSync;
-        self.last_modified_date_time = Utc::now();
-        self.checklist_items.last().unwrap()
-    }
-
-    /// Remove a checklist item by ID
-    pub fn remove_checklist_item(&mut self, item_id: &str) -> bool {
-        let initial_len = self.checklist_items.len();
-        self.checklist_items.retain(|item| item.id != item_id);
-        let removed = self.checklist_items.len() < initial_len;
-        if removed {
-            self.checklist_sync_status = ChecklistSyncStatus::PendingSync;
-            self.last_modified_date_time = Utc::now();
-        }
-        removed
-    }
-
-    /// Toggle checklist item completion status
-    pub fn toggle_checklist_item(&mut self, item_id: &str) -> bool {
-        if let Some(item) = self.checklist_items.iter_mut().find(|item| item.id == item_id) {
-            item.toggle();
-            self.checklist_sync_status = ChecklistSyncStatus::PendingSync;
-            self.last_modified_date_time = Utc::now();
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Update checklist item title
-    pub fn update_checklist_item_title(&mut self, item_id: &str, new_title: String) -> bool {
-        if let Some(item) = self.checklist_items.iter_mut().find(|item| item.id == item_id) {
-            item.display_name = new_title;
-            self.checklist_sync_status = ChecklistSyncStatus::PendingSync;
-            self.last_modified_date_time = Utc::now();
-            true
-        } else {
-            false
-        }
-    }
-
     /// Get checklist completion percentage
     pub fn checklist_completion_percentage(&self) -> f32 {
         if self.checklist_items.is_empty() {
@@ -129,11 +83,6 @@ impl Task {
         }
         let completed = self.checklist_items.iter().filter(|item| item.is_checked).count();
         (completed as f32 / self.checklist_items.len() as f32) * 100.0
-    }
-
-    /// Check if all checklist items are completed
-    pub fn is_checklist_complete(&self) -> bool {
-        !self.checklist_items.is_empty() && self.checklist_items.iter().all(|item| item.is_checked)
     }
 
     /// Check if the task is due today

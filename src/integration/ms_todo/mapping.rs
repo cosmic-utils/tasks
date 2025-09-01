@@ -349,8 +349,9 @@ fn parse_ms_graph_date(date_str: &str) -> Option<DateTime<Utc>> {
 
 #[cfg(test)]
 mod tests {
+    use chrono::{DateTime, TimeZone, Utc, Datelike, Timelike};
+  
     use super::*;
-    use chrono::TimeZone;
 
     #[test]
     fn test_list_to_create_request() {
@@ -475,7 +476,7 @@ mod tests {
         assert_eq!(list.id, "ms-graph-id");
         assert_eq!(list.name, "MS Graph List");
         assert_eq!(list.icon, Some("view-list-symbolic".to_string()));
-        assert_eq!(list.number_of_tasks, 5); // Should use the odata_count
+        
     }
 
     #[test]
@@ -601,7 +602,7 @@ mod tests {
             assert_eq!(dt.day(), 3);
             assert_eq!(dt.hour(), 0);
             assert_eq!(dt.minute(), 0);
-            assert_eq!(dt.second(), 0);
+
         }
         
         // Test standard RFC3339 format

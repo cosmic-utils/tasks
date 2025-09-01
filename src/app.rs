@@ -551,19 +551,19 @@ impl TasksApp {
                     }
                 }
             }
-            TasksAction::PopulateLists(lists) => {
-                //self.clear_lists();
-                // for list in lists {
-                //     self.create_nav_item(&list);
-                // }
-                self.update_lists(lists);
-                let Some(entity) = self.nav_model.iter().next() else {
-                    return;
-                };
-                self.nav_model.activate(entity);
-                let task = self.on_nav_select(entity);
-                tasks.push(task);
-            }
+            // TasksAction::PopulateLists(lists) => {
+            //     //self.clear_lists();
+            //     // for list in lists {
+            //     //     self.create_nav_item(&list);
+            //     // }
+            //     self.update_lists(lists);
+            //     let Some(entity) = self.nav_model.iter().next() else {
+            //         return;
+            //     };
+            //     self.nav_model.activate(entity);
+            //     let task = self.on_nav_select(entity);
+            //     tasks.push(task);
+            // }
             TasksAction::AddList(list) => {
                 self.create_nav_item(&list);
                 let Some(entity) = self.nav_model.iter().last() else {
@@ -897,9 +897,9 @@ impl TasksApp {
                 }
             }
             // Handle any other actions
-            _ => {
-                tracing::debug!("Unhandled action: {:?}", tasks_action);
-            }
+            // _ => {
+            //     tracing::debug!("Unhandled action: {:?}", tasks_action);
+            // }
         }
     }
 }

@@ -253,11 +253,11 @@ impl Content {
             .on_toggle(move |value| Message::TaskComplete(id, value));
 
         // Priority flag icon
-        let priority_icon = match task.priority {
-            models::Priority::Low => icons::get_icon("flag-outline-thin-symbolic", 16),
-            models::Priority::Normal => icons::get_icon("flag-outline-thick-symbolic", 16),
-            models::Priority::High => icons::get_icon("flag-filled-symbolic", 16),
-        };
+        // let priority_icon = match task.priority {
+        //     models::Priority::Low => icons::get_icon("flag-outline-thin-symbolic", 16),
+        //     models::Priority::Normal => icons::get_icon("flag-outline-thick-symbolic", 16),
+        //     models::Priority::High => icons::get_icon("flag-filled-symbolic", 16),
+        // };
         
 
         // Due date with color coding
