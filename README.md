@@ -5,7 +5,7 @@
 
   <p>A Microsoft TODO management application for the COSMIC™ desktop</p>
   
-  ![baner.png](https://raw.githubusercontent.com/digit1024/msToDO/rebrand/res/screenshots/baner.png#gh-light-mode-only)
+  ![baner.png](https://raw.githubusercontent.com/digit1024/msToDO/rebrand/res/screenshots/baner.png)
 
   ![window-light.png](https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/window-light.png#gh-light-mode-only)
   ![window-dark.png](https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/window-dark.png#gh-dark-mode-only)
