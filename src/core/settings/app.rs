@@ -4,7 +4,7 @@ use cosmic::{
     Application,
 };
 use std::sync::Mutex;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::EnvFilter;
 
 use crate::{
     app::TasksApp,
@@ -56,5 +56,4 @@ tracing_subscriber::fmt()
 
 pub fn icons() {
     ICON_CACHE.get_or_init(|| Mutex::new(IconCache::new()));
-    crate::core::icons::cache_all_icons_in_background(vec![14, 16, 18, 20, 32]);
 }

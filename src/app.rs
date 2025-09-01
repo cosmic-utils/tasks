@@ -354,38 +354,6 @@ impl TasksApp {
                             tasks
                                 .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
                         }
-                        DialogPage::Icon(entity, name, _) => {
-                            let data = if let Some(entity) = entity {
-                                self.nav_model.data::<List>(entity)
-                            } else {
-                                self.nav_model.active_data::<List>()
-                            };
-                            if let Some(list) = data {
-                                let entity = self.nav_model.active();
-                                self.nav_model.text_set(entity, list.name.clone());
-                                self.nav_model
-                                    .icon_set(entity, crate::app::icons::get_icon(&name, 16));
-                            }
-                            if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.icon = Some(name);
-                                let list = list.clone();
-                                // Convert to async operation
-                                let storage = self.storage.clone();
-                                let list_clone = list.clone();
-                                let future = async move { storage.update_list(&list_clone).await };
-                                tasks.push(self.spawn_storage_operation(
-                                    future,
-                                    |_| Message::Content(content::Message::Empty),
-                                    |error| {
-                                        tracing::error!("Error updating list: {}", error);
-                                        Message::Content(content::Message::Empty)
-                                    },
-                                ));
-                                tasks.push(self.update(Message::Content(
-                                    content::Message::SetList(Some(list)),
-                                )));
-                            }
-                        }
                         DialogPage::Calendar(date) => {
                             self.update_details(tasks, details::Message::SetDueDate(date.selected));
                         }
@@ -465,15 +433,6 @@ impl TasksApp {
                 NavMenuAction::Rename(entity) => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
                         DialogAction::Open(DialogPage::Rename(Some(entity), String::new())),
-                    ))));
-                }
-                NavMenuAction::SetIcon(entity) => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Icon(
-                            Some(entity),
-                            String::new(),
-                            String::new(),
-                        )),
                     ))));
                 }
                 NavMenuAction::Export(entity) => {
@@ -1053,11 +1012,7 @@ impl Application for TasksApp {
                     Some(icons::get_handle("edit-symbolic", 14)),
                     NavMenuAction::Rename(id),
                 ),
-                cosmic::widget::menu::Item::Button(
-                    fl!("icon"),
-                    Some(icons::get_handle("face-smile-big-symbolic", 14)),
-                    NavMenuAction::SetIcon(id),
-                ),
+                
                 cosmic::widget::menu::Item::Button(
                     fl!("export"),
                     Some(icons::get_handle("share-symbolic", 18)),

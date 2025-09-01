@@ -20,7 +20,6 @@ pub enum Action {
     NewList,
     DeleteList,
     RenameList,
-    Icon,
     ToggleHideCompleted(bool),
     SortByNameAsc,
     SortByNameDesc,
@@ -98,9 +97,6 @@ impl MenuAction for Action {
             Action::NewList => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::New(String::new()),
             ))),
-            Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
-                DialogPage::Icon(None, String::new(), String::new()),
-            ))),
             Action::RenameList => Message::Application(ApplicationAction::Dialog(
                 DialogAction::Open(DialogPage::Rename(None, String::new())),
             )),
@@ -121,7 +117,6 @@ impl MenuAction for Action {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum NavMenuAction {
     Rename(segmented_button::Entity),
-    SetIcon(segmented_button::Entity),
     Export(segmented_button::Entity),
     Delete(segmented_button::Entity),
 }

@@ -70,55 +70,9 @@ impl IconCache {
         icon::icon(handle).size(size)
     }
 
-    pub fn cache_all_icons(&mut self, size: u16) {
-        for name in self.bundled_icons.iter() {
-            let key = IconCacheKey {
-                name: name.clone(),
-                size,
-            };
-            if !self.cache.contains_key(&key) {
-                let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join(format!("res/icons/bundled/{}.svg", name));
-                if let Ok(data) = fs::read(&path) {
-                    let handle = icon::from_svg_bytes(data.clone()).symbolic(true);
-                    self.cache.insert(
-                        key,
-                        IconCacheEntry {
-                            handle,
-                            _bytes: Some(data),
-                        },
-                    );
-                }
-            }
-        }
-    }
 }
 
-#[allow(dead_code)]
-pub fn get_all_icons(size: u16) -> Vec<(String, icon::Icon)> {
-    let icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
-    icon_cache
-        .cache
-        .iter()
-        .filter(|(key, _)| key.size == size)
-        .map(|(key, entry)| {
-            (
-                key.name.clone(),
-                icon::icon(entry.handle.clone()).size(size),
-            )
-        })
-        .collect()
-}
-
-pub fn get_all_icon_handles(size: u16) -> Vec<(String, icon::Handle)> {
-    let icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
-    icon_cache
-        .cache
-        .iter()
-        .filter(|(key, _)| key.size == size)
-        .map(|(key, entry)| (key.name.clone(), entry.handle.clone()))
-        .collect()
-}
+// Removed enumeration helpers used only by the icon picker dialog
 
 pub fn get_icon(name: &str, size: u16) -> icon::Icon {
     let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
@@ -151,15 +105,4 @@ pub fn get_handle(name: &str, size: u16) -> icon::Handle {
         },
     );
     handle
-}
-
-pub fn cache_all_icons_in_background(sizes: Vec<u16>) {
-    if let Some(cache_mutex) = ICON_CACHE.get() {
-        std::thread::spawn(move || {
-            let mut cache = cache_mutex.lock().unwrap();
-            for size in sizes {
-                cache.cache_all_icons(size);
-            }
-        });
-    }
 }

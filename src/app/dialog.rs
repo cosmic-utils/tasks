@@ -20,7 +20,6 @@ pub enum DialogAction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogPage {
     New(String),
-    Icon(Option<segmented_button::Entity>, String, String),
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
     Calendar(CalendarModel),
@@ -96,62 +95,6 @@ impl DialogPage {
                 .secondary_action(widget::button::standard(fl!("cancel")).on_press(
                     Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                 )),
-            DialogPage::Icon(entity, icon, search) => {
-                let search_lower = search.to_lowercase();
-                let icon_buttons = crate::core::icons::get_all_icon_handles(20)
-                    .iter()
-                    .filter(|(name, _)| name.to_lowercase().contains(&search_lower))
-                    .map(|(name, icon)| {
-                        widget::button::icon(icon.clone())
-                            .medium()
-                            .on_press(Message::Application(ApplicationAction::Dialog(
-                                DialogAction::Update(DialogPage::Icon(
-                                    *entity,
-                                    name.clone(),
-                                    search.clone(),
-                                )),
-                            )))
-                            .into()
-                    })
-                    .collect();
-
-                let search_input = widget::text_input(fl!("search-icons"), search.as_str())
-                    .id(text_input_id.clone())
-                    .on_input({
-                        let entity = *entity;
-                        let icon = icon.clone();
-                        move |s| {
-                            Message::Application(ApplicationAction::Dialog(DialogAction::Update(
-                                DialogPage::Icon(entity, icon.clone(), s),
-                            )))
-                        }
-                    });
-
-                let dialog = widget::dialog()
-                    .title(fl!("icon-select"))
-                    .icon(crate::core::icons::get_icon(icon, 32))
-                    .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                    )))
-                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
-                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                    ))
-                    .control(
-                        widget::column::with_children(vec![
-                            search_input.into(),
-                            widget::container(widget::scrollable(
-                                widget::row()
-                                    .push(widget::flex_row(icon_buttons))
-                                    .push(widget::horizontal_space()),
-                            ))
-                            .height(Length::Fixed(300.0))
-                            .into(),
-                        ])
-                        .spacing(spacing.space_xxs),
-                    );
-
-                dialog
-            }
             DialogPage::Calendar(date) => {
                 let date_clone = date.clone();
                 let dialog = widget::dialog()

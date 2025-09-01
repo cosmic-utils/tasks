@@ -57,12 +57,6 @@ pub fn menu_bar<'a>(
                     ),
                     Item::Divider,
                     Item::Button(
-                        fl!("icon"),
-                        Some(icons::get_handle("face-smile-big-symbolic", 14)),
-                        Action::Icon,
-                    ),
-                    Item::Divider,
-                    Item::Button(
                         fl!("delete"),
                         Some(icons::get_handle("user-trash-full-symbolic", 14)),
                         Action::DeleteList,
