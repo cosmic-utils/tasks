@@ -14,6 +14,7 @@ pub enum DialogAction {
     Update(DialogPage),
     Close,
     Complete,
+    #[allow(dead_code)]
     None,
 }
 

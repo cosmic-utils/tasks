@@ -25,27 +25,3 @@ impl Markdown for Task {
         task
     }
 }
-
-// Helper function to recursively format sub-tasks with proper indentation
-fn format_sub_tasks(sub_tasks: &[Task], indent_level: usize) -> String {
-    let mut result = String::new();
-    let indent = "  ".repeat(indent_level);
-
-    for sub_task in sub_tasks {
-        // Add the sub-task with proper indentation
-        result.push_str(&format!(
-            "{}- [{}] {}\n",
-            indent,
-            if sub_task.status == Status::Completed {
-                "x"
-            } else {
-                " "
-            },
-            sub_task.title
-        ));
-
-        
-    }
-
-    result
-}

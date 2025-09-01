@@ -15,7 +15,6 @@ use crate::{
     fl,
     storage::{
         models::{self, Priority, ChecklistItem},
-        LocalStorage,
     },
 };
 
@@ -23,7 +22,6 @@ pub struct Details {
     pub task: models::Task,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub text_editor_content: widget::text_editor::Content,
-    pub storage: LocalStorage,
     // Checklist editing state
     pub editing_checklist_item: Option<String>,
     pub new_checklist_item_text: String,
@@ -48,12 +46,14 @@ pub enum Message {
     DeleteChecklistItem(String),
     UpdateChecklistItemTitle(String, String),
     UpdateNewChecklistItemText(String),
+    #[allow(dead_code)]
     EmptyInputMessage(String),
 }
 
 pub enum Output {
     OpenCalendarDialog,
     OpenReminderCalendarDialog,
+    #[allow(dead_code)]
     RefreshTask(models::Task),
     UpdateTaskAsync(models::Task),
     // Checklist outputs
@@ -61,11 +61,12 @@ pub enum Output {
     UpdateChecklistItemAsync(String, String),
     ToggleChecklistItemAsync(String),
     DeleteChecklistItemAsync(String),
+    #[allow(dead_code)]
     FetchChecklistItems,
 }
 
 impl Details {
-    pub fn new(storage: LocalStorage) -> Self {
+    pub fn new() -> Self {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
@@ -89,31 +90,13 @@ impl Details {
             task: models::Task::default(),
             priority_model,
             text_editor_content: widget::text_editor::Content::new(),
-            storage,
             editing_checklist_item: None,
             new_checklist_item_text: String::new(),
             editing_checklist_item_title: String::new(),
         }
     }
 
-    /// Set a new task and trigger checklist fetch
-    pub fn set_task(&mut self, task: models::Task) -> Vec<Output> {
-        self.task = task;
-        self.text_editor_content = widget::text_editor::Content::new();
-        // Note: We can't directly set text in text_editor, it will be populated when the task is loaded
-        
-        // Reset checklist editing state
-        self.editing_checklist_item = None;
-        self.new_checklist_item_text.clear();
-        self.editing_checklist_item_title.clear();
-        
-        // Trigger checklist fetch if task has an ID
-        if !self.task.id.is_empty() {
-            vec![Output::FetchChecklistItems]
-        } else {
-            vec![]
-        }
-    }
+
 
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = vec![];

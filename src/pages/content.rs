@@ -7,7 +7,7 @@ use cosmic::{
     },
     iced_widget::row,
     theme,
-    widget::{self, menu::Action as MenuAction},
+    widget::{self},
     Apply, Element,
 };
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
@@ -16,7 +16,6 @@ use crate::{
     core::{config, icons},
     fl,
     storage::models::{self, List, Status},
-    storage::LocalStorage,
 };
 
 pub struct Content {
@@ -29,7 +28,6 @@ pub struct Content {
     sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     config: config::TasksConfig,
     input: String,
-    storage: LocalStorage,
     context_menu_open: bool,
     search_bar_visible: bool,
     search_query: String,
@@ -48,6 +46,7 @@ pub enum SortType {
 pub enum Message {
     TaskAdd,
 
+    #[allow(dead_code)]
     TaskExpand(DefaultKey),
     
     TaskComplete(DefaultKey, bool),
@@ -75,7 +74,9 @@ pub enum Message {
     
     // New async message variants
     TaskCreated(models::Task),           // Task was created successfully
+    #[allow(dead_code)]
     TaskUpdated(models::Task),          // Task was updated successfully
+    #[allow(dead_code)]
     TaskDeleted(models::Task),          // Task was deleted successfully
 }
 
@@ -94,45 +95,10 @@ pub enum Output {
     FetchTasksAsync(models::List),
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum TaskAction {
-    
-    Edit(DefaultKey),
-    Delete(DefaultKey),
-}
 
-impl MenuAction for TaskAction {
-    type Message = Message;
-
-    fn message(&self) -> Self::Message {
-        match self {
-            TaskAction::Edit(id) => Message::TaskOpenDetails(*id),
-            
-            TaskAction::Delete(id) => Message::TaskDelete(*id),
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum SubTaskAction {
-    AddSubTask(DefaultKey),
-    Edit(DefaultKey),
-    Delete(DefaultKey),
-}
-
-impl MenuAction for SubTaskAction {
-    type Message = Message;
-
-    fn message(&self) -> Self::Message {
-        
-            
-             Message::Empty
-        
-    }
-}
 
 impl Content {
-    pub fn new(storage: LocalStorage) -> Self {
+    pub fn new() -> Self {
         Self {
             list: None,
             tasks: SlotMap::new(),
@@ -143,7 +109,6 @@ impl Content {
             sub_task_input_ids: SecondaryMap::new(),
             input: String::new(),
             config: config::TasksConfig::config(),
-            storage,
             context_menu_open: false,
             search_bar_visible: false,
             search_query: String::new(),
@@ -452,15 +417,7 @@ impl Content {
         }
     }
 
-    fn populate_sub_task_slotmap(&mut self, tasks: Vec<models::Task>) {
-        for task in tasks {
-            let task_id = self.sub_tasks.insert(task.clone());
-            self.sub_task_input_ids
-                .insert(task_id, widget::Id::unique());
-            self.sub_task_editing.insert(task_id, false);
-            
-        }
-    }
+
 
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = Vec::new();

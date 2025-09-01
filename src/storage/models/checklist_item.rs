@@ -61,15 +61,7 @@ impl ChecklistItem {
         }
     }
 
-    /// Toggle the checked status
-    pub fn toggle(&mut self) {
-        self.is_checked = !self.is_checked;
-        if self.is_checked {
-            self.checked_date_time = Some(Utc::now());
-        } else {
-            self.checked_date_time = None;
-        }
-    }
+
 
 
 
