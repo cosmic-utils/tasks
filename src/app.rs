@@ -924,22 +924,21 @@ impl Application for TasksApp {
         let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(Self::APP_ID)
-            .version("0.2.0")
-            .author("Eduardo Flores")
+            .version("1.0.0")
+            .author("Eduardo Flores (original) and Mchał Banaś (microsoft TODO)")
             .license("GPL-3.0-only")
             .links([
-                (fl!("repository"), "https://github.com/digit1024/msToDO"),
+                (fl!("repository-original"), "https://github.com/cosmic-utils/tasks"),
+                (fl!("repository-microsoft-todo"), "https://github.com/digit1024/msToDO"),
                 (
-                    fl!("support"),
-                    "https://github.com/digit1024/msToDO/issues",
+                    fl!("support-original"),
+                    "https://github.com/cosmic-utils/tasks/issues",
                 ),
-                (fl!("website"), "https://github.com/digit1024/msToDO"),
-                ("Buy Me a Coffee".to_string(), "https://buymeacoffee.com/digit1024"),
-            ])
-            .developers([
-                ("digit1024", "digit1024@github.com"),
-                ("Original: Eduardo Flores", "edfloreshz@proton.me")
-            ]);
+                (fl!("support"), "https://github.com/digit1024/msToDO/issues"),
+                (fl!("website-original"), "https://tasks.edfloreshz.dev"),
+                (fl!("website-microsoft-todo"), "https://github.com/digit1024/msToDO"),
+            ]).comments("I want to thank the original author of 'tasks'. Without his work, this app would not be possible.")
+            .developers([("Eduardo Flores", "edfloreshz@proton.me") ,("Michał Banaś", "https://github.com/digit1024")]);
 
         let mut app = TasksApp {
             core,

@@ -91,8 +91,13 @@ hide-completed = Hide completed
 
 ## About
 repository = Repository
+repository-original = Repository [Original]
+repository-microsoft-todo = Repository [Microsoft TODO]
 support = Support
+support-original = Support [Original]
 website = Website
+website-original = Website [Original]
+website-microsoft-todo = Website [Microsoft TODO]
 
 ## Error
 cause = Cause
