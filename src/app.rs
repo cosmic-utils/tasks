@@ -253,8 +253,7 @@ impl Tasks {
                             }
                         }
                         DialogPage::Calendar(date) => {
-                            self.details
-                                .update(details::Message::SetDueDate(date.selected));
+                            self.update_details(tasks, details::Message::SetDueDate(date.selected));
                         }
                         DialogPage::Export(content) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
