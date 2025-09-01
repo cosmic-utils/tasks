@@ -4,7 +4,7 @@
   "runtime-version": "23.08",
   "sdk": "org.freedesktop.Sdk",
   "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
-  "command": "tasks",
+  "command": "ms-todo-app",
   "finish-args": [
     "--share=ipc",
     "--socket=wayland",
@@ -17,7 +17,7 @@
     "append-path": "/usr/lib/sdk/rust-stable/bin",
     "build-args": ["--share=network"],
     "env": {
-      "CARGO_HOME": "/run/build/tasks/cargo"
+      "CARGO_HOME": "/run/build/ms-todo-app/cargo"
     }
   },
   "modules": [
@@ -45,7 +45,7 @@
       ]
     },
     {
-      "name": "tasks",
+      "name": "ms-todo-app",
       "buildsystem": "simple",
       "build-commands": ["just vendor", "just build-vendored", "just flatpak"],
       "sources": [
