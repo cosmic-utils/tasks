@@ -1,5 +1,5 @@
-name := 'tasks'
-export APPID := 'dev.edfloreshz.Tasks'
+name := 'ms-todo-app'
+export APPID := 'com.github.digit1024.MS_TODO_APP'
 
 rootdir := ''
 prefix := '/usr'

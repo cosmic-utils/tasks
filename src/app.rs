@@ -908,7 +908,7 @@ impl Application for TasksApp {
     type Executor = cosmic::executor::Default;
     type Flags = crate::app::Flags;
     type Message = Message;
-    const APP_ID: &'static str = "dev.edfloreshz.Tasks";
+    const APP_ID: &'static str = "com.github.digit1024.MS_TODO_APP";
 
     fn core(&self) -> &Core {
         &self.core
@@ -924,18 +924,21 @@ impl Application for TasksApp {
         let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(Self::APP_ID)
-            .version("0.2.0")
-            .author("Eduardo Flores")
+            .version("1.0.0")
+            .author("Eduardo Flores (original) and Mchał Banaś (microsoft TODO)")
             .license("GPL-3.0-only")
             .links([
-                (fl!("repository"), "https://github.com/cosmic-utils/tasks"),
+                (fl!("repository-original"), "https://github.com/cosmic-utils/tasks"),
+                (fl!("repository-microsoft-todo"), "https://github.com/digit1024/msToDO"),
                 (
-                    fl!("support"),
+                    fl!("support-original"),
                     "https://github.com/cosmic-utils/tasks/issues",
                 ),
-                (fl!("website"), "https://tasks.edfloreshz.dev"),
-            ])
-            .developers([("Eduardo Flores", "edfloreshz@proton.me")]);
+                (fl!("support"), "https://github.com/digit1024/msToDO/issues"),
+                (fl!("website-original"), "https://tasks.edfloreshz.dev"),
+                (fl!("website-microsoft-todo"), "https://github.com/digit1024/msToDO"),
+            ]).comments("I want to thank the original author of 'tasks'. Without his work, this app would not be possible.")
+            .developers([("Eduardo Flores", "edfloreshz@proton.me") ,("Michał Banaś", "https://github.com/digit1024")]);
 
         let mut app = TasksApp {
             core,

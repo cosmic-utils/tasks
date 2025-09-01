@@ -3667,6 +3667,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "ms-todo-app"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "chrono",
+ "cli-clipboard",
+ "dirs 6.0.0",
+ "env_logger",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "keyring",
+ "libcosmic",
+ "open",
+ "rand 0.9.2",
+ "reqwest",
+ "ron 0.10.1",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "sha2",
+ "slotmap",
+ "sqlx",
+ "thiserror 2.0.12",
+ "tiny_http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "webbrowser",
+]
+
+[[package]]
 name = "mutate_once"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5854,39 +5887,6 @@ dependencies = [
  "grid",
  "num-traits",
  "slotmap",
-]
-
-[[package]]
-name = "tasks"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "base64",
- "chrono",
- "cli-clipboard",
- "dirs 6.0.0",
- "env_logger",
- "i18n-embed",
- "i18n-embed-fl",
- "keyring",
- "libcosmic",
- "open",
- "rand 0.9.2",
- "reqwest",
- "ron 0.10.1",
- "rust-embed",
- "serde",
- "serde_json",
- "sha2",
- "slotmap",
- "sqlx",
- "thiserror 2.0.12",
- "tiny_http",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "webbrowser",
 ]
 
 [[package]]

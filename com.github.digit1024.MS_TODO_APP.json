@@ -1,5 +1,5 @@
 {
-  "id": "dev.edfloreshz.Tasks",
+  "id": "com.github.digit1024.MS_TODO_APP",
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "23.08",
   "sdk": "org.freedesktop.Sdk",
@@ -52,7 +52,7 @@
         {
           "type": "git",
           "branch": "main",
-          "url": "https://github.com/edfloreshz/tasks.git"
+          "url": "https://github.com/digit1024/msToDO.git"
         }
       ]
     }
