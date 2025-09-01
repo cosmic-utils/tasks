@@ -5,7 +5,7 @@ pub mod status;
 pub mod task;
 pub mod checklist_item;
 
-pub use list::List;
+pub use list::{List, VirtualListType};
 pub use priority::Priority;
 pub use recurrence::Recurrence;
 pub use status::Status;

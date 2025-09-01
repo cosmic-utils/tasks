@@ -43,6 +43,9 @@ impl From<TodoTaskList> for List {
             hide_completed: true,                // Not supported in MS Graph
             number_of_tasks,                     // Count of non-completed tasks
             well_known_list_name: todo_list.wellknownListName,
+            is_virtual: false,                   // MS Graph lists are never virtual
+            virtual_type: None,                  // MS Graph lists are never virtual
+            sort_order: 0,                       // Default sort order
         }
     }
 }
@@ -363,7 +366,10 @@ mod tests {
             icon: Some("test-icon".to_string()),
             hide_completed: false,
             number_of_tasks: 0,
-            well_known_list_name: None, 
+            well_known_list_name: None,
+            is_virtual: false,
+            virtual_type: None,
+            sort_order: 0,
         };
 
         let request: CreateTodoTaskListRequest = (&list).into();

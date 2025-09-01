@@ -181,7 +181,7 @@ impl TasksApp {
                     if let Some(data) = self.nav_model.active_data_mut::<List>() {
                         data.hide_completed = list.hide_completed;   
                         // Convert to async operation
-                        let storage = self.storage.clone();
+                        let mut storage = self.storage.clone();
                         let future = async move { storage.tasks(&list).await };
                         tasks.push(self.spawn_storage_operation( 
                             future,
@@ -438,7 +438,7 @@ impl TasksApp {
                 NavMenuAction::Export(entity) => {
                     if let Some(list) = self.nav_model.data::<List>(entity) {
                         // Convert to async operation
-                        let storage = self.storage.clone();
+                        let mut storage = self.storage.clone();
                         let list_clone = list.clone();
                         let future = async move { storage.tasks(&list_clone).await };
                         let list_for_export = list.clone();
@@ -587,8 +587,25 @@ impl TasksApp {
                 self.nav_model.remove(self.nav_model.active());
             }
             TasksAction::CreateTaskAsync(task) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.create_task(&task).await };
+                let mut storage = self.storage.clone();
+                
+                // Handle virtual list task routing
+                let mut task_to_create = task.clone();
+                if let Some(current_list) = self.nav_model.active_data::<List>() {
+                    if current_list.is_virtual {
+                        // Find the "Tasks" list (well_known_list_name = "defaultList")
+                        for entity in self.nav_model.iter() {
+                            if let Some(list) = self.nav_model.data::<List>(entity) {
+                                if list.well_known_list_name.as_deref() == Some("defaultList") {
+                                    task_to_create.list_id = Some(list.id.clone());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                let future = async move { storage.create_task(&task_to_create).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
                     |task| Message::Tasks(TasksAction::TaskCreated(Ok(task))),
@@ -609,7 +626,7 @@ impl TasksApp {
                 }
             }
             TasksAction::UpdateTaskAsync(task) => {
-                let storage = self.storage.clone();
+                let mut storage = self.storage.clone();
                 let future = async move { storage.update_task(&task).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
@@ -632,7 +649,7 @@ impl TasksApp {
                 }
             }
             TasksAction::DeleteTaskAsync(task) => {
-                let storage = self.storage.clone();
+                let mut storage = self.storage.clone();
                 let future = async move { storage.delete_task(&task).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
@@ -671,7 +688,7 @@ impl TasksApp {
 
             // NEW: Add these cases
             TasksAction::FetchTasksAsync(list) => {
-                let storage = self.storage.clone();
+                let mut storage = self.storage.clone();
                 let future = async move { storage.tasks(&list).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
