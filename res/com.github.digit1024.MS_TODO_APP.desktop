@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=Open MS Todo
-Exec=tasks %F
+Name=MS TODO App
+Exec=ms-todo-app %F
 Terminal=false
 Type=Application
 StartupNotify=true
-Icon=dev.edfloreshz.Tasks
+Icon=com.github.digit1024.MS_TODO_APP
 Categories=Utility;
 Keywords=Tasks; Management;Todo;Project;Planner;Organizer;Reminder;Checklist;Task;To-do;List;
 Keywords[bg]=Задачи;Управление;Задача;Проект;Планировщик;Организатор;Напомняне;Списък;Задача;За-направяне;Списък;

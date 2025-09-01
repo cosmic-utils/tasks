@@ -25,7 +25,7 @@ impl Application for View {
     type Flags = crate::settings::error::Flags;
     type Message = ();
 
-    const APP_ID: &'static str = "dev.edfloreshz.Tasks";
+    const APP_ID: &'static str = "com.github.digit1024.MS_TODO_APP";
 
     fn core(&self) -> &cosmic::Core {
         &self.core

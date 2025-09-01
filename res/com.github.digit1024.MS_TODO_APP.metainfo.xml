@@ -1,37 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>dev.edfloreshz.Tasks</id>
-  <developer id="dev.edfloreshz">
-    <name>Eduardo Flores</name>
+  <id>com.github.digit1024.MS_TODO_APP</id>
+  <developer id="com.github.digit1024">
+    <name>digit1024</name>
   </developer>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <content_rating type="oars-1.1" />
-  <update_contact>edfloreshz@proton.me</update_contact>
-  <url type="homepage">https://tasks.edfloreshz.dev/</url>
-  <url type="bugtracker">https://github.com/cosmic-utils/tasks/issues</url>
-  <url type="vcs-browser">https://github.com/cosmic-utils/tasks</url>
-  <url type="donation">https://ko-fi.com/edfloreshz</url>
-  <url type="contact">https://edfloreshz.dev</url>
-  <url type="contribute">https://github.com/cosmic-utils/tasks</url>
-  <url type="translate">https://github.com/cosmic-utils/tasks/tree/main/i18n</url>
-  <name>Tasks</name>
-  <summary>Get things done</summary>
+  <update_contact>digit1024@github.com</update_contact>
+  <url type="homepage">https://github.com/digit1024/msToDO</url>
+  <url type="bugtracker">https://github.com/digit1024/msToDO/issues</url>
+  <url type="vcs-browser">https://github.com/digit1024/msToDO</url>
+  <url type="donation">https://buymeacoffee.com/digit1024</url>
+  <url type="contact">https://github.com/digit1024</url>
+  <url type="contribute">https://github.com/digit1024/msToDO</url>
+  <url type="translate">https://github.com/digit1024/msToDO/tree/main/i18n</url>
+  <name>MS TODO App</name>
+  <summary>Microsoft TODO management application for the COSMIC desktop</summary>
   <description>
-    <p>A simple task management app, reaching across the cosmos to help you get things done</p>
+    <p>A Microsoft TODO management application for the COSMIC™ desktop, forked from the original Tasks app by Eduardo Flores</p>
     <ul>
         <li>Exceptional performance and responsiveness.</li>
         <li>Effortless keyboard shortcut support.</li>
         <li>Expressive emoji integration.</li>
+        <li>Microsoft TODO integration.</li>
     </ul>
+    <p><strong>Original Developer:</strong> Eduardo Flores (edfloreshz@proton.me)</p>
+    <p><strong>Fork Maintainer:</strong> digit1024</p>
   </description>
   <branding>
     <color type="primary" scheme_preference="light">#eaeaff</color>
     <color type="primary" scheme_preference="dark">#280c4b</color>
   </branding>
-  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
-  <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
+  <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/digit1024/msToDO/master/res/icons/hicolor/scalable/apps/com.github.digit1024.MS_TODO_APP.svg</icon>
+  <launchable type="desktop-id">com.github.digit1024.MS_TODO_APP.desktop</launchable>
   <releases>
+    <release version="0.2.0" date="2025-01-27">
+        <description>
+            <p>Forked and rebranded as MS TODO App! 🚀</p>
+            <ul>
+                <li>✨ <em>Rebranded as MS TODO App</em></li>
+                <li>🔗 <em>Updated to new repository</em></li>
+                <li>☕ <em>Added Buy Me a Coffee support</em></li>
+                <li>🎯 <em>Microsoft TODO integration focus</em></li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.0" date="2025-05-27">
         <description>
             <p>Powerful new features! 🚀</p>
@@ -74,27 +88,27 @@
   </releases>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png</image>
+      <image>https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/window-light.png</image>
       <caption>Main application interface</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png</image>
+      <image>https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/window-dark.png</image>
       <caption>Main application interface</caption>
     </screenshot>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/details-light.png</image>
+      <image>https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/details-light.png</image>
       <caption>Task details</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/details-dark.png</image>
+      <image>https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/details-dark.png</image>
       <caption>Task details</caption>
     </screenshot>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/new-list-light.png</image>
+      <image>https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/new-list-light.png</image>
       <caption>Create a new list</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/new-list-dark.png</image>
+      <image>https://raw.githubusercontent.com/digit1024/msToDO/main/res/screenshots/new-list-dark.png</image>
       <caption>Create a new list</caption>
     </screenshot>
   </screenshots>
@@ -111,6 +125,6 @@
   </supports>
   <provides>
     <id>com.system76.CosmicApplication</id>
-    <binary>tasks</binary>
+    <binary>ms-todo-app</binary>
   </provides>
 </component>

@@ -908,7 +908,7 @@ impl Application for TasksApp {
     type Executor = cosmic::executor::Default;
     type Flags = crate::app::Flags;
     type Message = Message;
-    const APP_ID: &'static str = "dev.edfloreshz.Tasks";
+    const APP_ID: &'static str = "com.github.digit1024.MS_TODO_APP";
 
     fn core(&self) -> &Core {
         &self.core
@@ -928,14 +928,18 @@ impl Application for TasksApp {
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
             .links([
-                (fl!("repository"), "https://github.com/cosmic-utils/tasks"),
+                (fl!("repository"), "https://github.com/digit1024/msToDO"),
                 (
                     fl!("support"),
-                    "https://github.com/cosmic-utils/tasks/issues",
+                    "https://github.com/digit1024/msToDO/issues",
                 ),
-                (fl!("website"), "https://tasks.edfloreshz.dev"),
+                (fl!("website"), "https://github.com/digit1024/msToDO"),
+                ("Buy Me a Coffee".to_string(), "https://buymeacoffee.com/digit1024"),
             ])
-            .developers([("Eduardo Flores", "edfloreshz@proton.me")]);
+            .developers([
+                ("digit1024", "digit1024@github.com"),
+                ("Original: Eduardo Flores", "edfloreshz@proton.me")
+            ]);
 
         let mut app = TasksApp {
             core,
