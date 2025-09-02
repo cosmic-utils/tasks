@@ -27,7 +27,8 @@
         "type": "git",
         "url": "https://github.com/pop-os/libcosmic",
         "commit": "364c0b938183af799739abd3e870be15601ca727",
-        "dest": "flatpak-cargo/git/libcosmic-364c0b9"
+        "dest": "flatpak-cargo/git/libcosmic-364c0b9", 
+	"submodules": true
     },
     {
         "type": "git",
