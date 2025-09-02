@@ -11,10 +11,11 @@ target/
 
 
 # Added by cargo
-app.log
+/app.log
 /target
 /.idea
 /.vscode
 /.flatpak-builder
 /flatpak_build
-res/icons/_backup
+/res/icons/_backup
+/vendor/

@@ -471,6 +471,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-process"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65daa13722ad51e6ab1a1b9c01299142bc75135b337923cfa10e79bbbd669f00"
+dependencies = [
+ "async-channel",
+ "async-io 2.4.0",
+ "async-lock 3.4.0",
+ "async-signal",
+ "async-task",
+ "blocking",
+ "cfg-if",
+ "event-listener 5.4.0",
+ "futures-lite 2.6.0",
+ "rustix 1.0.7",
+]
+
+[[package]]
 name = "async-recursion"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1112,11 +1130,13 @@ dependencies = [
 [[package]]
 name = "cosmic-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
+ "cosmic-settings-daemon",
  "dirs 6.0.0",
+ "futures-util",
  "iced_futures",
  "known-folders",
  "notify",
@@ -1126,15 +1146,16 @@ dependencies = [
  "tokio",
  "tracing",
  "xdg",
+ "zbus 5.7.1",
 ]
 
 [[package]]
 name = "cosmic-config-derive"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "quote",
- "syn 1.0.109",
+ "syn 2.0.101",
 ]
 
 [[package]]
@@ -1165,6 +1186,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-settings-daemon"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#3b86984332be2c930a3536ab714b843c851fa8ca"
+dependencies = [
+ "zbus 5.7.1",
+]
+
+[[package]]
 name = "cosmic-text"
 version = "0.14.2"
 source = "git+https://github.com/pop-os/cosmic-text.git#987ff45ff20f3cee1322e2f2909ac4c2c26f8321"
@@ -1189,7 +1218,7 @@ dependencies = [
 [[package]]
 name = "cosmic-theme"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "almost",
  "cosmic-config",
@@ -1971,20 +2000,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "freedesktop-desktop-entry"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbcb2951884fd80c5b3093ce762bebcc4ec351fadff3c253f9d09cb91917ddd2"
-dependencies = [
- "gettext-rs",
- "log",
- "memchr",
- "thiserror 2.0.12",
- "unicase",
- "xdg",
-]
-
-[[package]]
 name = "fsevent-sys"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2173,26 +2188,6 @@ dependencies = [
  "libc",
  "r-efi",
  "wasi 0.14.2+wasi-0.2.4",
-]
-
-[[package]]
-name = "gettext-rs"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a44e92f7dc08430aca7ed55de161253a22276dfd69c5526e5c5e95d1f7cf338a"
-dependencies = [
- "gettext-sys",
- "locale_config",
-]
-
-[[package]]
-name = "gettext-sys"
-version = "0.22.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb45773f5b8945f12aecd04558f545964f943dacda1b1155b3d738f5469ef661"
-dependencies = [
- "cc",
- "temp-dir",
 ]
 
 [[package]]
@@ -2655,7 +2650,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "dnd",
  "iced_accessibility",
@@ -2673,7 +2668,7 @@ dependencies = [
 [[package]]
 name = "iced_accessibility"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -2682,7 +2677,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "bitflags 2.9.1",
  "bytes",
@@ -2705,7 +2700,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "futures",
  "iced_core",
@@ -2731,7 +2726,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "bitflags 2.9.1",
  "bytemuck",
@@ -2753,7 +2748,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2765,7 +2760,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "bytes",
  "dnd",
@@ -2779,7 +2774,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2795,7 +2790,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "as-raw-xcb-connection",
  "bitflags 2.9.1",
@@ -2826,7 +2821,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "dnd",
  "iced_renderer",
@@ -2844,7 +2839,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "dnd",
  "iced_futures",
@@ -3316,7 +3311,7 @@ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb2a24775419f82d"
+source = "git+https://github.com/pop-os/libcosmic.git?branch=master#364c0b938183af799739abd3e870be15601ca727"
 dependencies = [
  "apply",
  "ashpd",
@@ -3324,10 +3319,10 @@ dependencies = [
  "chrono",
  "cosmic-config",
  "cosmic-freedesktop-icons",
+ "cosmic-settings-daemon",
  "cosmic-theme",
  "css-color",
  "derive_setters",
- "freedesktop-desktop-entry",
  "futures",
  "iced",
  "iced_core",
@@ -3340,14 +3335,11 @@ dependencies = [
  "iced_winit",
  "image",
  "lazy_static",
- "libc",
  "license",
- "mime 0.3.17",
  "palette",
+ "raw-window-handle",
  "rfd",
- "rustix 1.0.7",
  "serde",
- "shlex",
  "slotmap",
  "taffy",
  "thiserror 2.0.12",
@@ -5890,12 +5882,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "temp-dir"
-version = "0.1.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83176759e9416cf81ee66cb6508dbfe9c96f20b8b56265a39917551c23c70964"
-
-[[package]]
 name = "tempfile"
 version = "3.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6338,12 +6324,6 @@ dependencies = [
  "serde",
  "tinystr",
 ]
-
-[[package]]
-name = "unicase"
-version = "2.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75b844d17643ee918803943289730bec8aac480150456169e647ed0b576ba539"
 
 [[package]]
 name = "unicode-bidi"
@@ -7727,7 +7707,7 @@ dependencies = [
  "async-fs",
  "async-io 1.13.0",
  "async-lock 2.8.0",
- "async-process",
+ "async-process 1.8.1",
  "async-recursion",
  "async-task",
  "async-trait",
@@ -7765,8 +7745,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3a7c7cee313d044fca3f48fa782cb750c79e4ca76ba7bc7718cd4024cdf6f68"
 dependencies = [
  "async-broadcast 0.7.2",
+ "async-executor",
+ "async-io 2.4.0",
+ "async-lock 3.4.0",
+ "async-process 2.4.0",
  "async-recursion",
+ "async-task",
  "async-trait",
+ "blocking",
  "enumflags2",
  "event-listener 5.4.0",
  "futures-core",
