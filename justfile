@@ -37,7 +37,7 @@ clean:
 
 # Removes vendored dependencies
 clean-vendor:
-    rm -rf .cargo vendor vendor.tar
+    rm -rf .cargo vendor vendor.tar.gz
 
 # `cargo clean` and removes vendored dependencies
 clean-dist: clean clean-vendor
@@ -48,6 +48,10 @@ build-debug *args:
 
 # Compiles with release profile
 build-release *args: (build-debug '--release' args)
+
+# Extract vendored dependencies
+vendor-extract:
+    tar -xzf vendor.tar.gz
 
 # Compiles release profile with vendored dependencies
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
@@ -79,6 +83,7 @@ install:
 # Installs files
 flatpak:
     install -Dm0755 {{bin-src}} {{flatpak-bin-dst}}
+    install -Dm0644 LICENSE {{flatpak-bin-dst}}/LICENSE
     install -Dm0644 {{desktop-src}} {{flatpak-desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{flatpak-metainfo-dst}}
     for size in `ls {{icons-src}}`; do \
@@ -96,25 +101,9 @@ uninstall:
 
 # Vendor dependencies locally
 vendor:
-    #!/usr/bin/env bash
-    mkdir -p .cargo
-    cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config.toml
-    echo 'directory = "vendor"' >> .cargo/config.toml
-    echo >> .cargo/config.toml
-    echo '[env]' >> .cargo/config.toml
-    if [ -n "${SOURCE_DATE_EPOCH}" ]
-    then
-        source_date="$(date -d "@${SOURCE_DATE_EPOCH}" "+%Y-%m-%d")"
-        echo "VERGEN_GIT_COMMIT_DATE = \"${source_date}\"" >> .cargo/config.toml
-    fi
-    if [ -n "${SOURCE_GIT_HASH}" ]
-    then
-        echo "VERGEN_GIT_SHA = \"${SOURCE_GIT_HASH}\"" >> .cargo/config.toml
-    fi
-    tar pcf vendor.tar .cargo vendor
-    rm -rf .cargo vendor
+    [ -d .cargo ] || mkdir .cargo
+    cargo vendor --locked > .cargo/config.toml
+    [ -d vendor/license/license-list-data ] || mkdir vendor/license/license-list-data
+    cp -r /home/digit1024/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/license-3.7.0+3.27.0/license-list-data/json vendor/license/license-list-data
 
-# Extracts vendored dependencies
-vendor-extract:
-    rm -rf vendor
-    tar pxf vendor.tar
+    tar -czf vendor.tar.gz vendor .cargo

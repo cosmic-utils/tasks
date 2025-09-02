@@ -1,7 +1,7 @@
 {
   "id": "com.github.digit1024.ms-todo-app",
   "runtime": "org.freedesktop.Platform",
-  "runtime-version": "23.08",
+  "runtime-version": "24.08",
   "sdk": "org.freedesktop.Sdk",
   "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
   "command": "ms-todo-app",
@@ -47,13 +47,20 @@
     {
       "name": "ms-todo-app",
       "buildsystem": "simple",
-      "build-commands": ["just vendor", "just build-vendored", "just flatpak"],
+      "build-commands": [
+        "just build-vendored",
+        "just flatpak"
+      ],
       "sources": [
         {
-          "type": "git",
-          "branch": "main",
-          "url": "https://github.com/digit1024/msToDO.git"
+          "type": "dir",
+          "path": "."
+        },
+        {
+          "type": "file",
+          "path": "vendor.tar.gz"
         }
+        
       ]
     }
   ]
