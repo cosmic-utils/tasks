@@ -24,26 +24,43 @@ fn horizontal(theme: &cosmic::Theme) -> Appearance {
     let rad_0 = cosmic.corner_radii.radius_0;
     Appearance {
         background: Some(background.into()),
-        border_radius: rad_m.into(),
+        border: cosmic::iced::Border {
+            radius: rad_m.into(),
+            width: 1.0,
+            color: cosmic.accent.base.into(),
+        },
+        
         inactive: ItemStatusAppearance {
             background: None,
             first: ItemAppearance {
-                border_radius: Radius::from([rad_m[0], rad_0[1], rad_0[2], rad_m[3]]),
+                border: cosmic::iced::Border {
+                    radius: rad_m.into(),
+                    width: 1.0,
+                    color: cosmic.accent.base.into(),
+                },
                 ..Default::default()
             },
             middle: ItemAppearance {
-                border_radius: cosmic.corner_radii.radius_0.into(),
+                border: cosmic::iced::Border {
+                    radius: rad_m.into(),
+                    width: 1.0,
+                    color: cosmic.accent.base.into(),
+                },
                 ..Default::default()
             },
             last: ItemAppearance {
-                border_radius: Radius::from([rad_0[0], rad_m[1], rad_m[2], rad_0[3]]),
+                border: cosmic::iced::Border {
+                    radius: rad_m.into(),
+                    width: 1.0,
+                    color: cosmic.accent.base.into(),
+                },
                 ..Default::default()
             },
             text_color: container.component.on.into(),
         },
         hover: hover(theme, &active),
-        focus: focus(theme, &active),
-        active,
+        pressed: focus(theme, &active),   
+        active, 
         ..Default::default()
     }
 }
@@ -53,6 +70,7 @@ mod horizontal {
     use cosmic::widget::segmented_button::{ItemAppearance, ItemStatusAppearance};
 
     pub fn selection_active(theme: &cosmic::Theme) -> ItemStatusAppearance {
+        let cosmic = theme.cosmic();
         let mut color = theme.cosmic().palette.neutral_5;
         color.alpha = 0.2;
 
@@ -62,15 +80,27 @@ mod horizontal {
         ItemStatusAppearance {
             background: Some(Background::Color(color.into())),
             first: ItemAppearance {
-                border_radius: Radius::from([rad_m[0], rad_0[1], rad_0[2], rad_m[3]]),
+                border: cosmic::iced::Border {
+                    radius: rad_m.into(),
+                    width: 1.0,
+                    color: cosmic.accent.base.into(),  
+                },
                 ..Default::default()
             },
             middle: ItemAppearance {
-                border_radius: theme.cosmic().corner_radii.radius_0.into(),
+                border: cosmic::iced::Border {
+                    radius: rad_m.into(),
+                    width: 1.0,
+                    color: cosmic.accent.base.into(),
+                },
                 ..Default::default()
             },
             last: ItemAppearance {
-                border_radius: Radius::from([rad_0[0], rad_m[1], rad_m[2], rad_0[3]]),
+                border: cosmic::iced::Border {
+                    radius: rad_m.into(),
+                    width: 1.0,
+                    color: cosmic.accent.base.into(),
+                },
                 ..Default::default()
             },
             text_color: theme.cosmic().accent.base.into(),

@@ -923,7 +923,7 @@ impl Application for TasksApp {
 
         let about = widget::about::About::default()
             .name(fl!("tasks"))
-            .icon(Self::APP_ID)
+            .icon(cosmic::widget::icon::Named::new(Self::APP_ID))
             .version("1.0.0")
             .author("Eduardo Flores (original) and Mchał Banaś (microsoft TODO)")
             .license("GPL-3.0-only")

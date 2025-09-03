@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use cosmic::{
-    widget::menu::{items, key_bind::KeyBind, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
+    widget::{menu::{items, key_bind::KeyBind, root, Item, ItemHeight, ItemWidth, MenuBar, Tree}, RcElementWrapper},
     Element,
 };
 
@@ -21,7 +21,7 @@ pub fn menu_bar<'a>(
 ) -> Element<'a, Message> {
     MenuBar::new(vec![
         Tree::with_children(
-            root(fl!("file")),
+            RcElementWrapper::new(Element::from(root(fl!("file")))),
             items(
                 key_binds,
                 vec![
@@ -46,7 +46,7 @@ pub fn menu_bar<'a>(
             ),
         ),
         Tree::with_children(
-            root(fl!("edit")),
+            RcElementWrapper::new(Element::from(root(fl!("edit")))),
             items(
                 key_binds,
                 vec![
@@ -65,7 +65,7 @@ pub fn menu_bar<'a>(
             ),
         ),
         Tree::with_children(
-            root(fl!("view")),
+            RcElementWrapper::new(Element::from(root(fl!("view")))),
             items(
                 key_binds,
                 vec![
@@ -91,7 +91,7 @@ pub fn menu_bar<'a>(
             ),
         ),
         Tree::with_children(
-            root(fl!("sort")),
+            RcElementWrapper::new(Element::from(root(fl!("sort")))),
             items(
                 key_binds,
                 vec![
