@@ -11,7 +11,11 @@
     "--socket=fallback-x11",
     "--device=dri",
     "--talk-name=com.system76.CosmicSettingsDaemon",
-    "--filesystem=xdg-config/cosmic:ro"
+    "--filesystem=xdg-config/cosmic:ro", 
+    "--share=network", 
+    "--talk-name=org.freedesktop.secrets",
+    "--talk-name=org.gnome.keyring.*",
+    "--talk-name=org.kde.kwalletd5"
   ],
   "build-options": {
     "append-path": "/usr/lib/sdk/rust-stable/bin",

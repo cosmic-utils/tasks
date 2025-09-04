@@ -83,12 +83,14 @@ install:
 # Installs files
 flatpak:
     install -Dm0755 {{bin-src}} {{flatpak-bin-dst}}
-    install -Dm0644 LICENSE {{flatpak-bin-dst}}/LICENSE
     install -Dm0644 {{desktop-src}} {{flatpak-desktop-dst}}
     install -Dm0644 {{metainfo-src}} {{flatpak-metainfo-dst}}
     for size in `ls {{icons-src}}`; do \
         install -Dm0644 "{{icons-src}}/$size/apps/{{APPID}}.svg" "{{flatpak-icons-dst}}/$size/apps/{{APPID}}.svg"; \
     done
+    # Install bundled icons to where the code expects them
+    mkdir -p {{flatpak-base-dir}}/res/icons/bundled
+    cp -r res/icons/bundled/* {{flatpak-base-dir}}/res/icons/bundled/
 
 # Uninstalls installed files
 uninstall:
