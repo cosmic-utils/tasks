@@ -24,7 +24,6 @@ use cosmic::{
     },
     widget::{
         self,
-        calendar::CalendarModel,
         menu::{key_bind::KeyBind, Action as _},
         segmented_button::{Entity, EntityMut, SingleSelect},
     },
@@ -35,7 +34,7 @@ use crate::{
     app::{
         actions::{Action, ApplicationAction, NavMenuAction, TasksAction},
         context::ContextPage,
-        dialog::{DialogAction, DialogPage},
+        dialog::{DialogAction, DialogPage, DateTimeInfo},
     },
     core::{
         config::{self, CONFIG_VERSION},
@@ -219,12 +218,12 @@ impl TasksApp {
             match details_task {
                 details::Output::OpenCalendarDialog => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Calendar(CalendarModel::now())),
+                        DialogAction::Open(DialogPage::Calendar(DateTimeInfo::new(chrono::Utc::now().date_naive()))),
                     ))));
                 }
                 details::Output::OpenReminderCalendarDialog => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::ReminderCalendar(CalendarModel::now())),
+                        DialogAction::Open(DialogPage::ReminderCalendar(DateTimeInfo::new(chrono::Utc::now().date_naive()))),
                     ))));
                 }
                 details::Output::RefreshTask(task) => {
@@ -354,11 +353,11 @@ impl TasksApp {
                             tasks
                                 .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
                         }
-                        DialogPage::Calendar(date) => {
-                            self.update_details(tasks, details::Message::SetDueDate(date.selected));
+                        DialogPage::Calendar(date_time_info) => {
+                            self.update_details(tasks, details::Message::SetDueDate(date_time_info.selected_date()));
                         }
-                        DialogPage::ReminderCalendar(date) => {
-                            self.update_details(tasks, details::Message::SetReminderDate(date.selected));
+                        DialogPage::ReminderCalendar(date_time_info) => {
+                            self.update_details(tasks, details::Message::SetReminderDate(date_time_info.selected_date()));
                             
                         }
                         DialogPage::Export(content) => {
