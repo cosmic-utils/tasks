@@ -70,6 +70,14 @@ pub fn menu_bar<'a>(
                 key_binds,
                 vec![
                     Item::Button(
+                        fl!("refresh"),
+                        Some(icons::get_handle(
+                            "arrow-circular-small-top-right-symbolic",
+                            14,
+                        )),
+                        Action::RefreshLists,
+                    ),
+                    Item::Button(
                         fl!("menu-settings"),
                         Some(icons::get_handle("settings-symbolic", 14)),
                         Action::Settings,

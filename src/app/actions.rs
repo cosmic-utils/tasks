@@ -4,7 +4,7 @@ use crate::{
         dialog::{DialogAction, DialogPage},
         Message,
     },
-    storage::models::{List, Task, ChecklistItem},
+    storage::models::{ChecklistItem, List, Task},
 };
 use cosmic::{
     iced::keyboard::{Key, Modifiers},
@@ -25,6 +25,7 @@ pub enum Action {
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    RefreshLists,
 }
 
 #[derive(Debug, Clone)]
@@ -49,36 +50,35 @@ pub enum ApplicationAction {
 
 #[derive(Debug, Clone)]
 pub enum TasksAction {
-    
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
     FetchLists,
-    
+
     // New async variants
-    FetchListsAsync,                    // Trigger async list fetch
+    FetchListsAsync,                         // Trigger async list fetch
     ListsFetched(Result<Vec<List>, String>), // Lists result
-    CreateTaskAsync(Task),              // Create remote task
-    TaskCreated(Result<Task, String>),  // Creation result
-    UpdateTaskAsync(Task),              // Update remote task
-    TaskUpdated(Result<(), String>),    // Update result
-    DeleteTaskAsync(Task),              // Delete remote task
-    TaskDeleted(Result<(), String>),    // Deletion result
-    DeleteListAsync(List),              // Delete remote list
-    ListDeleted(Result<(), String>),    // List deletion result
-    
-    FetchTasksAsync(List),              // Fetch tasks for a list
+    CreateTaskAsync(Task),                   // Create remote task
+    TaskCreated(Result<Task, String>),       // Creation result
+    UpdateTaskAsync(Task),                   // Update remote task
+    TaskUpdated(Result<(), String>),         // Update result
+    DeleteTaskAsync(Task),                   // Delete remote task
+    TaskDeleted(Result<(), String>),         // Deletion result
+    DeleteListAsync(List),                   // Delete remote list
+    ListDeleted(Result<(), String>),         // List deletion result
+
+    FetchTasksAsync(List),                   // Fetch tasks for a list
     TasksFetched(Result<Vec<Task>, String>), // Tasks result
-    
+
     // Checklist actions
-    AddChecklistItemAsync(String),           // item title
-    ChecklistItemAdded(Result<ChecklistItem, String>), // Creation result
-    UpdateChecklistItemAsync(String, String), // item_id, new_title
+    AddChecklistItemAsync(String),                       // item title
+    ChecklistItemAdded(Result<ChecklistItem, String>),   // Creation result
+    UpdateChecklistItemAsync(String, String),            // item_id, new_title
     ChecklistItemUpdated(Result<ChecklistItem, String>), // Update result
-    ToggleChecklistItemAsync(String),        // item_id
+    ToggleChecklistItemAsync(String),                    // item_id
     ChecklistItemToggled(Result<ChecklistItem, String>), // Toggle result
-    DeleteChecklistItemAsync(String),        // item_id
-    ChecklistItemDeleted(Result<String, String>), // Deletion result
-    FetchChecklistItemsAsync(String),        // task_id
+    DeleteChecklistItemAsync(String),                    // item_id
+    ChecklistItemDeleted(Result<String, String>),        // Deletion result
+    FetchChecklistItemsAsync(String),                    // task_id
     ChecklistItemsFetched(Result<Vec<ChecklistItem>, String>), // Fetch result
 }
 
@@ -89,6 +89,7 @@ impl MenuAction for Action {
             Action::About => {
                 Message::Application(ApplicationAction::ToggleContextPage(ContextPage::About))
             }
+            Action::RefreshLists => Message::Tasks(TasksAction::FetchListsAsync),
             Action::Settings => {
                 Message::Application(ApplicationAction::ToggleContextPage(ContextPage::Settings))
             }
