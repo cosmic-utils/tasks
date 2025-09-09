@@ -15,7 +15,7 @@ repo
 build_dir
 vendor
 vendor.tar.gz
-
+internaldocs
 # Added by cargo
 app.log
 /target
