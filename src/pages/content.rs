@@ -258,11 +258,11 @@ impl Content {
             
             let theme = theme::active();
             let (color, text) = if reminder_naive < today {
-                (theme.cosmic().destructive_color().into(), reminder_naive.format("%b %d").to_string())
+                (theme.cosmic().destructive_color().into(), reminder_date.format("%b %d %H:%M").to_string())
             } else if reminder_naive == today {
-                (theme.cosmic().warning_color().into(), reminder_naive.format("%b %d").to_string())
+                (theme.cosmic().warning_color().into(), reminder_date.format("%b %d %H:%M").to_string())
             } else {
-                (theme.cosmic().palette.neutral_9.into(), reminder_naive.format("%b %d").to_string())
+                (theme.cosmic().palette.neutral_9.into(), reminder_date.format("%b %d %H:%M").to_string())
             };
 
             let alarm_icon = icons::get_icon("alarm-symbolic", 14);
