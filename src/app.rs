@@ -19,8 +19,7 @@ use cosmic::{
     cosmic_config::{self, Update},
     cosmic_theme::{self, ThemeMode},
     iced::{
-        keyboard::{Event as KeyEvent, Modifiers},
-        Event, Subscription,
+        keyboard::{Event as KeyEvent, Modifiers}, Event, Length, Subscription
     },
     widget::{
         self,
@@ -64,6 +63,8 @@ pub struct TasksApp {
     modifiers: Modifiers,
     dialog_pages: VecDeque<DialogPage>,
     dialog_text_input: widget::Id,
+    running_operations: u32,
+    max_operations: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +74,9 @@ pub enum Message {
     Tasks(TasksAction),
     Application(ApplicationAction),
     Open(String),
+    OperationStarted,
+    OperationCompleted,
+    OperationFailed,
 }
 
 impl TasksApp {
@@ -147,6 +151,25 @@ impl TasksApp {
             .text(text)
             .icon(icon)
             .data(list.clone())
+    }
+
+    /// Increment running operations counter
+    fn start_operation(&mut self) {
+        self.running_operations += 1;
+        tracing::info!("🔄 Operation started. Total running: {}", self.running_operations);
+    }
+
+    /// Decrement running operations counter
+    fn complete_operation(&mut self) {
+        if self.running_operations > 0 {
+            self.running_operations -= 1;
+            tracing::info!("✅ Operation completed. Total running: {}", self.running_operations);
+        }
+    }
+
+    /// Get current operation count
+    fn get_operation_count(&self) -> u32 {
+        self.running_operations
     }
 
     fn update_content(
@@ -285,7 +308,7 @@ impl TasksApp {
 
     /// Helper function to spawn async storage operations
     pub fn spawn_storage_operation<F, T>(
-        &self,
+        &mut self,
         future: F,
         success_message: impl FnOnce(T) -> Message + Send + 'static,
         error_message: impl FnOnce(String) -> Message + Send + 'static,
@@ -294,6 +317,9 @@ impl TasksApp {
         F: std::future::Future<Output = Result<T, crate::Error>> + Send + 'static,
         T: Send + 'static,
     {
+        // Note: Operation tracking moved to the actual async action handlers
+        // to avoid double-counting when operations call other operations
+        
         cosmic::task::future(async move {
             cosmic::Action::App(match future.await {
                 Ok(result) => success_message(result),
@@ -556,6 +582,9 @@ impl TasksApp {
                 tasks.push(self.update(Message::Tasks(TasksAction::FetchListsAsync)));
             }
             TasksAction::FetchListsAsync => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let mut storage = self.storage.clone();
                 let future = async move { storage.lists().await };
                 tasks.push(self.spawn_storage_operation(
@@ -565,6 +594,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::ListsFetched(result) => {
+                self.complete_operation();
                 match result {
                     Ok(lists) => {
                         self.update_lists(lists);
@@ -621,6 +651,9 @@ impl TasksApp {
                 self.nav_model.remove(self.nav_model.active());
             }
             TasksAction::CreateTaskAsync(task) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let mut storage = self.storage.clone();
 
                 // Handle virtual list task routing
@@ -647,6 +680,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::TaskCreated(result) => {
+                self.complete_operation();
                 match result {
                     Ok(task) => {
                         // Handle successful task creation
@@ -660,6 +694,9 @@ impl TasksApp {
                 }
             }
             TasksAction::UpdateTaskAsync(task) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let mut storage = self.storage.clone();
                 let future = async move { storage.update_task(&task).await };
                 tasks.push(self.spawn_storage_operation(
@@ -669,6 +706,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::TaskUpdated(result) => {
+                self.complete_operation();
                 match result {
                     Ok(_) => {
                         // Task updated successfully
@@ -685,6 +723,9 @@ impl TasksApp {
                 }
             }
             TasksAction::DeleteTaskAsync(task) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let mut storage = self.storage.clone();
                 let future = async move { storage.delete_task(&task).await };
                 tasks.push(self.spawn_storage_operation(
@@ -694,6 +735,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::TaskDeleted(result) => {
+                self.complete_operation();
                 match result {
                     Ok(_) => {
                         // Task deleted successfully
@@ -705,6 +747,9 @@ impl TasksApp {
                 }
             }
             TasksAction::DeleteListAsync(list) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let storage = self.storage.clone();
                 let future = async move { storage.delete_list(&list).await };
                 tasks.push(self.spawn_storage_operation(
@@ -713,17 +758,23 @@ impl TasksApp {
                     |error| Message::Tasks(TasksAction::ListDeleted(Err(error))),
                 ));
             }
-            TasksAction::ListDeleted(result) => match result {
-                Ok(_) => {
-                    tracing::info!("List deleted successfully");
+            TasksAction::ListDeleted(result) => {
+                self.complete_operation();
+                match result {
+                    Ok(_) => {
+                        tracing::info!("List deleted successfully");
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to delete list: {}", error);
+                    }
                 }
-                Err(error) => {
-                    tracing::error!("Failed to delete list: {}", error);
-                }
-            },
+            }
 
             // NEW: Add these cases
             TasksAction::FetchTasksAsync(list) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let mut storage = self.storage.clone();
                 let future = async move { storage.tasks(&list).await };
                 tasks.push(self.spawn_storage_operation(
@@ -734,6 +785,7 @@ impl TasksApp {
             }
 
             TasksAction::TasksFetched(result) => {
+                self.complete_operation();
                 match result {
                     Ok(task_list) => {
                         // Send tasks to content page
@@ -748,6 +800,9 @@ impl TasksApp {
             }
             // Handle checklist actions
             TasksAction::AddChecklistItemAsync(title) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 // Get current task from details
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
@@ -764,6 +819,7 @@ impl TasksApp {
                 self.details.new_checklist_item_text.clear();
             }
             TasksAction::ChecklistItemAdded(result) => {
+                self.complete_operation();
                 match result {
                     Ok(item) => {
                         tracing::info!("Checklist item added successfully");
@@ -817,6 +873,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::ChecklistItemUpdated(result) => {
+                self.complete_operation();
                 match result {
                     Ok(updated_item) => {
                         tracing::info!("Checklist item updated successfully");
@@ -958,6 +1015,9 @@ impl TasksApp {
                 }
             }
             TasksAction::FetchChecklistItemsAsync(task_id) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 tracing::info!("🔄 Fetching checklist items for task: {}", task_id);
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
@@ -987,6 +1047,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::ChecklistItemsFetched(result) => {
+                self.complete_operation();
                 match result {
                     Ok(items) => {
                         tracing::info!("✅ Successfully fetched {} checklist items", items.len());
@@ -1066,6 +1127,8 @@ impl Application for TasksApp {
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
+            running_operations: 0,
+            max_operations: 10,
         };
 
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
@@ -1108,6 +1171,35 @@ impl Application for TasksApp {
         let dialog_page = self.dialog_pages.front()?;
         let dialog = dialog_page.view(&self.dialog_text_input);
         Some(dialog.into())
+    }
+
+    fn footer(&self) -> Option<Element<Message>> {
+        tracing::debug!("Footer check: running_operations = {}", self.running_operations);
+        if self.running_operations > 0 {
+            let progress = if self.max_operations > 0 {
+                (self.running_operations as f32) / (self.max_operations as f32)
+            } else {
+                0.5 // Indeterminate progress
+            };
+            
+            tracing::info!("📊 Showing footer with {} operations, progress: {:.2}", self.running_operations, progress);
+            
+            Some(
+                widget::container(
+                    widget::column::with_capacity(2)
+                        .push(widget::text::body("Syncing with Microsoft Todo..."))
+                        .push(
+                            widget::progress_bar(0.0..=1.0, progress)
+                                .width(Length::Fill)
+                        )
+                        .spacing(8)
+                )
+                .padding(12)
+                .into()
+            )
+        } else {
+            None
+        }
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
@@ -1170,6 +1262,7 @@ impl Application for TasksApp {
 
         app::Task::batch(tasks)
     }
+
 
     fn subscription(&self) -> Subscription<Self::Message> {
         struct ConfigSubscription;
@@ -1242,6 +1335,15 @@ impl Application for TasksApp {
             }
             Message::Application(application_action) => {
                 self.update_app(&mut tasks, application_action);
+            }
+            Message::OperationStarted => {
+                self.start_operation();
+            }
+            Message::OperationCompleted => {
+                self.complete_operation();
+            }
+            Message::OperationFailed => {
+                self.complete_operation();
             }
         }
 

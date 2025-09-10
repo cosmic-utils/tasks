@@ -7,7 +7,7 @@ use cosmic::{
     },
     iced_widget::row,
     theme,
-    widget::{self},
+    widget::{self, SpinButton},
     Apply, Element,
 };
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
@@ -48,7 +48,7 @@ pub enum Message {
 
     #[allow(dead_code)]
     TaskExpand(DefaultKey),
-    
+
     TaskComplete(DefaultKey, bool),
     TaskDelete(DefaultKey),
     TaskToggleTitleEditMode(DefaultKey, bool),
@@ -56,8 +56,6 @@ pub enum Message {
     TaskOpenDetails(DefaultKey),
     TaskTitleSubmit(DefaultKey),
     TaskTitleUpdate(DefaultKey, String),
-
-    
 
     ToggleHideCompleted,
 
@@ -71,13 +69,13 @@ pub enum Message {
     ToggleSearchBar,
     SearchQueryChanged(String),
     SetSort(SortType),
-    
+
     // New async message variants
-    TaskCreated(models::Task),           // Task was created successfully
+    TaskCreated(models::Task), // Task was created successfully
     #[allow(dead_code)]
-    TaskUpdated(models::Task),          // Task was updated successfully
+    TaskUpdated(models::Task), // Task was updated successfully
     #[allow(dead_code)]
-    TaskDeleted(models::Task),          // Task was deleted successfully
+    TaskDeleted(models::Task), // Task was deleted successfully
 }
 
 pub enum Output {
@@ -85,17 +83,15 @@ pub enum Output {
     Focus(widget::Id),
     OpenTaskDetails(models::Task),
     FinishedTasksChanged,
-    
+
     // New async output variants
     CreateTaskAsync(models::Task),
     UpdateTaskAsync(models::Task),
     DeleteTaskAsync(models::Task),
-    
+
     // NEW: Add this to fetch tasks when list is selected
     FetchTasksAsync(models::List),
 }
-
-
 
 impl Content {
     pub fn new() -> Self {
@@ -223,21 +219,29 @@ impl Content {
         //     models::Priority::Normal => icons::get_icon("flag-outline-thick-symbolic", 16),
         //     models::Priority::High => icons::get_icon("flag-filled-symbolic", 16),
         // };
-        
 
         // Due date with color coding
         let due_date_widget: Element<Message> = if let Some(due_date) = task.due_date {
             let now = chrono::Utc::now();
             let due_date_naive = due_date.naive_utc().date();
             let today = now.naive_utc().date();
-            
+
             let theme = theme::active();
             let (color, text) = if due_date_naive < today {
-                (theme.cosmic().destructive_color().into(), due_date_naive.format("%b %d").to_string())
+                (
+                    theme.cosmic().destructive_color().into(),
+                    due_date_naive.format("%b %d").to_string(),
+                )
             } else if due_date_naive == today {
-                (theme.cosmic().warning_color().into(), due_date_naive.format("%b %d").to_string())
+                (
+                    theme.cosmic().warning_color().into(),
+                    due_date_naive.format("%b %d").to_string(),
+                )
             } else {
-                (theme.cosmic().palette.neutral_9.into(), due_date_naive.format("%b %d").to_string())
+                (
+                    theme.cosmic().palette.neutral_9.into(),
+                    due_date_naive.format("%b %d").to_string(),
+                )
             };
 
             let calendar_icon = icons::get_icon("office-calendar-symbolic", 14);
@@ -255,14 +259,23 @@ impl Content {
             let now = chrono::Utc::now();
             let reminder_naive = reminder_date.naive_utc().date();
             let today = now.naive_utc().date();
-            
+
             let theme = theme::active();
             let (color, text) = if reminder_naive < today {
-                (theme.cosmic().destructive_color().into(), reminder_date.format("%b %d %H:%M").to_string())
+                (
+                    theme.cosmic().destructive_color().into(),
+                    reminder_date.format("%b %d %H:%M").to_string(),
+                )
             } else if reminder_naive == today {
-                (theme.cosmic().warning_color().into(), reminder_date.format("%b %d %H:%M").to_string())
+                (
+                    theme.cosmic().warning_color().into(),
+                    reminder_date.format("%b %d %H:%M").to_string(),
+                )
             } else {
-                (theme.cosmic().palette.neutral_9.into(), reminder_date.format("%b %d %H:%M").to_string())
+                (
+                    theme.cosmic().palette.neutral_9.into(),
+                    reminder_date.format("%b %d %H:%M").to_string(),
+                )
             };
 
             let alarm_icon = icons::get_icon("alarm-symbolic", 14);
@@ -284,7 +297,9 @@ impl Content {
             };
             widget::text(truncated_notes)
                 .size(12)
-                .class(cosmic::style::Text::Color(theme::active().cosmic().palette.neutral_6.into()))
+                .class(cosmic::style::Text::Color(
+                    theme::active().cosmic().palette.neutral_6.into(),
+                ))
                 .into()
         } else {
             widget::text::text("").into()
@@ -318,7 +333,6 @@ impl Content {
             .spacing(spacing.space_xxs)
             .padding([spacing.space_xxs, spacing.space_s])
             .push(item_checkbox)
-            
             .push(task_item_text)
             .push(edit_button)
             .push(delete_button);
@@ -328,7 +342,6 @@ impl Content {
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_s])
-            
             .push(due_date_widget)
             .push(reminder_widget)
             .push(widget::Space::new(Length::Fill, Length::Fixed(4 as f32))); // Spacer
@@ -359,8 +372,6 @@ impl Content {
             .class(cosmic::style::Container::ContextDrawer)
             .into()
     }
-
-    
 
     pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
@@ -413,11 +424,8 @@ impl Content {
             let task_id = self.tasks.insert(task.clone());
             self.task_input_ids.insert(task_id, widget::Id::unique());
             self.task_editing.insert(task_id, false);
-            
         }
     }
-
-
 
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = Vec::new();
@@ -458,7 +466,7 @@ impl Content {
                         // First time selecting a list, fetch its tasks
                         self.tasks.clear();
                         tasks.push(Output::FetchTasksAsync(list.clone()));
-                    },
+                    }
                     _ => {}
                 }
                 self.list.clone_from(&list);
@@ -547,18 +555,18 @@ impl Content {
                     tasks.push(Output::UpdateTaskAsync(task.clone()));
                 }
             }
-            
+
             Message::ToggleHideCompleted => {
                 if let Some(ref mut list) = self.list {
                     list.hide_completed = !list.hide_completed;
                     tasks.push(Output::ToggleHideCompleted(list.clone()));
                 }
             }
-            
+
             Message::SetSort(sort_type) => {
                 self.sort_type = sort_type;
             }
-            
+
             // New async message handlers
             Message::TaskCreated(task) => {
                 let id = self.tasks.insert(task);
@@ -598,6 +606,7 @@ impl Content {
         };
 
         widget::column::with_capacity(2)
+            
             .push(self.list_view(list))
             .push(self.new_task_view())
             .spacing(spacing.space_xxs)

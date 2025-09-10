@@ -153,17 +153,11 @@ impl LocalStorage {
             .get_valid_token()
             .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
 
-        let response: TodoTaskListCollection = self
-            .http_client
-            .get(
-                "/me/todo/lists",
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
+        // Use helper method to fetch all pages with pagination
+        let todo_lists = self.fetch_all_todo_lists(&auth_token).await?;
 
         let mut lists = Vec::new();
-        for tl in response.value {
+        for tl in todo_lists {
             let l: List = tl.into();
             lists.push(l);
         }
@@ -187,21 +181,11 @@ impl LocalStorage {
             format!("/me/todo/lists/{}/tasks?$orderby=createdDateTime desc", list.id)
         };
 
-        let response: TodoTaskCollection = self
-            .http_client
-            .get(
-                &url,
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| {
-
-                error!("❌ Failed to get tasks via API: {}   for url {}", _e, url);
-                Error::Tasks(TasksError::ApiError)
-            })?;
+        // Use helper method to fetch all pages with pagination
+        let todo_tasks = self.fetch_all_todo_tasks(&url, &auth_token).await?;
 
         // Convert TodoTask[] → Task[] with proper path construction
-        let tasks: Vec<Task> = response.value
+        let tasks: Vec<Task> = todo_tasks
             .into_iter()
             .map(|todo_task| {
                 crate::integration::ms_todo::mapping::todo_task_to_task_with_path(
@@ -220,17 +204,12 @@ impl LocalStorage {
             .get_valid_token()
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
 
-        let response: TodoTaskCollection = self
-            .http_client
-            .get(
-                &format!("/me/todo/lists/{}/tasks?$filter=status ne 'completed'", list.id),
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+        // Use helper method to fetch all pages with pagination
+        let url = format!("/me/todo/lists/{}/tasks?$filter=status ne 'completed'", list.id);
+        let todo_tasks = self.fetch_all_todo_tasks(&url, &auth_token).await?;
 
         // Convert TodoTask[] → Task[] with proper path construction
-        let tasks: Vec<Task> = response.value
+        let tasks: Vec<Task> = todo_tasks
             .into_iter()
             .map(|todo_task| {
                 crate::integration::ms_todo::mapping::todo_task_to_task_with_path(
@@ -246,6 +225,45 @@ impl LocalStorage {
     pub fn sub_tasks(_task: &Task) -> Result<Vec<Task>, Error> {
         // Skip sub-tasks for now as requested
         Ok(Vec::new())
+    }
+
+    /// Helper method to fetch all pages of todo lists with pagination
+    async fn fetch_all_todo_lists(&self, auth_token: &str) -> Result<Vec<TodoTaskList>, Error> {
+        self.http_client
+            .get_all_pages::<TodoTaskList, TodoTaskListCollection>(
+                "/me/todo/lists",
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))
+    }
+
+    /// Helper method to fetch all pages of todo tasks with pagination
+    async fn fetch_all_todo_tasks(&self, url: &str, auth_token: &str) -> Result<Vec<TodoTask>, Error> {
+        self.http_client
+            .get_all_pages::<TodoTask, TodoTaskCollection>(
+                url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to get tasks via API: {}   for url {}", _e, url);
+                Error::Tasks(TasksError::ApiError)
+            })
+    }
+
+    /// Helper method to fetch all pages of checklist items with pagination
+    async fn fetch_all_checklist_items(&self, url: &str, auth_token: &str) -> Result<Vec<crate::integration::ms_todo::models::ChecklistItem>, Error> {
+        self.http_client
+            .get_all_pages::<crate::integration::ms_todo::models::ChecklistItem, crate::integration::ms_todo::models::ChecklistItemCollection>(
+                url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to fetch checklist items via API: {}", _e);
+                Error::Tasks(TasksError::ApiError)
+            })
     }
 
     pub async fn lists(&mut self) -> Result<Vec<List>, Error> {
@@ -484,20 +502,11 @@ impl LocalStorage {
 
         let url = format!("/me/todo/lists/{}/tasks/{}/checklistItems", list_id, task.id);
 
-        let response: crate::integration::ms_todo::models::ChecklistItemCollection = self
-            .http_client
-            .get(
-                &url,
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| {
-                error!("❌ Failed to fetch checklist items via API: {}", _e);
-                Error::Tasks(TasksError::ApiError)
-            })?;
+        // Use helper method to fetch all pages with pagination
+        let checklist_items = self.fetch_all_checklist_items(&url, &auth_token).await?;
 
         // Convert MS Graph ChecklistItem[] → local ChecklistItem[]
-        let items: Vec<crate::storage::models::ChecklistItem> = response.value
+        let items: Vec<crate::storage::models::ChecklistItem> = checklist_items
             .into_iter()
             .map(|item| item.into())
             .collect();

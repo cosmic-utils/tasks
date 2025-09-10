@@ -3,6 +3,8 @@ use reqwest::Client;
 use serde::Serialize;
 use tracing::debug;
 
+use crate::integration::ms_todo::models::PaginatedCollection;
+
 const GRAPH_API_BASE: &str = "https://graph.microsoft.com/v1.0";
 
 /// HTTP client for Microsoft Graph Todo API operations
@@ -177,6 +179,34 @@ impl MsTodoHttpClient {
             .await
             .context("Failed to deserialize response to type R")?;
         Ok(response_json)
+    }
+
+    /// Fetch all pages of a paginated collection
+    /// This method handles Microsoft Graph API pagination by following next_link URLs
+    pub async fn get_all_pages<T, C>(&self, url: &str, auth_header: &str) -> Result<Vec<T>>
+    where
+        T: Serialize + serde::de::DeserializeOwned + std::fmt::Debug + Clone,
+        C: Serialize + serde::de::DeserializeOwned + std::fmt::Debug + PaginatedCollection<T>,
+    {
+        let mut all_items = Vec::new();
+        let mut current_url = url.to_string();
+        
+        loop {
+            debug!("Fetching page from: {}", current_url);
+            
+            let response: C = self.get(&current_url, auth_header).await?;
+            all_items.extend(response.get_items());
+            
+            // Check if there's a next page
+            if let Some(next_link) = response.get_next_link() {
+                current_url = next_link;
+            } else {
+                break;
+            }
+        }
+        
+        debug!("Fetched {} total items across all pages", all_items.len());
+        Ok(all_items)
     }
 
     /// Get a request builder for custom HTTP requests
