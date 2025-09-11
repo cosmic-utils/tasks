@@ -32,7 +32,7 @@ features = ["env-filter"]
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
 default-features = false
-features = ["multi-window", "tokio", "winit", "about", "wgpu"]
+features = ["multi-window", "tokio", "winit", "about", "wgpu" , "dbus-config"]
 
 [dependencies.i18n-embed]
 version = "0.15.4"

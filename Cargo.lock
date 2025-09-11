@@ -471,6 +471,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-process"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65daa13722ad51e6ab1a1b9c01299142bc75135b337923cfa10e79bbbd669f00"
+dependencies = [
+ "async-channel",
+ "async-io 2.4.0",
+ "async-lock 3.4.0",
+ "async-signal",
+ "async-task",
+ "blocking",
+ "cfg-if",
+ "event-listener 5.4.0",
+ "futures-lite 2.6.0",
+ "rustix 1.0.7",
+]
+
+[[package]]
 name = "async-recursion"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1116,7 +1134,9 @@ source = "git+https://github.com/pop-os/libcosmic.git#1fce5df160f595d1b1e5a8e2bb
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
+ "cosmic-settings-daemon",
  "dirs 6.0.0",
+ "futures-util",
  "iced_futures",
  "known-folders",
  "notify",
@@ -1126,6 +1146,7 @@ dependencies = [
  "tokio",
  "tracing",
  "xdg",
+ "zbus 5.7.1",
 ]
 
 [[package]]
@@ -1162,6 +1183,14 @@ dependencies = [
  "wayland-protocols-wlr",
  "wayland-scanner 0.31.6",
  "wayland-server",
+]
+
+[[package]]
+name = "cosmic-settings-daemon"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#3b86984332be2c930a3536ab714b843c851fa8ca"
+dependencies = [
+ "zbus 5.7.1",
 ]
 
 [[package]]
@@ -3324,6 +3353,7 @@ dependencies = [
  "chrono",
  "cosmic-config",
  "cosmic-freedesktop-icons",
+ "cosmic-settings-daemon",
  "cosmic-theme",
  "css-color",
  "derive_setters",
@@ -7727,7 +7757,7 @@ dependencies = [
  "async-fs",
  "async-io 1.13.0",
  "async-lock 2.8.0",
- "async-process",
+ "async-process 1.8.1",
  "async-recursion",
  "async-task",
  "async-trait",
@@ -7765,8 +7795,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3a7c7cee313d044fca3f48fa782cb750c79e4ca76ba7bc7718cd4024cdf6f68"
 dependencies = [
  "async-broadcast 0.7.2",
+ "async-executor",
+ "async-io 2.4.0",
+ "async-lock 3.4.0",
+ "async-process 2.4.0",
  "async-recursion",
+ "async-task",
  "async-trait",
+ "blocking",
  "enumflags2",
  "event-listener 5.4.0",
  "futures-core",

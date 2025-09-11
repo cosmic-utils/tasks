@@ -1128,7 +1128,7 @@ impl Application for TasksApp {
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
             running_operations: 0,
-            max_operations: 10,
+            max_operations: 1,
         };
 
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
