@@ -7,6 +7,7 @@ add-new-task = Add new task
 search-tasks = Search tasks
 task-count = {$count} tasks
 
+refresh= Refresh
 # Details
 title = Title
 details = Details

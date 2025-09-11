@@ -19,12 +19,10 @@ use cosmic::{
     cosmic_config::{self, Update},
     cosmic_theme::{self, ThemeMode},
     iced::{
-        keyboard::{Event as KeyEvent, Modifiers},
-        Event, Subscription,
+        keyboard::{Event as KeyEvent, Modifiers}, Event, Length, Subscription
     },
     widget::{
         self,
-        calendar::CalendarModel,
         menu::{key_bind::KeyBind, Action as _},
         segmented_button::{Entity, EntityMut, SingleSelect},
     },
@@ -35,7 +33,7 @@ use crate::{
     app::{
         actions::{Action, ApplicationAction, NavMenuAction, TasksAction},
         context::ContextPage,
-        dialog::{DialogAction, DialogPage},
+        dialog::{DateTimeInfo, DialogAction, DialogPage},
     },
     core::{
         config::{self, CONFIG_VERSION},
@@ -65,6 +63,8 @@ pub struct TasksApp {
     modifiers: Modifiers,
     dialog_pages: VecDeque<DialogPage>,
     dialog_text_input: widget::Id,
+    running_operations: u32,
+    max_operations: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +74,9 @@ pub enum Message {
     Tasks(TasksAction),
     Application(ApplicationAction),
     Open(String),
+    OperationStarted,
+    OperationCompleted,
+    OperationFailed,
 }
 
 impl TasksApp {
@@ -95,6 +98,7 @@ impl TasksApp {
     // }
 
     fn update_lists(&mut self, lists: Vec<List>) {
+        let mut counter = 0;
         for list in lists {
             let mut found = false;
             let mut entity_found: Option<Entity> = None;
@@ -107,7 +111,10 @@ impl TasksApp {
                 }
             }
             if !found {
-                self.create_nav_item(&list);
+                let item = self.create_nav_item(&list);
+                if counter == 3 || counter == 5 {
+                    item.divider_above(true);
+                }
             } else {
                 // Create text with task count if there are tasks
                 let text = if list.number_of_tasks > 0 {
@@ -124,6 +131,7 @@ impl TasksApp {
                     ),
                 );
             }
+            counter += 1;
         }
     }
 
@@ -143,6 +151,25 @@ impl TasksApp {
             .text(text)
             .icon(icon)
             .data(list.clone())
+    }
+
+    /// Increment running operations counter
+    fn start_operation(&mut self) {
+        self.running_operations += 1;
+        tracing::info!("🔄 Operation started. Total running: {}", self.running_operations);
+    }
+
+    /// Decrement running operations counter
+    fn complete_operation(&mut self) {
+        if self.running_operations > 0 {
+            self.running_operations -= 1;
+            tracing::info!("✅ Operation completed. Total running: {}", self.running_operations);
+        }
+    }
+
+    /// Get current operation count
+    fn get_operation_count(&self) -> u32 {
+        self.running_operations
     }
 
     fn update_content(
@@ -170,7 +197,9 @@ impl TasksApp {
 
                     // Trigger checklist fetch after setting the task
                     if !task.id.is_empty() {
-                        tasks.push(self.update(Message::Tasks(TasksAction::FetchChecklistItemsAsync(task.id.clone()))));
+                        tasks.push(self.update(Message::Tasks(
+                            TasksAction::FetchChecklistItemsAsync(task.id.clone()),
+                        )));
                     }
 
                     tasks.push(self.update(Message::Application(
@@ -179,17 +208,17 @@ impl TasksApp {
                 }
                 content::Output::ToggleHideCompleted(list) => {
                     if let Some(data) = self.nav_model.active_data_mut::<List>() {
-                        data.hide_completed = list.hide_completed;   
+                        data.hide_completed = list.hide_completed;
                         // Convert to async operation
-                        let storage = self.storage.clone();
+                        let mut storage = self.storage.clone();
                         let future = async move { storage.tasks(&list).await };
-                        tasks.push(self.spawn_storage_operation( 
+                        tasks.push(self.spawn_storage_operation(
                             future,
-                            |t| Message::Content(content::Message::SetTasks(t)), 
+                            |t| Message::Content(content::Message::SetTasks(t)),
                             |error| {
                                 tracing::error!("Error updating list hide completed: {}", error);
                                 Message::Content(content::Message::Empty)
-                            }, 
+                            },
                         ));
                     }
                 }
@@ -219,12 +248,16 @@ impl TasksApp {
             match details_task {
                 details::Output::OpenCalendarDialog => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Calendar(CalendarModel::now())),
+                        DialogAction::Open(DialogPage::Calendar(DateTimeInfo::new(
+                            chrono::Utc::now().date_naive(),
+                        ))),
                     ))));
                 }
                 details::Output::OpenReminderCalendarDialog => {
                     tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::ReminderCalendar(CalendarModel::now())),
+                        DialogAction::Open(DialogPage::ReminderCalendar(DateTimeInfo::new(
+                            chrono::Utc::now().date_naive(),
+                        ))),
                     ))));
                 }
                 details::Output::RefreshTask(task) => {
@@ -237,19 +270,37 @@ impl TasksApp {
                 }
                 // Handle checklist outputs
                 details::Output::AddChecklistItemAsync(title) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::AddChecklistItemAsync(title))));
+                    tasks.push(
+                        self.update(Message::Tasks(TasksAction::AddChecklistItemAsync(title))),
+                    );
                 }
                 details::Output::UpdateChecklistItemAsync(item_id, new_title) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::UpdateChecklistItemAsync(item_id, new_title))));
+                    tasks.push(
+                        self.update(Message::Tasks(TasksAction::UpdateChecklistItemAsync(
+                            item_id, new_title,
+                        ))),
+                    );
                 }
                 details::Output::ToggleChecklistItemAsync(item_id) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::ToggleChecklistItemAsync(item_id))));
+                    tasks.push(
+                        self.update(Message::Tasks(TasksAction::ToggleChecklistItemAsync(
+                            item_id,
+                        ))),
+                    );
                 }
                 details::Output::DeleteChecklistItemAsync(item_id) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::DeleteChecklistItemAsync(item_id))));
+                    tasks.push(
+                        self.update(Message::Tasks(TasksAction::DeleteChecklistItemAsync(
+                            item_id,
+                        ))),
+                    );
                 }
                 details::Output::FetchChecklistItems => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::FetchChecklistItemsAsync(self.details.task.id.clone()))));
+                    tasks.push(
+                        self.update(Message::Tasks(TasksAction::FetchChecklistItemsAsync(
+                            self.details.task.id.clone(),
+                        ))),
+                    );
                 }
             }
         }
@@ -257,7 +308,7 @@ impl TasksApp {
 
     /// Helper function to spawn async storage operations
     pub fn spawn_storage_operation<F, T>(
-        &self,
+        &mut self,
         future: F,
         success_message: impl FnOnce(T) -> Message + Send + 'static,
         error_message: impl FnOnce(String) -> Message + Send + 'static,
@@ -266,6 +317,9 @@ impl TasksApp {
         F: std::future::Future<Output = Result<T, crate::Error>> + Send + 'static,
         T: Send + 'static,
     {
+        // Note: Operation tracking moved to the actual async action handlers
+        // to avoid double-counting when operations call other operations
+        
         cosmic::task::future(async move {
             cosmic::Action::App(match future.await {
                 Ok(result) => success_message(result),
@@ -354,12 +408,19 @@ impl TasksApp {
                             tasks
                                 .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
                         }
-                        DialogPage::Calendar(date) => {
-                            self.update_details(tasks, details::Message::SetDueDate(date.selected));
+                        DialogPage::Calendar(date_time_info) => {
+                            self.update_details(
+                                tasks,
+                                details::Message::SetDueDate(date_time_info.to_naive_datetime()),
+                            );
                         }
-                        DialogPage::ReminderCalendar(date) => {
-                            self.update_details(tasks, details::Message::SetReminderDate(date.selected));
-                            
+                        DialogPage::ReminderCalendar(date_time_info) => {
+                            self.update_details(
+                                tasks,
+                                details::Message::SetReminderDate(
+                                    date_time_info.to_naive_datetime(),
+                                ),
+                            );
                         }
                         DialogPage::Export(content) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
@@ -438,7 +499,7 @@ impl TasksApp {
                 NavMenuAction::Export(entity) => {
                     if let Some(list) = self.nav_model.data::<List>(entity) {
                         // Convert to async operation
-                        let storage = self.storage.clone();
+                        let mut storage = self.storage.clone();
                         let list_clone = list.clone();
                         let future = async move { storage.tasks(&list_clone).await };
                         let list_for_export = list.clone();
@@ -521,6 +582,9 @@ impl TasksApp {
                 tasks.push(self.update(Message::Tasks(TasksAction::FetchListsAsync)));
             }
             TasksAction::FetchListsAsync => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let mut storage = self.storage.clone();
                 let future = async move { storage.lists().await };
                 tasks.push(self.spawn_storage_operation(
@@ -530,13 +594,14 @@ impl TasksApp {
                 ));
             }
             TasksAction::ListsFetched(result) => {
+                self.complete_operation();
                 match result {
                     Ok(lists) => {
                         self.update_lists(lists);
                         // for list in lists {
                         //     self.create_nav_item(&list);
                         // }
-                        if self.nav_model.active_data_mut::<List>().is_none(){
+                        if self.nav_model.active_data_mut::<List>().is_none() {
                             let Some(entity) = self.nav_model.iter().next() else {
                                 return;
                             };
@@ -544,7 +609,6 @@ impl TasksApp {
                             let task = self.on_nav_select(entity);
                             tasks.push(task);
                         }
-                        
                     }
                     Err(error) => {
                         tracing::error!("Error fetching lists: {}", error);
@@ -587,8 +651,28 @@ impl TasksApp {
                 self.nav_model.remove(self.nav_model.active());
             }
             TasksAction::CreateTaskAsync(task) => {
-                let storage = self.storage.clone();
-                let future = async move { storage.create_task(&task).await };
+                // Start tracking this operation
+                self.start_operation();
+                
+                let mut storage = self.storage.clone();
+
+                // Handle virtual list task routing
+                let mut task_to_create = task.clone();
+                if let Some(current_list) = self.nav_model.active_data::<List>() {
+                    if current_list.is_virtual {
+                        // Find the "Tasks" list (well_known_list_name = "defaultList")
+                        for entity in self.nav_model.iter() {
+                            if let Some(list) = self.nav_model.data::<List>(entity) {
+                                if list.well_known_list_name.as_deref() == Some("defaultList") {
+                                    task_to_create.list_id = Some(list.id.clone());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let future = async move { storage.create_task(&task_to_create).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
                     |task| Message::Tasks(TasksAction::TaskCreated(Ok(task))),
@@ -596,6 +680,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::TaskCreated(result) => {
+                self.complete_operation();
                 match result {
                     Ok(task) => {
                         // Handle successful task creation
@@ -609,7 +694,10 @@ impl TasksApp {
                 }
             }
             TasksAction::UpdateTaskAsync(task) => {
-                let storage = self.storage.clone();
+                // Start tracking this operation
+                self.start_operation();
+                
+                let mut storage = self.storage.clone();
                 let future = async move { storage.update_task(&task).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
@@ -618,12 +706,15 @@ impl TasksApp {
                 ));
             }
             TasksAction::TaskUpdated(result) => {
+                self.complete_operation();
                 match result {
                     Ok(_) => {
                         // Task updated successfully
                         tracing::info!("Task updated successfully");
                         if let Some(current_list) = self.nav_model.active_data::<List>() {
-                            tasks.push(self.update(Message::Tasks(TasksAction::FetchTasksAsync(current_list.clone()))));
+                            tasks.push(self.update(Message::Tasks(TasksAction::FetchTasksAsync(
+                                current_list.clone(),
+                            ))));
                         }
                     }
                     Err(error) => {
@@ -632,7 +723,10 @@ impl TasksApp {
                 }
             }
             TasksAction::DeleteTaskAsync(task) => {
-                let storage = self.storage.clone();
+                // Start tracking this operation
+                self.start_operation();
+                
+                let mut storage = self.storage.clone();
                 let future = async move { storage.delete_task(&task).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
@@ -641,6 +735,7 @@ impl TasksApp {
                 ));
             }
             TasksAction::TaskDeleted(result) => {
+                self.complete_operation();
                 match result {
                     Ok(_) => {
                         // Task deleted successfully
@@ -652,6 +747,9 @@ impl TasksApp {
                 }
             }
             TasksAction::DeleteListAsync(list) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 let storage = self.storage.clone();
                 let future = async move { storage.delete_list(&list).await };
                 tasks.push(self.spawn_storage_operation(
@@ -660,18 +758,24 @@ impl TasksApp {
                     |error| Message::Tasks(TasksAction::ListDeleted(Err(error))),
                 ));
             }
-            TasksAction::ListDeleted(result) => match result {
-                Ok(_) => {
-                    tracing::info!("List deleted successfully");
+            TasksAction::ListDeleted(result) => {
+                self.complete_operation();
+                match result {
+                    Ok(_) => {
+                        tracing::info!("List deleted successfully");
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to delete list: {}", error);
+                    }
                 }
-                Err(error) => {
-                    tracing::error!("Failed to delete list: {}", error);
-                }
-            },
+            }
 
             // NEW: Add these cases
             TasksAction::FetchTasksAsync(list) => {
-                let storage = self.storage.clone();
+                // Start tracking this operation
+                self.start_operation();
+                
+                let mut storage = self.storage.clone();
                 let future = async move { storage.tasks(&list).await };
                 tasks.push(self.spawn_storage_operation(
                     future,
@@ -681,6 +785,7 @@ impl TasksApp {
             }
 
             TasksAction::TasksFetched(result) => {
+                self.complete_operation();
                 match result {
                     Ok(task_list) => {
                         // Send tasks to content page
@@ -695,10 +800,13 @@ impl TasksApp {
             }
             // Handle checklist actions
             TasksAction::AddChecklistItemAsync(title) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 // Get current task from details
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
-                let future = async move { 
+                let future = async move {
                     // Create checklist item via MS Graph
                     storage.create_checklist_item(&task, &title).await
                 };
@@ -711,20 +819,23 @@ impl TasksApp {
                 self.details.new_checklist_item_text.clear();
             }
             TasksAction::ChecklistItemAdded(result) => {
+                self.complete_operation();
                 match result {
                     Ok(item) => {
                         tracing::info!("Checklist item added successfully");
                         // Add the new item to the local task and refresh
                         let mut task = self.details.task.clone();
                         task.checklist_items.push(item);
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::Synced;
                         self.details.task = task;
                     }
                     Err(error) => {
                         tracing::error!("Failed to add checklist item: {}", error);
                         // Mark sync as failed
                         let mut task = self.details.task.clone();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
                         self.details.task = task;
                     }
                 }
@@ -732,42 +843,59 @@ impl TasksApp {
             TasksAction::UpdateChecklistItemAsync(item_id, new_title) => {
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
-                let future = async move { 
+                let future = async move {
                     // Get current checklist item to preserve checked state
-                    let current_item = task.checklist_items.iter()
+                    let current_item = task
+                        .checklist_items
+                        .iter()
                         .find(|item| item.id == item_id)
                         .cloned();
-                    
+
                     if let Some(item) = current_item {
                         // Update via MS Graph API
-                        storage.update_checklist_item(&task, &item_id, &new_title, item.is_checked).await
+                        storage
+                            .update_checklist_item(&task, &item_id, &new_title, item.is_checked)
+                            .await
                     } else {
-                        Err(crate::app::error::Error::Tasks(crate::app::error::TasksError::TaskNotFound))
+                        Err(crate::app::error::Error::Tasks(
+                            crate::app::error::TasksError::TaskNotFound,
+                        ))
                     }
                 };
                 tasks.push(self.spawn_storage_operation(
                     future,
-                    |updated_item| Message::Tasks(TasksAction::ChecklistItemUpdated(Ok(updated_item))),
-                    |error| Message::Tasks(TasksAction::ChecklistItemUpdated(Err(error.to_string()))),
+                    |updated_item| {
+                        Message::Tasks(TasksAction::ChecklistItemUpdated(Ok(updated_item)))
+                    },
+                    |error| {
+                        Message::Tasks(TasksAction::ChecklistItemUpdated(Err(error.to_string())))
+                    },
                 ));
             }
             TasksAction::ChecklistItemUpdated(result) => {
+                self.complete_operation();
                 match result {
                     Ok(updated_item) => {
                         tracing::info!("Checklist item updated successfully");
                         // Update the local task with the updated item
                         let mut task = self.details.task.clone();
-                        if let Some(item) = task.checklist_items.iter_mut().find(|item| item.id == updated_item.id) {
+                        if let Some(item) = task
+                            .checklist_items
+                            .iter_mut()
+                            .find(|item| item.id == updated_item.id)
+                        {
                             *item = updated_item;
                         }
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::Synced;
                         self.details.task = task;
                     }
                     Err(error) => {
                         tracing::error!("Failed to update checklist item: {}", error);
                         // Mark sync as failed
                         let mut task = self.details.task.clone();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
                         self.details.task = task;
                     }
                 }
@@ -775,24 +903,39 @@ impl TasksApp {
             TasksAction::ToggleChecklistItemAsync(item_id) => {
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
-                let future = async move { 
+                let future = async move {
                     // Get current checklist item to toggle checked state
-                    let current_item = task.checklist_items.iter()
+                    let current_item = task
+                        .checklist_items
+                        .iter()
                         .find(|item| item.id == item_id)
                         .cloned();
-                    
+
                     if let Some(item) = current_item {
                         // Toggle via MS Graph API
                         let new_checked_state = !item.is_checked;
-                        storage.update_checklist_item(&task, &item_id, &item.display_name, new_checked_state).await
+                        storage
+                            .update_checklist_item(
+                                &task,
+                                &item_id,
+                                &item.display_name,
+                                new_checked_state,
+                            )
+                            .await
                     } else {
-                        Err(crate::app::error::Error::Tasks(crate::app::error::TasksError::TaskNotFound))
+                        Err(crate::app::error::Error::Tasks(
+                            crate::app::error::TasksError::TaskNotFound,
+                        ))
                     }
                 };
                 tasks.push(self.spawn_storage_operation(
                     future,
-                    |updated_item| Message::Tasks(TasksAction::ChecklistItemToggled(Ok(updated_item))),
-                    |error| Message::Tasks(TasksAction::ChecklistItemToggled(Err(error.to_string()))),
+                    |updated_item| {
+                        Message::Tasks(TasksAction::ChecklistItemToggled(Ok(updated_item)))
+                    },
+                    |error| {
+                        Message::Tasks(TasksAction::ChecklistItemToggled(Err(error.to_string())))
+                    },
                 ));
             }
             TasksAction::ChecklistItemToggled(result) => {
@@ -801,17 +944,23 @@ impl TasksApp {
                         tracing::info!("Checklist item toggled successfully");
                         // Update the local task with the updated item
                         let mut task = self.details.task.clone();
-                        if let Some(item) = task.checklist_items.iter_mut().find(|item| item.id == updated_item.id) {
+                        if let Some(item) = task
+                            .checklist_items
+                            .iter_mut()
+                            .find(|item| item.id == updated_item.id)
+                        {
                             *item = updated_item;
                         }
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::Synced;
                         self.details.task = task;
                     }
                     Err(error) => {
                         tracing::error!("Failed to toggle checklist item: {}", error);
                         // Mark sync as failed
                         let mut task = self.details.task.clone();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
                         self.details.task = task;
                     }
                 }
@@ -819,14 +968,18 @@ impl TasksApp {
             TasksAction::DeleteChecklistItemAsync(item_id) => {
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
-                let future = async move { 
+                let future = async move {
                     // Delete via MS Graph API
                     storage.delete_checklist_item(&task, &item_id).await
                 };
                 tasks.push(self.spawn_storage_operation(
                     future,
-                    |item_id_recived| Message::Tasks(TasksAction::ChecklistItemDeleted(Ok(item_id_recived   ))),
-                    |error| Message::Tasks(TasksAction::ChecklistItemDeleted(Err(error.to_string()))),
+                    |item_id_recived| {
+                        Message::Tasks(TasksAction::ChecklistItemDeleted(Ok(item_id_recived)))
+                    },
+                    |error| {
+                        Message::Tasks(TasksAction::ChecklistItemDeleted(Err(error.to_string())))
+                    },
                 ));
             }
             TasksAction::ChecklistItemDeleted(result) => {
@@ -837,29 +990,38 @@ impl TasksApp {
                         // We need to find which item was deleted by comparing with the current state
                         // For now, we'll refresh the checklist items to ensure consistency
                         if !self.details.task.id.is_empty() {
-                            
-                            //task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
 
+                            //task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
                         }
                         let mut task = self.details.task.clone();
-                        task.checklist_items = task.checklist_items.iter().filter(|item| item.id != item_id_recived).cloned().collect();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        task.checklist_items = task
+                            .checklist_items
+                            .iter()
+                            .filter(|item| item.id != item_id_recived)
+                            .cloned()
+                            .collect();
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::Synced;
                         self.details.task = task;
                     }
                     Err(error) => {
                         tracing::error!("Failed to delete checklist item: {}", error);
                         // Mark sync as failed
                         let mut task = self.details.task.clone();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
                         self.details.task = task;
                     }
                 }
             }
             TasksAction::FetchChecklistItemsAsync(task_id) => {
+                // Start tracking this operation
+                self.start_operation();
+                
                 tracing::info!("🔄 Fetching checklist items for task: {}", task_id);
                 let task = self.details.task.clone();
                 let storage = self.storage.clone();
-                let future = async move { 
+                let future = async move {
                     // Fetch checklist items via MS Graph API
                     storage.fetch_checklist_items(&task).await
                 };
@@ -867,39 +1029,52 @@ impl TasksApp {
                 tasks.push(self.spawn_storage_operation(
                     future,
                     move |items| {
-                        tracing::info!("✅ Fetched {} checklist items for task: {}", items.len(), task_id_clone);
+                        tracing::info!(
+                            "✅ Fetched {} checklist items for task: {}",
+                            items.len(),
+                            task_id_clone
+                        );
                         Message::Tasks(TasksAction::ChecklistItemsFetched(Ok(items)))
                     },
                     move |error| {
-                        tracing::error!("❌ Failed to fetch checklist items for task {}: {}", task_id, error);
+                        tracing::error!(
+                            "❌ Failed to fetch checklist items for task {}: {}",
+                            task_id,
+                            error
+                        );
                         Message::Tasks(TasksAction::ChecklistItemsFetched(Err(error)))
                     },
                 ));
             }
             TasksAction::ChecklistItemsFetched(result) => {
+                self.complete_operation();
                 match result {
                     Ok(items) => {
                         tracing::info!("✅ Successfully fetched {} checklist items", items.len());
                         // Update the task with fetched checklist items
                         let mut task = self.details.task.clone();
                         task.checklist_items = items.clone();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::Synced;
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::Synced;
                         self.details.task = task;
-                        tracing::info!("🔄 Updated local task with {} checklist items", items.len());
+                        tracing::info!(
+                            "🔄 Updated local task with {} checklist items",
+                            items.len()
+                        );
                     }
                     Err(error) => {
                         tracing::error!("❌ Failed to fetch checklist items: {}", error);
                         // Mark sync as failed
                         let mut task = self.details.task.clone();
-                        task.checklist_sync_status = crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
+                        task.checklist_sync_status =
+                            crate::storage::models::task::ChecklistSyncStatus::SyncFailed(error);
                         self.details.task = task;
                     }
                 }
-            }
-            // Handle any other actions
-            // _ => {
-            //     tracing::debug!("Unhandled action: {:?}", tasks_action);
-            // }
+            } // Handle any other actions
+              // _ => {
+              //     tracing::debug!("Unhandled action: {:?}", tasks_action);
+              // }
         }
     }
 }
@@ -955,6 +1130,8 @@ impl Application for TasksApp {
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
+            running_operations: 0,
+            max_operations: 1,
         };
 
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
@@ -999,6 +1176,35 @@ impl Application for TasksApp {
         Some(dialog.into())
     }
 
+    fn footer(&self) -> Option<Element<Message>> {
+        tracing::debug!("Footer check: running_operations = {}", self.running_operations);
+        if self.running_operations > 0 {
+            let progress = if self.max_operations > 0 {
+                (self.running_operations as f32) / (self.max_operations as f32)
+            } else {
+                0.5 // Indeterminate progress
+            };
+            
+            tracing::info!("📊 Showing footer with {} operations, progress: {:.2}", self.running_operations, progress);
+            
+            Some(
+                widget::container(
+                    widget::column::with_capacity(2)
+                        .push(widget::text::body("Syncing with Microsoft Todo..."))
+                        .push(
+                            widget::progress_bar(0.0..=1.0, progress)
+                                .width(Length::Fill)
+                        )
+                        .spacing(8)
+                )
+                .padding(12)
+                .into()
+            )
+        } else {
+            None
+        }
+    }
+
     fn header_start(&self) -> Vec<Element<Self::Message>> {
         vec![menu::menu_bar(&self.key_binds, &self.config)]
     }
@@ -1015,7 +1221,6 @@ impl Application for TasksApp {
                     Some(icons::get_handle("edit-symbolic", 14)),
                     NavMenuAction::Rename(id),
                 ),
-                
                 cosmic::widget::menu::Item::Button(
                     fl!("export"),
                     Some(icons::get_handle("share-symbolic", 18)),
@@ -1060,6 +1265,7 @@ impl Application for TasksApp {
 
         app::Task::batch(tasks)
     }
+
 
     fn subscription(&self) -> Subscription<Self::Message> {
         struct ConfigSubscription;
@@ -1132,6 +1338,15 @@ impl Application for TasksApp {
             }
             Message::Application(application_action) => {
                 self.update_app(&mut tasks, application_action);
+            }
+            Message::OperationStarted => {
+                self.start_operation();
+            }
+            Message::OperationCompleted => {
+                self.complete_operation();
+            }
+            Message::OperationFailed => {
+                self.complete_operation();
             }
         }
 

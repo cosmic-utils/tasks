@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, NaiveTime, NaiveDateTime, Timelike};
 use cosmic::{
     iced::{
         alignment::{Horizontal, Vertical},
@@ -7,6 +8,42 @@ use cosmic::{
 };
 
 use crate::{app::actions::ApplicationAction, app::Message, fl};
+
+/// Holds both date and time information for dialog inputs
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DateTimeInfo {
+    pub calendar: CalendarModel,
+    pub time: NaiveTime,
+}
+
+impl DateTimeInfo {
+    /// Create a new DateTimeInfo with the given date and current time
+    pub fn new(date: NaiveDate) -> Self {
+        let now = chrono::Utc::now().time();
+        Self {
+            calendar: CalendarModel::new(date, date),
+            time: now,
+        }
+    }
+    
+    /// Create a new DateTimeInfo with the given date and time
+    pub fn with_time(date: NaiveDate, time: NaiveTime) -> Self {
+        Self {
+            calendar: CalendarModel::new(date, date),
+            time,
+        }
+    }
+    
+    /// Get the selected date from the calendar
+    pub fn selected_date(&self) -> NaiveDate {
+        self.calendar.selected
+    }
+    
+    /// Combine date and time into a NaiveDateTime
+    pub fn to_naive_datetime(&self) -> NaiveDateTime {
+        NaiveDateTime::new(self.selected_date(), self.time)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum DialogAction {
@@ -23,8 +60,8 @@ pub enum DialogPage {
     New(String),
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
-    Calendar(CalendarModel),
-    ReminderCalendar(CalendarModel),
+    Calendar(DateTimeInfo),
+    ReminderCalendar(DateTimeInfo),
     Export(String),
 }
 
@@ -96,8 +133,10 @@ impl DialogPage {
                 .secondary_action(widget::button::standard(fl!("cancel")).on_press(
                     Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                 )),
-            DialogPage::Calendar(date) => {
-                let date_clone = date.clone();
+            DialogPage::Calendar(date_time_info) => {
+                let date_time_clone_prev = date_time_info.clone();
+                let date_time_clone_next = date_time_info.clone();
+                let date_time_clone_select = date_time_info.clone();
                 let dialog = widget::dialog()
                     .title(fl!("select-date"))
                     .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
@@ -107,42 +146,52 @@ impl DialogPage {
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                     ))
                     .control(
-                        widget::container(widget::calendar(
-                            date,
-                            |selected_date| {
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::Calendar(CalendarModel::new(
-                                        selected_date,
-                                        selected_date,
-                                    ))),
-                                ))
-                            },
-                            move || {
-                                // Previous month - update visible month, keep selected date
-                                let mut new_model = date_clone.clone();
-                                new_model.show_prev_month();
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::Calendar(new_model))
-                                ))
-                            },
-                            move || {
-                                // Next month - update visible month, keep selected date
-                                let mut new_model = date_clone.clone();
-                                new_model.show_next_month();
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::Calendar(new_model))
-                                ))
-                            },
-                            chrono::Weekday::Mon,
-                        ))
-                        .width(Length::Fill)
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center),
+                        widget::column::with_children(vec![
+                            widget::container(widget::calendar(
+                                &date_time_info.calendar,
+                                move |selected_date| {
+                                    Message::Application(ApplicationAction::Dialog(
+                                        DialogAction::Update(DialogPage::Calendar(DateTimeInfo::with_time(
+                                            selected_date,
+                                            date_time_clone_select.time,
+                                        ))),
+                                    ))
+                                },
+                                move || {
+                                    // Previous month - update visible month, keep selected date and time
+                                    let mut new_info = date_time_clone_prev.clone();
+                                    new_info.calendar.show_prev_month();
+                                    Message::Application(ApplicationAction::Dialog(
+                                        DialogAction::Update(DialogPage::Calendar(new_info))
+                                    ))
+                                },
+                                move || {
+                                    // Next month - update visible month, keep selected date and time
+                                    let mut new_info = date_time_clone_next.clone();
+                                    new_info.calendar.show_next_month();
+                                    Message::Application(ApplicationAction::Dialog(
+                                        DialogAction::Update(DialogPage::Calendar(new_info))
+                                    ))
+                                },
+                                chrono::Weekday::Mon,
+                            ))
+                            .width(Length::Fill)
+                            .align_x(Horizontal::Center)
+                            .align_y(Vertical::Center)
+                            .into(),
+                        ])
+                        .spacing(spacing.space_s),
                     );
                 dialog
             }
-            DialogPage::ReminderCalendar(date) => {
-                let date_clone = date.clone();
+            DialogPage::ReminderCalendar(date_time_info) => {
+                let date_time_clone_prev = date_time_info.clone();
+                let date_time_clone_next = date_time_info.clone();
+                let date_time_clone_select = date_time_info.clone();
+                let date_time_clone_hour = date_time_info.clone();
+                let date_time_clone_minute = date_time_info.clone();
+                let hour_str = format!("{:02}", date_time_info.time.hour());
+                let minute_str = format!("{:02}", date_time_info.time.minute());
                 let dialog = widget::dialog()
                     .title(fl!("reminder"))
                     .primary_action(widget::button::suggested(fl!("ok")).on_press_maybe(Some(
@@ -152,37 +201,85 @@ impl DialogPage {
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
                     ))
                     .control(
-                        widget::container(widget::calendar(
-                            date,
-                            |selected_date| {
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::ReminderCalendar(CalendarModel::new(
-                                        selected_date,
-                                        selected_date,
-                                    ))),
-                                ))
-                            },
-                            move || {
-                                // Previous month - update visible month, keep selected date
-                                let mut new_model = date_clone.clone();
-                                new_model.show_prev_month();
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::ReminderCalendar(new_model))
-                                ))
-                            },
-                            move || {
-                                // Next month - update visible month, keep selected date
-                                let mut new_model = date_clone.clone();
-                                new_model.show_next_month();
-                                Message::Application(ApplicationAction::Dialog(
-                                    DialogAction::Update(DialogPage::ReminderCalendar(new_model))
-                                ))
-                            },
-                            chrono::Weekday::Mon,
-                        ))
-                        .width(Length::Fill)
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center),
+                        widget::column::with_children(vec![
+                            widget::container(widget::calendar(
+                                &date_time_info.calendar,
+                                move |selected_date| {
+                                    Message::Application(ApplicationAction::Dialog(
+                                        DialogAction::Update(DialogPage::ReminderCalendar(DateTimeInfo::with_time(
+                                            selected_date,
+                                            date_time_clone_select.time,
+                                        ))),
+                                    ))
+                                },
+                                move || {
+                                    // Previous month - update visible month, keep selected date and time
+                                    let mut new_info = date_time_clone_prev.clone();
+                                    new_info.calendar.show_prev_month();
+                                    Message::Application(ApplicationAction::Dialog(
+                                        DialogAction::Update(DialogPage::ReminderCalendar(new_info))
+                                    ))
+                                },
+                                move || {
+                                    // Next month - update visible month, keep selected date and time
+                                    let mut new_info = date_time_clone_next.clone();
+                                    new_info.calendar.show_next_month();
+                                    Message::Application(ApplicationAction::Dialog(
+                                        DialogAction::Update(DialogPage::ReminderCalendar(new_info))
+                                    ))
+                                },
+                                chrono::Weekday::Mon,
+                            ))
+                            .width(Length::Fill)
+                            .align_x(Horizontal::Center)
+                            .align_y(Vertical::Center)
+                            .into(),
+                            // Time input section
+                            widget::row::with_children(vec![
+                                widget::text::body("Time:").into(),
+                                widget::text_input("HH", hour_str)
+                                    .width(Length::Fixed(50.0))
+                                    .on_input(move |hour_input| {
+                                        if let Ok(hour) = hour_input.parse::<u32>() {
+                                            if hour <= 23 {
+                                                if let Some(time) = NaiveTime::from_hms_opt(hour, date_time_clone_hour.time.minute(), 0) {
+                                                    return Message::Application(ApplicationAction::Dialog(
+                                                        DialogAction::Update(DialogPage::ReminderCalendar(DateTimeInfo::with_time(
+                                                            date_time_clone_hour.selected_date(),
+                                                            time,
+                                                        ))),
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        Message::Application(ApplicationAction::Dialog(DialogAction::None))
+                                    })
+                                    .into(),
+                                widget::text::body(":").into(),
+                                widget::text_input("MM", minute_str)
+                                    .width(Length::Fixed(50.0))
+                                    .on_input(move |minute_input| {
+                                        if let Ok(minute) = minute_input.parse::<u32>() {
+                                            if minute <= 59 {
+                                                if let Some(time) = NaiveTime::from_hms_opt(date_time_clone_minute.time.hour(), minute, 0) {
+                                                    return Message::Application(ApplicationAction::Dialog(
+                                                        DialogAction::Update(DialogPage::ReminderCalendar(DateTimeInfo::with_time(
+                                                            date_time_clone_minute.selected_date(),
+                                                            time,
+                                                        ))),
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        Message::Application(ApplicationAction::Dialog(DialogAction::None))
+                                    })
+                                    .into(),
+                            ])
+                            .spacing(spacing.space_xxs)
+                            .align_y(Vertical::Center)
+                            .into(),
+                        ])
+                        .spacing(spacing.space_s),
                     );
                 dialog
             }
