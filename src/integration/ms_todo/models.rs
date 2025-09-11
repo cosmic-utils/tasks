@@ -2,6 +2,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // ============================================================================
+// Pagination Support
+// ============================================================================
+
+/// Trait for collections that support pagination via next_link
+pub trait PaginatedCollection<T> {
+    /// Get the items from this page
+    fn get_items(&self) -> Vec<T>;
+    
+    /// Get the next_link URL if there are more pages
+    fn get_next_link(&self) -> Option<String>;
+}
+
+// ============================================================================
 // Todo Lists (todoTaskList)
 // ============================================================================
 
@@ -32,6 +45,16 @@ pub struct TodoTaskListCollection {
     pub value: Vec<TodoTaskList>,
     #[serde(rename = "@odata.nextLink")]
     pub next_link: Option<String>,
+}
+
+impl PaginatedCollection<TodoTaskList> for TodoTaskListCollection {
+    fn get_items(&self) -> Vec<TodoTaskList> {
+        self.value.clone()
+    }
+    
+    fn get_next_link(&self) -> Option<String> {
+        self.next_link.clone()
+    }
 }
 
 // ============================================================================
@@ -128,6 +151,16 @@ pub struct TodoTaskCollection {
     pub value: Vec<TodoTask>,
     #[serde(rename = "@odata.nextLink")]
     pub next_link: Option<String>,
+}
+
+impl PaginatedCollection<TodoTask> for TodoTaskCollection {
+    fn get_items(&self) -> Vec<TodoTask> {
+        self.value.clone()
+    }
+    
+    fn get_next_link(&self) -> Option<String> {
+        self.next_link.clone()
+    }
 }
 
 // ============================================================================
@@ -282,6 +315,16 @@ pub struct ChecklistItemCollection {
     pub value: Vec<ChecklistItem>,
     #[serde(rename = "@odata.nextLink")]
     pub next_link: Option<String>,
+}
+
+impl PaginatedCollection<ChecklistItem> for ChecklistItemCollection {
+    fn get_items(&self) -> Vec<ChecklistItem> {
+        self.value.clone()
+    }
+    
+    fn get_next_link(&self) -> Option<String> {
+        self.next_link.clone()
+    }
 }
 
 /// Request model for creating a new checklist item

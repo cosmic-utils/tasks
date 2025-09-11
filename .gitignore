@@ -9,7 +9,13 @@ target/
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-
+.cargo 
+.cargo_bcp
+repo
+build_dir
+vendor
+vendor.tar.gz
+internaldocs
 # Added by cargo
 /app.log
 /target
@@ -17,6 +23,10 @@ target/
 /.vscode
 /.flatpak-builder
 /flatpak_build
+
 /res/icons/_backup
 /vendor/
 /cosmic_view/
+
+
+

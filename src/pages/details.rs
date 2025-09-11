@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, TimeZone, Utc};
+use chrono::{NaiveDateTime, TimeZone, Utc};
 use cosmic::{
     iced::{Alignment, Length},
     theme,
@@ -34,9 +34,9 @@ pub enum Message {
     Editor(text_editor::Action),
     PriorityActivate(Entity),
     OpenCalendarDialog,
-    SetDueDate(NaiveDate),
+    SetDueDate(NaiveDateTime),
     OpenReminderCalendarDialog,
-    SetReminderDate(NaiveDate),
+    SetReminderDate(NaiveDateTime),
     // Checklist messages
     AddChecklistItem(String),
     ToggleChecklistItem(String),
@@ -118,18 +118,18 @@ impl Details {
             Message::OpenCalendarDialog => {
                 tasks.push(Output::OpenCalendarDialog);
             }
-            Message::SetDueDate(date) => {
+            Message::SetDueDate(date_time) => {
                 let tz = Utc::now().timezone();
-                self.task.due_date = Some(tz.from_utc_datetime(&date.into()));
+                self.task.due_date = Some(tz.from_utc_datetime(&date_time));
                 // Update today field when due date changes
                 self.task.update_today_field();
             }
             Message::OpenReminderCalendarDialog => {
                 tasks.push(Output::OpenReminderCalendarDialog);
             }
-            Message::SetReminderDate(date) => {
+            Message::SetReminderDate(date_time) => {
                 let tz = Utc::now().timezone();
-                self.task.reminder_date = Some(tz.from_utc_datetime(&date.into()));
+                self.task.reminder_date = Some(tz.from_utc_datetime(&date_time));
             }
             // Checklist message handling
             Message::AddChecklistItem(ref title) => {
@@ -248,7 +248,7 @@ impl Details {
                             .reminder_date
                             .as_ref()
                             .unwrap()
-                            .format("%m-%d-%Y")
+                            .format("%m-%d-%Y %H:%M")
                             .to_string()
                     } else {
                         fl!("select-date")

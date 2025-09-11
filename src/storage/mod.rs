@@ -1,13 +1,12 @@
 pub mod models;
-
+pub mod cache;
 
 use crate::{
     app::markdown::Markdown,
-    storage::models::{List, Task},
+    storage::models::{List, Task, VirtualListType},
+    storage::cache::TaskCache,
     Error, LocalStorageError, TasksError,
 };
-
-
 
 use tracing::{debug, error, info};
 
@@ -15,12 +14,11 @@ use crate::integration::ms_todo::{http_client::MsTodoHttpClient, models::*};
 
 use crate::auth::ms_todo_auth::MsTodoAuth;
 
-
-
 #[derive(Debug, Clone)]
 pub struct LocalStorage {
     http_client: MsTodoHttpClient,
     auth: MsTodoAuth,
+    task_cache: TaskCache,
 }
 
 
@@ -44,6 +42,7 @@ impl LocalStorage {
         Ok(Self {
             http_client: MsTodoHttpClient::new(),
             auth: auth,
+            task_cache: TaskCache::new(),
         })
     }
 
@@ -57,7 +56,122 @@ impl LocalStorage {
         })
     }
 
-    pub async fn tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
+    // Cache management methods
+    async fn add_task_to_cache(&mut self, task: Task) -> Result<(), Error> {
+        self.task_cache.update_task(task);
+        Ok(())
+    }
+    
+    async fn update_task_in_cache(&mut self, task: Task) -> Result<(), Error> {
+        self.task_cache.update_task(task);
+        Ok(())
+    }
+    
+    async fn remove_task_from_cache(&mut self, task_id: &str, list_id: &str) -> Result<(), Error> {
+        self.task_cache.remove_task(task_id, list_id);
+        Ok(())
+    }
+    
+    async fn update_cache_for_list(&mut self, list_id: &str, tasks: Vec<Task>) -> Result<(), Error> {
+        self.task_cache.update_list_tasks(list_id, tasks);
+        Ok(())
+    }
+
+    async fn get_tasks_for_virtual_list(&self, list: &List) -> Result<Vec<Task>, Error> {
+        let virtual_type = list.virtual_type.as_ref()
+            .ok_or_else(|| Error::Tasks(TasksError::TaskNotFound))?;
+        
+        let all_tasks = self.task_cache.get_all_tasks();
+        info!("🔍 Getting tasks for virtual list: {:?} ({} total tasks in cache)", 
+              virtual_type, all_tasks.len());
+        
+        // Use cached data for virtual lists
+        let tasks = match virtual_type {
+            VirtualListType::MyDay => self.filter_my_day_tasks(&all_tasks),
+            VirtualListType::Planned => self.filter_planned_tasks(&all_tasks),
+            VirtualListType::All => self.filter_all_tasks(&all_tasks),
+        };
+        
+        info!("✅ Virtual list {:?} has {} tasks", virtual_type, tasks.len());
+        
+        Ok(tasks)
+    }
+    
+    fn filter_my_day_tasks(&self, tasks: &[Task]) -> Vec<Task> {
+        let today = chrono::Utc::now().date_naive();
+        tasks.iter()
+            .filter(|task| {
+                task.status != crate::storage::models::Status::Completed &&
+                task.due_date.map(|d| d.date_naive() == today).unwrap_or(false)
+            })
+            .cloned()
+            .collect()
+    }
+    
+    fn filter_planned_tasks(&self, tasks: &[Task]) -> Vec<Task> {
+        tasks.iter()
+            .filter(|task| {
+                task.status != crate::storage::models::Status::Completed &&
+                task.due_date.is_some()
+            })
+            .cloned()
+            .collect()
+    }
+    
+    fn filter_all_tasks(&self, tasks: &[Task]) -> Vec<Task> {
+        tasks.iter()
+            .filter(|task| task.status != crate::storage::models::Status::Completed)
+            .cloned()
+            .collect()
+    }
+
+    async fn initialize_cache(&mut self) -> Result<(), Error> {
+        info!("🔄 Initializing task cache...");
+        
+        // Fetch all lists
+        let lists = self.fetch_lists_via_api().await?;
+        info!("📋 Found {} lists", lists.len());
+        
+        // Fetch tasks for each list and populate cache
+        for list in lists {
+            if !list.is_virtual {
+                info!("📝 Fetching tasks for list: {}", list.name);
+                let tasks = self.get_active_tasks(&list).await?;
+                info!("✅ Found {} tasks for list: {}", tasks.len(), list.name);
+                self.task_cache.update_list_tasks(&list.id, tasks);
+            }
+        }
+        
+        let all_tasks = self.task_cache.get_all_tasks();
+        info!("🎯 Cache initialized with {} total tasks", all_tasks.len());
+        
+        Ok(())
+    }
+
+    async fn fetch_lists_via_api(&self) -> Result<Vec<List>, Error> {
+        let auth_token = self
+            .get_valid_token()
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))?;
+
+        // Use helper method to fetch all pages with pagination
+        let todo_lists = self.fetch_all_todo_lists(&auth_token).await?;
+
+        let mut lists = Vec::new();
+        for tl in todo_lists {
+            let l: List = tl.into();
+            lists.push(l);
+        }
+        
+        Ok(lists)
+    }
+
+    pub async fn tasks(&mut self, list: &List) -> Result<Vec<Task>, Error> {
+        // For virtual lists, use cache
+        if list.is_virtual {
+            return self.get_tasks_for_virtual_list(list).await;
+        }
+        
+        // For regular lists, fetch from API and update cache
         let auth_token = self
             .get_valid_token()
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
@@ -67,21 +181,11 @@ impl LocalStorage {
             format!("/me/todo/lists/{}/tasks?$orderby=createdDateTime desc", list.id)
         };
 
-        let response: TodoTaskCollection = self
-            .http_client
-            .get(
-                &url,
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| {
-
-                error!("❌ Failed to get tasks via API: {}   for url {}", _e, url);
-                Error::Tasks(TasksError::ApiError)
-            })?;
+        // Use helper method to fetch all pages with pagination
+        let todo_tasks = self.fetch_all_todo_tasks(&url, &auth_token).await?;
 
         // Convert TodoTask[] → Task[] with proper path construction
-        let tasks: Vec<Task> = response.value
+        let tasks: Vec<Task> = todo_tasks
             .into_iter()
             .map(|todo_task| {
                 crate::integration::ms_todo::mapping::todo_task_to_task_with_path(
@@ -90,6 +194,9 @@ impl LocalStorage {
             })
             .collect();
 
+        // Update cache for this list
+        self.update_cache_for_list(&list.id, tasks.clone()).await?;
+
         Ok(tasks)
     }
     pub async fn get_active_tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
@@ -97,17 +204,12 @@ impl LocalStorage {
             .get_valid_token()
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
 
-        let response: TodoTaskCollection = self
-            .http_client
-            .get(
-                &format!("/me/todo/lists/{}/tasks?$filter=status ne 'completed'", list.id),
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+        // Use helper method to fetch all pages with pagination
+        let url = format!("/me/todo/lists/{}/tasks?$filter=status ne 'completed'", list.id);
+        let todo_tasks = self.fetch_all_todo_tasks(&url, &auth_token).await?;
 
         // Convert TodoTask[] → Task[] with proper path construction
-        let tasks: Vec<Task> = response.value
+        let tasks: Vec<Task> = todo_tasks
             .into_iter()
             .map(|todo_task| {
                 crate::integration::ms_todo::mapping::todo_task_to_task_with_path(
@@ -125,7 +227,50 @@ impl LocalStorage {
         Ok(Vec::new())
     }
 
+    /// Helper method to fetch all pages of todo lists with pagination
+    async fn fetch_all_todo_lists(&self, auth_token: &str) -> Result<Vec<TodoTaskList>, Error> {
+        self.http_client
+            .get_all_pages::<TodoTaskList, TodoTaskListCollection>(
+                "/me/todo/lists",
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| Error::Tasks(TasksError::ListNotFound))
+    }
+
+    /// Helper method to fetch all pages of todo tasks with pagination
+    async fn fetch_all_todo_tasks(&self, url: &str, auth_token: &str) -> Result<Vec<TodoTask>, Error> {
+        self.http_client
+            .get_all_pages::<TodoTask, TodoTaskCollection>(
+                url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to get tasks via API: {}   for url {}", _e, url);
+                Error::Tasks(TasksError::ApiError)
+            })
+    }
+
+    /// Helper method to fetch all pages of checklist items with pagination
+    async fn fetch_all_checklist_items(&self, url: &str, auth_token: &str) -> Result<Vec<crate::integration::ms_todo::models::ChecklistItem>, Error> {
+        self.http_client
+            .get_all_pages::<crate::integration::ms_todo::models::ChecklistItem, crate::integration::ms_todo::models::ChecklistItemCollection>(
+                url,
+                &format!("Bearer {}", auth_token),
+            )
+            .await
+            .map_err(|_e| {
+                error!("❌ Failed to fetch checklist items via API: {}", _e);
+                Error::Tasks(TasksError::ApiError)
+            })
+    }
+
     pub async fn lists(&mut self) -> Result<Vec<List>, Error> {
+        // Initialize cache if empty
+        if self.task_cache.is_empty() {
+            self.initialize_cache().await?;
+        }
 
         let auth_token = self
             .get_valid_token()
@@ -152,11 +297,40 @@ impl LocalStorage {
 
             lists.push(l);
         }
-        lists.sort_by(|a, b| a.well_known_list_name.cmp(&b.well_known_list_name).then(a.name.cmp(&b.name)));
+        
+        // Add virtual lists
+        let virtual_lists = vec![
+            List::new_virtual(VirtualListType::MyDay, "My Day"),
+            List::new_virtual(VirtualListType::Planned, "Planned"),
+            List::new_virtual(VirtualListType::All, "All"),
+        ];
+        
+        // Calculate task counts for virtual lists
+        let mut virtual_lists_with_counts = Vec::new();
+        for mut virtual_list in virtual_lists {
+            let tasks = self.get_tasks_for_virtual_list(&virtual_list).await.unwrap_or_default();
+            virtual_list.number_of_tasks = tasks.len() as u32;
+            virtual_lists_with_counts.push(virtual_list);
+        }
+        
+        // Combine and sort: virtual lists first, then regular lists
+        lists.extend(virtual_lists_with_counts);
+        lists.sort_by(|a, b| {
+            if a.is_virtual && !b.is_virtual {
+                std::cmp::Ordering::Less
+            } else if !a.is_virtual && b.is_virtual {
+                std::cmp::Ordering::Greater
+            } else if a.is_virtual && b.is_virtual {
+                a.sort_order.cmp(&b.sort_order)
+            } else {
+                a.well_known_list_name.cmp(&b.well_known_list_name).then(a.name.cmp(&b.name))
+            }
+        });
+        
         Ok(lists)
     }
 
-    pub async fn create_task(&self, task: &Task) -> Result<Task, Error> {
+    pub async fn create_task(&mut self, task: &Task) -> Result<Task, Error> {
         let list_id = task.list_id.clone().unwrap_or_default();
         let auth_token = self
             .get_valid_token()
@@ -190,10 +364,13 @@ impl LocalStorage {
         let new_task =
             crate::integration::ms_todo::mapping::todo_task_to_task_with_path(response, &list_id);
 
+        // Update cache with new task
+        self.add_task_to_cache(new_task.clone()).await?;
+
         Ok(new_task)
     }
 
-    pub async fn update_task(&self, task: &Task) -> Result<(), Error> {
+    pub async fn update_task(&mut self, task: &Task) -> Result<(), Error> {
         let list_id = task.list_id.clone().unwrap_or_default();
         let auth_token = self
             .get_valid_token()
@@ -214,22 +391,29 @@ impl LocalStorage {
             .await
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
 
+        // Update cache with modified task
+        self.update_task_in_cache(task.clone()).await?;
+
         Ok(())
     }
 
-    pub async fn delete_task(&self, task: &Task) -> Result<(), Error> {
+    pub async fn delete_task(&mut self, task: &Task) -> Result<(), Error> {
         let list_id = task.list_id.clone().unwrap_or_default();
+        let task_id = task.id.clone();
         let auth_token = self
             .get_valid_token()
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
 
         self.http_client
             .delete(
-                &format!("/me/todo/lists/{}/tasks/{}", list_id, task.id),
+                &format!("/me/todo/lists/{}/tasks/{}", list_id, task_id),
                 &format!("Bearer {}", auth_token),
             )
             .await
             .map_err(|_e| Error::Tasks(TasksError::TaskNotFound))?;
+
+        // Remove from cache
+        self.remove_task_from_cache(&task_id, &list_id).await?;
 
         Ok(())
     }
@@ -318,20 +502,11 @@ impl LocalStorage {
 
         let url = format!("/me/todo/lists/{}/tasks/{}/checklistItems", list_id, task.id);
 
-        let response: crate::integration::ms_todo::models::ChecklistItemCollection = self
-            .http_client
-            .get(
-                &url,
-                &format!("Bearer {}", auth_token),
-            )
-            .await
-            .map_err(|_e| {
-                error!("❌ Failed to fetch checklist items via API: {}", _e);
-                Error::Tasks(TasksError::ApiError)
-            })?;
+        // Use helper method to fetch all pages with pagination
+        let checklist_items = self.fetch_all_checklist_items(&url, &auth_token).await?;
 
         // Convert MS Graph ChecklistItem[] → local ChecklistItem[]
-        let items: Vec<crate::storage::models::ChecklistItem> = response.value
+        let items: Vec<crate::storage::models::ChecklistItem> = checklist_items
             .into_iter()
             .map(|item| item.into())
             .collect();
