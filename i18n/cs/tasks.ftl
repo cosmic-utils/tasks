@@ -65,10 +65,10 @@ settings = Nastavení
 
 ### Appearance
 appearance = Vzhled
-theme = Motiv
+theme = Téma
 match-desktop = Podle systému
-dark = Tmavý
-light = Světlý
+dark = Tmavé
+light = Světlé
 
 # Menu
 
@@ -76,15 +76,15 @@ light = Světlý
 file = Soubor
 new-window = Nové okno
 new-list = Nový seznam
-quit = Konec
+quit = Ukončit
 
 ## Edit
-edit = Upravit
+edit = Úpravy
 rename = Přejmenovat
 delete = Smazat
 
 ## View
-view = Zobrazit
+view = Zobrazení
 menu-settings = Nastavení
 menu-about = O aplikaci Úkoly...
 hide-completed = Skrýt dokončené
@@ -98,3 +98,10 @@ website = Webová stránka
 cause = Příčina
 oops-something-wrong = Jejda! Něco se pokazilo.
 error-title = Úkoly - Chyba
+
+# Sort Menu
+sort = Řazení
+sort-name-asc = Název A-Z
+sort-name-desc = Název Z-A
+sort-date-asc = Datum přidání (od nejstarších po nejnovější)
+sort-date-desc = Datum přidání (od nejnovějších po nejstarší)
