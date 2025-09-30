@@ -16,13 +16,19 @@
   <url type="contribute">https://github.com/cosmic-utils/tasks</url>
   <url type="translate">https://github.com/cosmic-utils/tasks/tree/main/i18n</url>
   <name>Tasks</name>
+  <name xml:lang="cs">Úkoly</name>
   <summary>Get things done</summary>
+  <summary xml:lang="cs">Dokončete, co jste začali</summary>
   <description>
     <p>A simple task management app, reaching across the cosmos to help you get things done</p>
+    <p xml:lang="cs">Jednoduchá aplikace pro správu úkolů, která vám pomůže dokončit, co jste začali</p>
     <ul>
         <li>Exceptional performance and responsiveness.</li>
+        <li xml:lang="cs">Výjimečný výkon a rychlá odezva.</li>
         <li>Effortless keyboard shortcut support.</li>
+        <li xml:lang="cs">Bezproblémová podpora klávesových zkratek.</li>
         <li>Expressive emoji integration.</li>
+        <li xml:lang="cs">Expresivní integrace emoji.</li>
     </ul>
   </description>
   <branding>
@@ -76,26 +82,32 @@
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-light.png</image>
       <caption>Main application interface</caption>
+      <caption xml:lang="cs">Hlavní rozhraní aplikace</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/window-dark.png</image>
       <caption>Main application interface</caption>
+      <caption xml:lang="cs">Hlavní rozhraní aplikace</caption>
     </screenshot>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/details-light.png</image>
       <caption>Task details</caption>
+      <caption xml:lang="cs">Detaily úkolu</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/details-dark.png</image>
       <caption>Task details</caption>
+      <caption xml:lang="cs">Detaily úkolu</caption>
     </screenshot>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/new-list-light.png</image>
       <caption>Create a new list</caption>
+      <caption xml:lang="cs">Tvorba nového seznamu</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/edfloreshz/tasks/main/res/screenshots/new-list-dark.png</image>
       <caption>Create a new list</caption>
+      <caption xml:lang="cs">Tvorba nového seznamu</caption>
     </screenshot>
   </screenshots>
   <categories>
