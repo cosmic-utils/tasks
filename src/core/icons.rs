@@ -76,18 +76,15 @@ impl IconCache {
                 name: name.clone(),
                 size,
             };
-            if !self.cache.contains_key(&key) {
+            if let std::collections::hash_map::Entry::Vacant(e) = self.cache.entry(key) {
                 let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                     .join(format!("res/icons/bundled/{}.svg", name));
                 if let Ok(data) = fs::read(&path) {
                     let handle = icon::from_svg_bytes(data.clone()).symbolic(true);
-                    self.cache.insert(
-                        key,
-                        IconCacheEntry {
-                            handle,
-                            _bytes: Some(data),
-                        },
-                    );
+                    e.insert(IconCacheEntry {
+                        handle,
+                        _bytes: Some(data),
+                    });
                 }
             }
         }

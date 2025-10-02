@@ -21,7 +21,7 @@ pub fn menu_bar<'a>(
 ) -> Element<'a, Message> {
     MenuBar::new(vec![
         Tree::with_children(
-            root(fl!("file")),
+            Element::from(root(fl!("file"))),
             items(
                 key_binds,
                 vec![
@@ -46,7 +46,7 @@ pub fn menu_bar<'a>(
             ),
         ),
         Tree::with_children(
-            root(fl!("edit")),
+            Element::from(root(fl!("edit"))),
             items(
                 key_binds,
                 vec![
@@ -71,7 +71,7 @@ pub fn menu_bar<'a>(
             ),
         ),
         Tree::with_children(
-            root(fl!("view")),
+            Element::from(root(fl!("view"))),
             items(
                 key_binds,
                 vec![
@@ -97,7 +97,7 @@ pub fn menu_bar<'a>(
             ),
         ),
         Tree::with_children(
-            root(fl!("sort")),
+            Element::from(root(fl!("sort"))),
             items(
                 key_binds,
                 vec![

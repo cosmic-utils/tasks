@@ -105,10 +105,10 @@ impl Details {
         tasks
     }
 
-    pub fn view(&self) -> Element<Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        return widget::settings::view_column(vec![widget::settings::section()
+        widget::settings::view_column(vec![widget::settings::section()
             .title(fl!("details"))
             .add(
                 widget::column::with_children(vec![
@@ -182,6 +182,6 @@ impl Details {
             spacing.space_none,
             spacing.space_s,
         ])
-        .into();
+        .into()
     }
 }

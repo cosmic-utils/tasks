@@ -28,7 +28,7 @@ pub enum DialogPage {
 }
 
 impl DialogPage {
-    pub fn view(&self, text_input_id: &widget::Id) -> widget::Dialog<Message> {
+    pub fn view(&self, text_input_id: &widget::Id) -> widget::Dialog<'_, Message> {
         let spacing = cosmic::theme::active().cosmic().spacing;
 
         match self {

@@ -52,7 +52,7 @@ impl Application for View {
         (app, cosmic::app::Task::batch(tasks))
     }
 
-    fn view(&self) -> cosmic::Element<Self::Message> {
+    fn view(&self) -> cosmic::Element<'_, Self::Message> {
         widget::column()
             .push(widget::icon(icons::get_handle("sad-computer-symbolic", 32)).size(32))
             .push(

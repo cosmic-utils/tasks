@@ -3,6 +3,7 @@
 
 //! Contains stylesheet implementation for [`crate::widget::segmented_button`].
 
+use cosmic::iced::Border;
 use cosmic::iced::{border::Radius, Background};
 use cosmic::widget::segmented_button::ItemStatusAppearance;
 use cosmic::widget::segmented_button::{Appearance, ItemAppearance};
@@ -24,31 +25,40 @@ fn horizontal(theme: &cosmic::Theme) -> Appearance {
     let rad_0 = cosmic.corner_radii.radius_0;
     Appearance {
         background: Some(background.into()),
-        border_radius: rad_m.into(),
+        border: Border {
+            radius: rad_m.into(),
+            ..Default::default()
+        },
         inactive: ItemStatusAppearance {
             background: None,
             first: ItemAppearance {
-                border_radius: Radius::from([rad_m[0], rad_0[1], rad_0[2], rad_m[3]]),
-                ..Default::default()
+                border: Border {
+                    radius: Radius::from([rad_m[0], rad_0[1], rad_0[2], rad_m[3]]),
+                    ..Default::default()
+                },
             },
             middle: ItemAppearance {
-                border_radius: cosmic.corner_radii.radius_0.into(),
-                ..Default::default()
+                border: Border {
+                    radius: cosmic.corner_radii.radius_0.into(),
+                    ..Default::default()
+                },
             },
             last: ItemAppearance {
-                border_radius: Radius::from([rad_0[0], rad_m[1], rad_m[2], rad_0[3]]),
-                ..Default::default()
+                border: Border {
+                    radius: Radius::from([rad_0[0], rad_m[1], rad_m[2], rad_0[3]]),
+                    ..Default::default()
+                },
             },
             text_color: container.component.on.into(),
         },
         hover: hover(theme, &active),
-        focus: focus(theme, &active),
         active,
         ..Default::default()
     }
 }
 
 mod horizontal {
+    use cosmic::iced::Border;
     use cosmic::iced::{border::Radius, Background};
     use cosmic::widget::segmented_button::{ItemAppearance, ItemStatusAppearance};
 
@@ -62,28 +72,25 @@ mod horizontal {
         ItemStatusAppearance {
             background: Some(Background::Color(color.into())),
             first: ItemAppearance {
-                border_radius: Radius::from([rad_m[0], rad_0[1], rad_0[2], rad_m[3]]),
-                ..Default::default()
+                border: Border {
+                    radius: Radius::from([rad_m[0], rad_0[1], rad_0[2], rad_m[3]]),
+                    ..Default::default()
+                },
             },
             middle: ItemAppearance {
-                border_radius: theme.cosmic().corner_radii.radius_0.into(),
-                ..Default::default()
+                border: Border {
+                    radius: theme.cosmic().corner_radii.radius_0.into(),
+                    ..Default::default()
+                },
             },
             last: ItemAppearance {
-                border_radius: Radius::from([rad_0[0], rad_m[1], rad_m[2], rad_0[3]]),
-                ..Default::default()
+                border: Border {
+                    radius: Radius::from([rad_0[0], rad_m[1], rad_m[2], rad_0[3]]),
+                    ..Default::default()
+                },
             },
             text_color: theme.cosmic().accent.base.into(),
         }
-    }
-}
-
-pub fn focus(theme: &cosmic::Theme, default: &ItemStatusAppearance) -> ItemStatusAppearance {
-    let color = theme.cosmic().palette.neutral_3;
-    ItemStatusAppearance {
-        background: Some(Background::Color(color.into())),
-        text_color: theme.cosmic().accent.base.into(),
-        ..*default
     }
 }
 

@@ -264,8 +264,10 @@ impl Content {
         });
 
         let more_button = widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
-            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
-                .on_press(Message::Empty),
+            Element::from(
+                cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
+                    .on_press(Message::Empty),
+            ),
             widget::menu::items(
                 &HashMap::new(),
                 vec![
@@ -371,8 +373,10 @@ impl Content {
         });
 
         let more_button = widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
-            cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
-                .on_press(Message::Empty),
+            Element::from(
+                cosmic::widget::button::icon(icons::get_handle("view-more-symbolic", 18))
+                    .on_press(Message::Empty),
+            ),
             widget::menu::items(
                 &HashMap::new(),
                 vec![
@@ -473,7 +477,7 @@ impl Content {
             .into()
     }
 
-    pub fn new_task_view(&self) -> Element<Message> {
+    pub fn new_task_view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
         row(vec![
             widget::text_input(fl!("add-new-task"), &self.input)
@@ -788,7 +792,7 @@ impl Content {
         tasks
     }
 
-    pub fn view(&self) -> Element<Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let Some(ref list) = self.list else {

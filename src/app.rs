@@ -77,7 +77,7 @@ pub enum Message {
 }
 
 impl Tasks {
-    fn settings(&self) -> Element<Message> {
+    fn settings(&self) -> Element<'_, Message> {
         widget::scrollable(widget::settings::section().title(fl!("appearance")).add(
             widget::settings::item::item(
                 fl!("theme"),
@@ -91,7 +91,7 @@ impl Tasks {
         .into()
     }
 
-    fn create_nav_item(&mut self, list: &List) -> EntityMut<SingleSelect> {
+    fn create_nav_item(&mut self, list: &List) -> EntityMut<'_, SingleSelect> {
         let icon =
             crate::app::icons::get_icon(list.icon.as_deref().unwrap_or("view-list-symbolic"), 16);
         self.nav_model
@@ -479,7 +479,7 @@ impl Application for Tasks {
 
         let about = widget::about::About::default()
             .name(fl!("tasks"))
-            .icon(Self::APP_ID)
+            .icon(widget::icon::from_name(Self::APP_ID))
             .version("0.2.0")
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
@@ -521,7 +521,7 @@ impl Application for Tasks {
         (app, app::Task::batch(tasks))
     }
 
-    fn context_drawer(&self) -> Option<app::context_drawer::ContextDrawer<Self::Message>> {
+    fn context_drawer(&self) -> Option<app::context_drawer::ContextDrawer<'_, Self::Message>> {
         if !self.core.window.show_context {
             return None;
         }
@@ -529,7 +529,7 @@ impl Application for Tasks {
         Some(match self.context_page {
             ContextPage::About => app::context_drawer::about(
                 &self.about,
-                Message::Open,
+                |url| Message::Open(url.to_string()),
                 Message::Application(ApplicationAction::ToggleContextDrawer),
             )
             .title(self.context_page.title()),
@@ -546,13 +546,13 @@ impl Application for Tasks {
         })
     }
 
-    fn dialog(&self) -> Option<Element<Message>> {
+    fn dialog(&self) -> Option<Element<'_, Message>> {
         let dialog_page = self.dialog_pages.front()?;
         let dialog = dialog_page.view(&self.dialog_text_input);
         Some(dialog.into())
     }
 
-    fn header_start(&self) -> Vec<Element<Self::Message>> {
+    fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
         vec![menu::menu_bar(&self.key_binds, &self.config)]
     }
 
@@ -694,7 +694,7 @@ impl Application for Tasks {
         app::Task::batch(tasks)
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         self.content.view().map(Message::Content)
     }
 }
