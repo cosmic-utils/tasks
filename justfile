@@ -54,7 +54,7 @@ vendor-extract:
     tar -xzf vendor.tar.gz
 
 # Compiles release profile with vendored dependencies
-build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
+build-vendored *args: vendor-extract (build-release '--frozen --offline --jobs=1' args)
 
 # Runs a clippy check
 check *args:

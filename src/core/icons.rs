@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::widget::icon;
-use tracing::info;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+use tracing::info;
 
 pub(crate) static ICON_CACHE: OnceLock<Mutex<IconCache>> = OnceLock::new();
 
@@ -23,13 +23,12 @@ pub struct IconCacheEntry {
 pub struct IconCache {
     cache: HashMap<IconCacheKey, IconCacheEntry>,
     bundled_icons: std::collections::HashSet<String>,
-    
 }
 
 impl IconCache {
     pub fn new() -> Self {
         let mut bundled_icons = std::collections::HashSet::new();
-        
+
         let icons_dir = get_bundled_icons_path();
         if let Ok(entries) = fs::read_dir(icons_dir) {
             for entry in entries.flatten() {
@@ -43,7 +42,6 @@ impl IconCache {
         Self {
             cache: HashMap::new(),
             bundled_icons,
-            
         }
     }
 
@@ -72,10 +70,7 @@ impl IconCache {
         );
         icon::icon(handle).size(size)
     }
-
 }
-
-
 
 pub fn get_icon(name: &str, size: u16) -> icon::Icon {
     let mut icon_cache = ICON_CACHE.get().unwrap().lock().unwrap();
@@ -102,9 +97,9 @@ pub fn get_handle(name: &str, size: u16) -> icon::Handle {
         return entry.handle.clone();
     }
     let (handle, bytes) = if icon_cache.bundled_icons.contains(name) {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join(format!("res/icons/bundled/{}.svg", name));
-        let data = fs::read(&path).expect("Failed to read bundled icon");
+        let path = get_bundled_icons_path().join(format!("{}.svg", name));
+        let data =
+            fs::read(&path).expect(format!("Failed to read bundled icon {name}").as_str());
         let handle = icon::from_svg_bytes(data.clone()).symbolic(true);
         (handle, Some(data))
     } else {
