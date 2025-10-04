@@ -45,6 +45,32 @@ cd msToDO
 cargo build
 ```
 
+# CLI Usage
+
+MS TODO App includes a comprehensive command-line interface for automation and scripting:
+
+```bash
+# GUI mode (no arguments)
+./ms-todo-app
+
+# CLI mode (with commands)
+./ms-todo-app lists --include-virtual
+./ms-todo-app tasks <list-id> --today
+./ms-todo-app create --list <list-id> --title "New task" --due-date "2025-10-15"
+./ms-todo-app update <task-id> --status finished
+./ms-todo-app delete <task-id> --yes
+```
+
+**Features:**
+- 📋 List management and task queries
+- ✅ Create, update, and delete tasks
+- 🎯 Filter by date, status, and keywords
+- 📊 JSON output for scripting (`-o json`)
+- 🔄 POSIX exit codes for automation
+- 🤖 Perfect for cron jobs and shell scripts
+
+See [CLI_USAGE.md](CLI_USAGE.md) for detailed documentation and scripting examples.
+
 # Flatpak
 
 To build the cargo sources for the Flatpak manifest:

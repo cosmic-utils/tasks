@@ -4,6 +4,7 @@ mod pages;
 mod storage;
 mod auth;
 mod integration;
+mod cli;
 
 use core::settings;
 use auth::MsTodoAuth;
@@ -11,9 +12,31 @@ use tracing::{info, error};
 
 pub use app::error::*;
 
+fn main() {
+    // Check if CLI arguments are provided (more than just the program name)
+    if std::env::args().len() > 1 {
+        // Run CLI mode with tokio runtime
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+        match rt.block_on(cli::run()) {
+            Ok(_) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("CLI error: {}", e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        // Run GUI mode (synchronous, no tokio)
+        match run_gui() {
+            Ok(_) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("GUI error: {:?}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+}
 
-
-pub fn main() -> cosmic::iced::Result {
+pub fn run_gui() -> cosmic::iced::Result {
     // Initialize settings
     settings::app::init();
     
