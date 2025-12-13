@@ -17,3 +17,4 @@ target/
 /.vscode
 /.flatpak-builder
 /flatpak_build
+**/.venv
