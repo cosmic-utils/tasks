@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#    "aiohttp<4.0.0,>=3.9.5",
+#    "PyYAML<7.0.0,>=6.0.2",
+#    "tomlkit>=0.13.3,<1.0"
+# ]
+# ///
 
 __license__ = "MIT"
 import argparse
@@ -24,7 +32,7 @@ from typing import (
 from urllib.parse import ParseResult, parse_qs, urlparse
 
 import aiohttp
-import toml
+import tomlkit
 
 try:
     import yaml
@@ -112,7 +120,7 @@ _TomlType = Dict[str, Any]
 
 def load_toml(tomlfile: str = "Cargo.lock") -> _TomlType:
     with open(tomlfile, "r", encoding="utf-8") as f:
-        toml_data = toml.load(f)
+        toml_data = tomlkit.parse(f.read()).unwrap()
     return toml_data
 
 
@@ -155,7 +163,7 @@ def fetch_git_repo(git_url: str, commit: str) -> str:
 
 
 def update_workspace_keys(pkg: dict[str, Any], workspace: dict[str, Any]) -> None:
-    for key, item in pkg.items():
+    for key, item in list(pkg.items()):
         # There cannot be a 'workspace' key if the item is not a dict.
         if not isinstance(item, dict):
             continue
@@ -348,7 +356,7 @@ async def get_git_package_sources(
         },
         {
             "type": "inline",
-            "contents": toml.dumps(git_pkg.normalized),
+            "contents": tomlkit.dumps(git_pkg.normalized),
             "dest": f"{CARGO_CRATES}/{name}",  # -{version}',
             "dest-filename": "Cargo.toml",
         },
@@ -445,7 +453,7 @@ async def generate_sources(
     sources.append(
         {
             "type": "inline",
-            "contents": toml.dumps(
+            "contents": tomlkit.dumps(
                 {
                     "source": cargo_vendored_sources,
                 }
