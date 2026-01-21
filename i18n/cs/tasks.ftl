@@ -65,10 +65,10 @@ settings = Nastavení
 
 ### Appearance
 appearance = Vzhled
-theme = Téma
+theme = Motiv
 match-desktop = Podle systému
-dark = Tmavé
-light = Světlé
+dark = Tmavý
+light = Světlý
 
 # Menu
 
