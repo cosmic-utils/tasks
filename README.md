@@ -1,6 +1,6 @@
 <div align="center">
   <br>
-  <img src="res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg" width="150" />
+  <img src="resources/icons/hicolor/scalable/apps/icon.svg" width="150" />
   <h1>Tasks</h1>
 
   <p>A simple task management application for the COSMIC™ desktop</p>
