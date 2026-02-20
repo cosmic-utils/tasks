@@ -1,51 +1,48 @@
 [package]
 name = "tasks"
-version = "0.2.0"
-edition = "2021"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+description = "A simple task management application for the COSMIC™ desktop"
+repository = "https://github.com/cosmic-utils/tasks"
 
 [dependencies]
-i18n-embed-fl = "0.10.0"
-rust-embed = "8"
+futures-util = "0.3.31"
+i18n-embed = { version = "0.16", features = [
+    "fluent-system",
+    "desktop-requester",
+] }
+i18n-embed-fl = "0.10"
 open = "5.3.2"
-dirs = "6.0.0"
-cli-clipboard = "0.4.0"
-slotmap = "1.0.7"
-ron = "0.11.0"
-thiserror = "2.0.17"
-tracing = "0.1.41"
-
-[dependencies.tracing-subscriber]
-version = "0.3.20"
-features = ["env-filter"]
+rust-embed = "8.8.0"
+tokio = { version = "1.48.0", features = ["full"] }
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
-default-features = false
-features = ["multi-window", "tokio", "winit", "about", "wayland", "wgpu"]
+# See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
+features = [
+    # Accessibility support
+    "a11y",
+    # About widget for the app
+    "about",
+    # Uses cosmic-settings-daemon to watch for config file changes
+    "dbus-config",
+    # Support creating additional application windows.
+    "multi-window",
+    # On app startup, focuses an existing instance if the app is already open
+    "single-instance",
+    # Uses tokio as the executor for the runtime
+    "tokio",
+    # Windowing support for X11, Windows, Mac, & Redox
+    "winit",
+    # Add Wayland support to winit
+    "wayland",
+    # GPU-accelerated rendering
+    "wgpu",
+]
 
-[dependencies.i18n-embed]
-version = "0.16.0"
-features = ["fluent-system", "desktop-requester"]
-
-[dependencies.serde]
-version = "1"
-features = ["derive"]
-
-[dependencies.sqlx]
-version = "0.8.6"
-features = ["sqlite"]
-default-features = false
-
-[dependencies.chrono]
-version = "0.4.42"
-features = ["serde"]
-
-[dependencies.uuid]
-version = "1.18.1"
-features = ["v4"]
-
-[patch."https://github.com/smithay/client-toolkit.git"]
-sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
-
-# [patch."https://github.com/pop-os/libcosmic.git"]
-# libcosmic = { path = "../../edfloreshz-ext/libcosmic" }
+# Uncomment to test a locally-cloned libcosmic
+# [patch.'https://github.com/pop-os/libcosmic']
+# libcosmic = { path = "../libcosmic" }
+# cosmic-config = { path = "../libcosmic/cosmic-config" }
+# cosmic-theme = { path = "../libcosmic/cosmic-theme" }

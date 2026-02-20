@@ -42,4 +42,4 @@ appstreamcli validate --pedantic --explain res/dev.edfloreshz.Tasks.metainfo.xml
 
 Copyright 2024 © Eduardo Flores
 
-Tasks is released under the terms of the [GPL-3.0](https://github.com/edfloreshz/tasks/blob/main/LICENSE)
+Tasks is released under the terms of the [GPL-3.0-only](https://github.com/edfloreshz/tasks/blob/main/LICENSE)

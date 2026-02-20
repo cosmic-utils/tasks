@@ -1,700 +1,372 @@
-pub mod actions;
-pub mod context;
-pub mod dialog;
-pub mod error;
-mod flags;
-pub mod markdown;
-pub mod menu;
+// SPDX-License-Identifier: GPL-3.0-only
 
-pub use flags::*;
-use std::{
-    any::TypeId,
-    collections::{HashMap, VecDeque},
-    env, process,
-};
+use crate::config::Config;
+use crate::fl;
+use cosmic::app::context_drawer;
+use cosmic::cosmic_config::{self, CosmicConfigEntry};
+use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::{Alignment, Length, Subscription};
+use cosmic::widget::{self, about::About, icon, menu, nav_bar};
+use cosmic::{iced_futures, prelude::*};
+use futures_util::SinkExt;
+use std::collections::HashMap;
+use std::time::Duration;
 
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
-use cosmic::{
-    app::{self, Core},
-    cosmic_config::{self, Update},
-    cosmic_theme::{self, ThemeMode},
-    iced::{
-        keyboard::{Event as KeyEvent, Modifiers},
-        Event, Subscription,
-    },
-    widget::{
-        self,
-        calendar::CalendarModel,
-        menu::{key_bind::KeyBind, Action as _},
-        segmented_button::{Entity, EntityMut, SingleSelect},
-    },
-    Application, ApplicationExt, Element,
-};
+const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
+const APP_ICON: &[u8] = include_bytes!("../resources/icons/hicolor/scalable/apps/icon.svg");
 
-use crate::{
-    app::{
-        actions::{Action, ApplicationAction, NavMenuAction, TasksAction},
-        context::ContextPage,
-        dialog::{DialogAction, DialogPage},
-    },
-    core::{
-        config::{self, CONFIG_VERSION},
-        icons,
-        key_bind::key_binds,
-    },
-    fl,
-    pages::{
-        content::{self, Content},
-        details::{self, Details},
-    },
-    storage::{models::List, LocalStorage},
-};
-
-pub struct Tasks {
-    core: Core,
-    about: widget::about::About,
-    nav_model: widget::segmented_button::SingleSelectModel,
-    storage: LocalStorage,
-    content: Content,
-    details: Details,
-    config_handler: Option<cosmic_config::Config>,
-    config: config::TasksConfig,
-    app_themes: Vec<String>,
+/// The application model stores app-specific state used to describe its interface and
+/// drive its logic.
+pub struct AppModel {
+    /// Application state which is managed by the COSMIC runtime.
+    core: cosmic::Core,
+    /// Display a context drawer with the designated page if defined.
     context_page: ContextPage,
-    key_binds: HashMap<KeyBind, Action>,
-    modifiers: Modifiers,
-    dialog_pages: VecDeque<DialogPage>,
-    dialog_text_input: widget::Id,
+    /// The about page for this app.
+    about: About,
+    /// Contains items assigned to the nav bar panel.
+    nav: nav_bar::Model,
+    /// Key bindings for the application's menu bar.
+    key_binds: HashMap<menu::KeyBind, MenuAction>,
+    /// Configuration data that persists between application runs.
+    config: Config,
+    /// Time active
+    time: u32,
+    /// Toggle the watch subscription
+    watch_is_active: bool,
 }
 
+/// Messages emitted by the application and its widgets.
 #[derive(Debug, Clone)]
 pub enum Message {
-    Content(content::Message),
-    Details(details::Message),
-    Tasks(TasksAction),
-    Application(ApplicationAction),
-    Open(String),
+    LaunchUrl(String),
+    ToggleContextPage(ContextPage),
+    ToggleWatch,
+    UpdateConfig(Config),
+    WatchTick(u32),
 }
 
-impl Tasks {
-    fn settings(&self) -> Element<'_, Message> {
-        widget::scrollable(widget::settings::section().title(fl!("appearance")).add(
-            widget::settings::item::item(
-                fl!("theme"),
-                widget::dropdown(
-                    &self.app_themes,
-                    Some(self.config.app_theme.into()),
-                    |theme| Message::Application(ApplicationAction::AppTheme(theme)),
-                ),
-            ),
-        ))
-        .into()
-    }
-
-    fn create_nav_item(&mut self, list: &List) -> EntityMut<'_, SingleSelect> {
-        let icon =
-            crate::app::icons::get_icon(list.icon.as_deref().unwrap_or("view-list-symbolic"), 16);
-        self.nav_model
-            .insert()
-            .text(list.name.clone())
-            .icon(icon)
-            .data(list.clone())
-    }
-
-    fn update_content(
-        &mut self,
-        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
-        message: content::Message,
-    ) {
-        let content_tasks = self.content.update(message);
-        for content_task in content_tasks {
-            match content_task {
-                content::Output::Focus(id) => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Focus(id))))
-                }
-                content::Output::OpenTaskDetails(task) => {
-                    let entity = self.details.priority_model.entity_at(task.priority as u16);
-                    if let Some(entity) = entity {
-                        self.details.priority_model.activate(entity);
-                    }
-                    self.details.task = task.clone();
-                    self.details.text_editor_content =
-                        widget::text_editor::Content::with_text(&task.notes);
-
-                    tasks.push(self.update(Message::Application(
-                        ApplicationAction::ToggleContextPage(ContextPage::TaskDetails),
-                    )));
-                }
-                content::Output::ToggleHideCompleted(list) => {
-                    if let Some(data) = self.nav_model.active_data_mut::<List>() {
-                        data.hide_completed = list.hide_completed;
-                        if let Err(err) = self.storage.update_list(&list) {
-                            tracing::error!("Error updating list: {err}");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn update_details(
-        &mut self,
-        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
-        message: details::Message,
-    ) {
-        let details_tasks = self.details.update(message);
-        for details_task in details_tasks {
-            match details_task {
-                details::Output::OpenCalendarDialog => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Calendar(CalendarModel::now())),
-                    ))));
-                }
-                details::Output::RefreshTask(task) => {
-                    tasks.push(self.update(Message::Content(content::Message::RefreshTask(
-                        task.clone(),
-                    ))));
-                }
-            }
-        }
-    }
-
-    fn update_dialog(
-        &mut self,
-        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
-        dialog_action: DialogAction,
-    ) {
-        match dialog_action {
-            DialogAction::Open(page) => {
-                match page {
-                    DialogPage::Rename(entity, _) => {
-                        let data = if let Some(entity) = entity {
-                            self.nav_model.data::<List>(entity)
-                        } else {
-                            self.nav_model.active_data::<List>()
-                        };
-                        if let Some(list) = data {
-                            self.dialog_pages
-                                .push_back(DialogPage::Rename(entity, list.name.clone()));
-                        }
-                    }
-                    page => self.dialog_pages.push_back(page),
-                }
-                tasks.push(self.update(Message::Application(ApplicationAction::Focus(
-                    self.dialog_text_input.clone(),
-                ))));
-            }
-            DialogAction::Update(dialog_page) => {
-                self.dialog_pages[0] = dialog_page;
-            }
-            DialogAction::Close => {
-                self.dialog_pages.pop_front();
-            }
-            DialogAction::Complete => {
-                if let Some(dialog_page) = self.dialog_pages.pop_front() {
-                    match dialog_page {
-                        DialogPage::New(name) => {
-                            let list = List::new(&name);
-                            match self.storage.create_list(&list) {
-                                Ok(list) => {
-                                    tasks.push(
-                                        self.update(Message::Tasks(TasksAction::AddList(list))),
-                                    );
-                                }
-                                Err(err) => {
-                                    tracing::error!("Error creating list: {err}");
-                                }
-                            }
-                        }
-                        DialogPage::Rename(entity, name) => {
-                            let data = if let Some(entity) = entity {
-                                self.nav_model.data_mut::<List>(entity)
-                            } else {
-                                self.nav_model.active_data_mut::<List>()
-                            };
-                            if let Some(list) = data {
-                                list.name.clone_from(&name.clone());
-                                let list = list.clone();
-                                self.nav_model
-                                    .text_set(self.nav_model.active(), name.clone());
-                                if let Err(err) = self.storage.update_list(&list) {
-                                    tracing::error!("Error updating list: {err}");
-                                }
-                                tasks.push(self.update(Message::Content(
-                                    content::Message::SetList(Some(list)),
-                                )));
-                            }
-                        }
-                        DialogPage::Delete(entity) => {
-                            tasks
-                                .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
-                        }
-                        DialogPage::Icon(entity, name, _) => {
-                            let data = if let Some(entity) = entity {
-                                self.nav_model.data::<List>(entity)
-                            } else {
-                                self.nav_model.active_data::<List>()
-                            };
-                            if let Some(list) = data {
-                                let entity = self.nav_model.active();
-                                self.nav_model.text_set(entity, list.name.clone());
-                                self.nav_model
-                                    .icon_set(entity, crate::app::icons::get_icon(&name, 16));
-                            }
-                            if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.icon = Some(name);
-                                let list = list.clone();
-                                if let Err(err) = self.storage.update_list(&list) {
-                                    tracing::error!("Error updating list: {err}");
-                                }
-                                tasks.push(self.update(Message::Content(
-                                    content::Message::SetList(Some(list)),
-                                )));
-                            }
-                        }
-                        DialogPage::Calendar(date) => {
-                            self.details
-                                .update(details::Message::SetDueDate(date.selected));
-                        }
-                        DialogPage::Export(content) => {
-                            let Ok(mut clipboard) = ClipboardContext::new() else {
-                                tracing::error!("Clipboard is not available");
-                                return;
-                            };
-                            if let Err(error) = clipboard.set_contents(content) {
-                                tracing::error!("Error setting clipboard contents: {error}");
-                            }
-                        }
-                    }
-                }
-            }
-            DialogAction::None => (),
-        }
-    }
-
-    fn update_app(
-        &mut self,
-        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
-        application_action: ApplicationAction,
-    ) {
-        match application_action {
-            ApplicationAction::WindowClose => {
-                if let Some(window_id) = self.core.main_window_id() {
-                    tasks.push(cosmic::iced::window::close(window_id));
-                }
-            }
-            ApplicationAction::WindowNew => match env::current_exe() {
-                Ok(exe) => match process::Command::new(&exe).spawn() {
-                    Ok(_) => {}
-                    Err(err) => {
-                        eprintln!("failed to execute {exe:?}: {err}");
-                    }
-                },
-                Err(err) => {
-                    eprintln!("failed to get current executable path: {err}");
-                }
-            },
-            ApplicationAction::AppTheme(theme) => {
-                if let Some(handler) = &self.config_handler {
-                    if let Err(err) = self.config.set_app_theme(handler, theme.into()) {
-                        tracing::error!("{err}")
-                    }
-                }
-            }
-            ApplicationAction::ToggleHideCompleted(value) => {
-                if let Some(handler) = &self.config_handler {
-                    if let Err(err) = self.config.set_hide_completed(handler, value) {
-                        tracing::error!("{err}")
-                    }
-                    tasks.push(self.update(Message::Content(content::Message::SetConfig(
-                        self.config.clone(),
-                    ))));
-                }
-            }
-            ApplicationAction::SystemThemeModeChange => {
-                tasks.push(cosmic::command::set_theme(self.config.app_theme.theme()));
-            }
-            ApplicationAction::Key(modifiers, key) => {
-                for (key_bind, action) in self.key_binds.clone().into_iter() {
-                    if key_bind.matches(modifiers, &key) {
-                        tasks.push(self.update(action.message()));
-                    }
-                }
-            }
-            ApplicationAction::Modifiers(modifiers) => {
-                self.modifiers = modifiers;
-            }
-            ApplicationAction::NavMenuAction(nav_menu_action) => match nav_menu_action {
-                NavMenuAction::Rename(entity) => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Rename(Some(entity), String::new())),
-                    ))));
-                }
-                NavMenuAction::SetIcon(entity) => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Icon(
-                            Some(entity),
-                            String::new(),
-                            String::new(),
-                        )),
-                    ))));
-                }
-                NavMenuAction::Export(entity) => {
-                    if let Some(list) = self.nav_model.data::<List>(entity) {
-                        match self.storage.tasks(list) {
-                            Ok(data) => {
-                                let exported_markdown = LocalStorage::export_list(list, &data);
-                                tasks.push(self.update(Message::Application(
-                                    ApplicationAction::Dialog(DialogAction::Open(
-                                        DialogPage::Export(exported_markdown),
-                                    )),
-                                )));
-                            }
-                            Err(err) => {
-                                tracing::error!("Error fetching tasks: {err}");
-                            }
-                        }
-                    }
-                }
-                NavMenuAction::Delete(entity) => {
-                    tasks.push(self.update(Message::Application(ApplicationAction::Dialog(
-                        DialogAction::Open(DialogPage::Delete(Some(entity))),
-                    ))));
-                }
-            },
-            ApplicationAction::ToggleContextPage(context_page) => {
-                if self.context_page == context_page {
-                    self.core.window.show_context = !self.core.window.show_context;
-                } else {
-                    self.context_page = context_page;
-                    self.core.window.show_context = true;
-                }
-                tasks.push(
-                    self.update(Message::Content(content::Message::ContextMenuOpen(
-                        self.core.window.show_context,
-                    ))),
-                );
-            }
-            ApplicationAction::ToggleContextDrawer => {
-                self.core.window.show_context = !self.core.window.show_context;
-                tasks.push(
-                    self.update(Message::Content(content::Message::ContextMenuOpen(
-                        self.core.window.show_context,
-                    ))),
-                );
-            }
-            ApplicationAction::Dialog(dialog_action) => self.update_dialog(tasks, dialog_action),
-            ApplicationAction::Focus(id) => tasks.push(widget::text_input::focus(id)),
-            ApplicationAction::SortByNameAsc => {
-                tasks.push(self.update(Message::Content(content::Message::SetSort(
-                    content::SortType::NameAsc,
-                ))));
-            }
-            ApplicationAction::SortByNameDesc => {
-                tasks.push(self.update(Message::Content(content::Message::SetSort(
-                    content::SortType::NameDesc,
-                ))));
-            }
-            ApplicationAction::SortByDateAsc => {
-                tasks.push(self.update(Message::Content(content::Message::SetSort(
-                    content::SortType::DateAsc,
-                ))));
-            }
-            ApplicationAction::SortByDateDesc => {
-                tasks.push(self.update(Message::Content(content::Message::SetSort(
-                    content::SortType::DateDesc,
-                ))));
-            }
-        }
-    }
-
-    fn update_tasks(
-        &mut self,
-        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
-        tasks_action: TasksAction,
-    ) {
-        match tasks_action {
-            TasksAction::FetchLists => match self.storage.lists() {
-                Ok(lists) => {
-                    tasks.push(self.update(Message::Tasks(TasksAction::PopulateLists(lists))));
-                }
-                Err(err) => {
-                    tracing::error!("Error fetching lists: {err}");
-                }
-            },
-            TasksAction::PopulateLists(lists) => {
-                for list in lists {
-                    self.create_nav_item(&list);
-                }
-                let Some(entity) = self.nav_model.iter().next() else {
-                    return;
-                };
-                self.nav_model.activate(entity);
-                let task = self.on_nav_select(entity);
-                tasks.push(task);
-            }
-            TasksAction::AddList(list) => {
-                self.create_nav_item(&list);
-                let Some(entity) = self.nav_model.iter().last() else {
-                    return;
-                };
-                let task = self.on_nav_select(entity);
-                tasks.push(task);
-            }
-            TasksAction::DeleteList(entity) => {
-                let data = if let Some(entity) = entity {
-                    self.nav_model.data::<List>(entity)
-                } else {
-                    self.nav_model.active_data::<List>()
-                };
-                if let Some(list) = data {
-                    if let Err(err) = self.storage.delete_list(list) {
-                        tracing::error!("Error deleting list: {err}");
-                    }
-
-                    tasks.push(self.update(Message::Content(content::Message::SetList(None))));
-                }
-                self.nav_model.remove(self.nav_model.active());
-            }
-        }
-    }
-}
-
-impl Application for Tasks {
+/// Create a COSMIC application from the app model
+impl cosmic::Application for AppModel {
+    /// The async executor that will be used to run your application's commands.
     type Executor = cosmic::executor::Default;
-    type Flags = crate::app::Flags;
-    type Message = Message;
-    const APP_ID: &'static str = "dev.edfloreshz.Tasks";
 
-    fn core(&self) -> &Core {
+    /// Data that your application receives to its init method.
+    type Flags = ();
+
+    /// Messages which the application and its widgets will emit.
+    type Message = Message;
+
+    /// Unique identifier in RDNN (reverse domain name notation) format.
+    const APP_ID: &'static str = "dev.mmurphy.Test";
+
+    fn core(&self) -> &cosmic::Core {
         &self.core
     }
 
-    fn core_mut(&mut self) -> &mut Core {
+    fn core_mut(&mut self) -> &mut cosmic::Core {
         &mut self.core
     }
 
-    fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
-        let nav_model = widget::segmented_button::ModelBuilder::default().build();
+    /// Initializes the application with any given flags and startup commands.
+    fn init(
+        core: cosmic::Core,
+        _flags: Self::Flags,
+    ) -> (Self, Task<cosmic::Action<Self::Message>>) {
+        // Create a nav bar with three page items.
+        let mut nav = nav_bar::Model::default();
 
-        let about = widget::about::About::default()
-            .name(fl!("tasks"))
-            .icon(widget::icon::from_name(Self::APP_ID))
-            .version("0.2.0")
-            .author("Eduardo Flores")
-            .license("GPL-3.0-only")
-            .links([
-                (fl!("repository"), "https://github.com/cosmic-utils/tasks"),
-                (
-                    fl!("support"),
-                    "https://github.com/cosmic-utils/tasks/issues",
-                ),
-                (fl!("website"), "https://tasks.edfloreshz.dev"),
-            ])
-            .developers([("Eduardo Flores", "edfloreshz@proton.me")]);
+        nav.insert()
+            .text(fl!("page-id", num = 1))
+            .data::<Page>(Page::Page1)
+            .icon(icon::from_name("applications-science-symbolic"))
+            .activate();
 
-        let mut app = Tasks {
+        nav.insert()
+            .text(fl!("page-id", num = 2))
+            .data::<Page>(Page::Page2)
+            .icon(icon::from_name("applications-system-symbolic"));
+
+        nav.insert()
+            .text(fl!("page-id", num = 3))
+            .data::<Page>(Page::Page3)
+            .icon(icon::from_name("applications-games-symbolic"));
+
+        // Create the about widget
+        let about = About::default()
+            .name(fl!("app-title"))
+            .icon(widget::icon::from_svg_bytes(APP_ICON))
+            .version(env!("CARGO_PKG_VERSION"))
+            .links([(fl!("repository"), REPOSITORY)])
+            .license(env!("CARGO_PKG_LICENSE"));
+
+        // Construct the app model with the runtime's core.
+        let mut app = AppModel {
             core,
+            context_page: ContextPage::default(),
             about,
-            storage: flags.storage.clone(),
-            nav_model,
-            content: Content::new(flags.storage.clone()),
-            details: Details::new(flags.storage),
-            config_handler: flags.config_handler,
-            config: flags.config,
-            app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
-            context_page: ContextPage::Settings,
-            key_binds: key_binds(),
-            modifiers: Modifiers::empty(),
-            dialog_pages: VecDeque::new(),
-            dialog_text_input: widget::Id::unique(),
+            nav,
+            key_binds: HashMap::new(),
+            // Optional configuration file for an application.
+            config: cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
+                .map(|context| match Config::get_entry(&context) {
+                    Ok(config) => config,
+                    Err((_errors, config)) => {
+                        // for why in errors {
+                        //     tracing::error!(%why, "error loading app config");
+                        // }
+
+                        config
+                    }
+                })
+                .unwrap_or_default(),
+            time: 0,
+            watch_is_active: false,
         };
 
-        let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
+        // Create a startup command that sets the window title.
+        let command = app.update_title();
 
-        if let Some(id) = app.core.main_window_id() {
-            tasks.push(app.set_window_title(fl!("tasks"), id));
-        }
-
-        app.core.nav_bar_toggle_condensed();
-
-        (app, app::Task::batch(tasks))
+        (app, command)
     }
 
-    fn context_drawer(&self) -> Option<app::context_drawer::ContextDrawer<'_, Self::Message>> {
+    /// Elements to pack at the start of the header bar.
+    fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
+        let menu_bar = menu::bar(vec![menu::Tree::with_children(
+            menu::root(fl!("view")).apply(Element::from),
+            menu::items(
+                &self.key_binds,
+                vec![menu::Item::Button(fl!("about"), None, MenuAction::About)],
+            ),
+        )]);
+
+        vec![menu_bar.into()]
+    }
+
+    /// Enables the COSMIC application to create a nav bar with this model.
+    fn nav_model(&self) -> Option<&nav_bar::Model> {
+        Some(&self.nav)
+    }
+
+    /// Display a context drawer if the context page is requested.
+    fn context_drawer(&self) -> Option<context_drawer::ContextDrawer<'_, Self::Message>> {
         if !self.core.window.show_context {
             return None;
         }
 
         Some(match self.context_page {
-            ContextPage::About => app::context_drawer::about(
+            ContextPage::About => context_drawer::about(
                 &self.about,
-                |url| Message::Open(url.to_string()),
-                Message::Application(ApplicationAction::ToggleContextDrawer),
-            )
-            .title(self.context_page.title()),
-            ContextPage::Settings => app::context_drawer::context_drawer(
-                self.settings(),
-                Message::Application(ApplicationAction::ToggleContextDrawer),
-            )
-            .title(self.context_page.title()),
-            ContextPage::TaskDetails => app::context_drawer::context_drawer(
-                self.details.view().map(Message::Details),
-                Message::Application(ApplicationAction::ToggleContextDrawer),
-            )
-            .title(self.context_page.title()),
+                |url| Message::LaunchUrl(url.to_string()),
+                Message::ToggleContextPage(ContextPage::About),
+            ),
         })
     }
 
-    fn dialog(&self) -> Option<Element<'_, Message>> {
-        let dialog_page = self.dialog_pages.front()?;
-        let dialog = dialog_page.view(&self.dialog_text_input);
-        Some(dialog.into())
-    }
+    /// Describes the interface based on the current state of the application model.
+    ///
+    /// Application events will be processed through the view. Any messages emitted by
+    /// events received by widgets will be passed to the update method.
+    fn view(&self) -> Element<'_, Self::Message> {
+        let space_s = cosmic::theme::spacing().space_s;
+        let content: Element<_> = match self.nav.active_data::<Page>().unwrap() {
+            Page::Page1 => {
+                let header = widget::row::with_capacity(2)
+                    .push(widget::text::title1(fl!("welcome")))
+                    .push(widget::text::title3(fl!("page-id", num = 1)))
+                    .align_y(Alignment::End)
+                    .spacing(space_s);
 
-    fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
-        vec![menu::menu_bar(&self.key_binds, &self.config)]
-    }
+                let counter_label = ["Watch: ", self.time.to_string().as_str()].concat();
+                let section = cosmic::widget::settings::section().add(
+                    cosmic::widget::settings::item::builder(counter_label).control(
+                        widget::button::text(if self.watch_is_active {
+                            "Stop"
+                        } else {
+                            "Start"
+                        })
+                        .on_press(Message::ToggleWatch),
+                    ),
+                );
 
-    fn nav_context_menu(
-        &self,
-        id: widget::nav_bar::Id,
-    ) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
-        Some(cosmic::widget::menu::items(
-            &HashMap::new(),
-            vec![
-                cosmic::widget::menu::Item::Button(
-                    fl!("rename"),
-                    Some(icons::get_handle("edit-symbolic", 14)),
-                    NavMenuAction::Rename(id),
-                ),
-                cosmic::widget::menu::Item::Button(
-                    fl!("icon"),
-                    Some(icons::get_handle("face-smile-big-symbolic", 14)),
-                    NavMenuAction::SetIcon(id),
-                ),
-                cosmic::widget::menu::Item::Button(
-                    fl!("export"),
-                    Some(icons::get_handle("share-symbolic", 18)),
-                    NavMenuAction::Export(id),
-                ),
-                cosmic::widget::menu::Item::Button(
-                    fl!("delete"),
-                    Some(icons::get_handle("user-trash-full-symbolic", 14)),
-                    NavMenuAction::Delete(id),
-                ),
-            ],
-        ))
-    }
-
-    fn nav_model(&self) -> Option<&widget::segmented_button::SingleSelectModel> {
-        Some(&self.nav_model)
-    }
-
-    fn on_escape(&mut self) -> app::Task<Self::Message> {
-        if self.dialog_pages.pop_front().is_some() {
-            return app::Task::none();
-        }
-
-        self.core.window.show_context = false;
-
-        app::Task::none()
-    }
-
-    fn on_nav_select(&mut self, entity: Entity) -> app::Task<Self::Message> {
-        let mut tasks = vec![];
-        self.nav_model.activate(entity);
-        let location_opt = self.nav_model.data::<List>(entity);
-
-        if let Some(list) = location_opt {
-            let message = Message::Content(content::Message::SetList(Some(list.clone())));
-            let window_title = format!("{} - {}", list.name, fl!("tasks"));
-            if let Some(window_id) = self.core.main_window_id() {
-                tasks.push(self.set_window_title(window_title, window_id));
+                widget::column::with_capacity(2)
+                    .push(header)
+                    .push(section)
+                    .spacing(space_s)
+                    .height(Length::Fill)
+                    .into()
             }
-            return self.update(message);
-        }
 
-        app::Task::batch(tasks)
+            Page::Page2 => {
+                let header = widget::row::with_capacity(2)
+                    .push(widget::text::title1(fl!("welcome")))
+                    .push(widget::text::title3(fl!("page-id", num = 2)))
+                    .align_y(Alignment::End)
+                    .spacing(space_s);
+
+                widget::column::with_capacity(1)
+                    .push(header)
+                    .spacing(space_s)
+                    .height(Length::Fill)
+                    .into()
+            }
+
+            Page::Page3 => {
+                let header = widget::row::with_capacity(2)
+                    .push(widget::text::title1(fl!("welcome")))
+                    .push(widget::text::title3(fl!("page-id", num = 3)))
+                    .align_y(Alignment::End)
+                    .spacing(space_s);
+
+                widget::column::with_capacity(1)
+                    .push(header)
+                    .spacing(space_s)
+                    .height(Length::Fill)
+                    .into()
+            }
+        };
+
+        widget::container(content)
+            .width(600)
+            .height(Length::Fill)
+            .apply(widget::container)
+            .width(Length::Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .into()
     }
 
+    /// Register subscriptions for this application.
+    ///
+    /// Subscriptions are long-running async tasks running in the background which
+    /// emit messages to the application through a channel. They can be dynamically
+    /// stopped and started conditionally based on application state, or persist
+    /// indefinitely.
     fn subscription(&self) -> Subscription<Self::Message> {
-        struct ConfigSubscription;
-        struct ThemeSubscription;
-
+        // Add subscriptions which are always active.
         let mut subscriptions = vec![
-            cosmic::iced::event::listen_with(|event, _status, _window_id| match event {
-                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => {
-                    Some(Message::Application(ApplicationAction::Key(modifiers, key)))
-                }
-                Event::Keyboard(KeyEvent::ModifiersChanged(modifiers)) => Some(
-                    Message::Application(ApplicationAction::Modifiers(modifiers)),
-                ),
-                _ => None,
-            }),
-            cosmic_config::config_subscription(
-                TypeId::of::<ConfigSubscription>(),
-                Self::APP_ID.into(),
-                CONFIG_VERSION,
-            )
-            .map(|update: Update<ThemeMode>| {
-                if !update.errors.is_empty() {
-                    tracing::info!(
-                        "errors loading config {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
-                }
-                Message::Application(ApplicationAction::SystemThemeModeChange)
-            }),
-            cosmic_config::config_subscription::<_, cosmic_theme::ThemeMode>(
-                TypeId::of::<ThemeSubscription>(),
-                cosmic_theme::THEME_MODE_ID.into(),
-                cosmic_theme::ThemeMode::version(),
-            )
-            .map(|update: Update<ThemeMode>| {
-                if !update.errors.is_empty() {
-                    tracing::info!(
-                        "errors loading theme mode {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
-                }
-                Message::Application(ApplicationAction::SystemThemeModeChange)
-            }),
+            // Watch for application configuration changes.
+            self.core()
+                .watch_config::<Config>(Self::APP_ID)
+                .map(|update| {
+                    // for why in update.errors {
+                    //     tracing::error!(?why, "app config error");
+                    // }
+
+                    Message::UpdateConfig(update.config)
+                }),
         ];
 
-        subscriptions.push(self.content.subscription().map(Message::Content));
+        // Conditionally enables a timer that emits a message every second.
+        if self.watch_is_active {
+            subscriptions.push(Subscription::run(|| {
+                iced_futures::stream::channel(1, |mut emitter| async move {
+                    let mut time = 1;
+                    let mut interval = tokio::time::interval(Duration::from_secs(1));
+
+                    loop {
+                        interval.tick().await;
+                        _ = emitter.send(Message::WatchTick(time)).await;
+                        time += 1;
+                    }
+                })
+            }));
+        }
 
         Subscription::batch(subscriptions)
     }
 
-    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
-        let mut tasks = vec![];
+    /// Handles messages emitted by the application and its widgets.
+    ///
+    /// Tasks may be returned for asynchronous execution of code in the background
+    /// on the application's async runtime.
+    fn update(&mut self, message: Self::Message) -> Task<cosmic::Action<Self::Message>> {
         match message {
-            Message::Open(url) => {
-                if let Err(err) = open::that_detached(url) {
-                    tracing::error!("{err}")
+            Message::WatchTick(time) => {
+                self.time = time;
+            }
+
+            Message::ToggleWatch => {
+                self.watch_is_active = !self.watch_is_active;
+            }
+
+            Message::ToggleContextPage(context_page) => {
+                if self.context_page == context_page {
+                    // Close the context drawer if the toggled context page is the same.
+                    self.core.window.show_context = !self.core.window.show_context;
+                } else {
+                    // Open the context drawer to display the requested context page.
+                    self.context_page = context_page;
+                    self.core.window.show_context = true;
                 }
             }
-            Message::Content(message) => {
-                self.update_content(&mut tasks, message);
-            }
-            Message::Details(message) => {
-                self.update_details(&mut tasks, message);
-            }
-            Message::Tasks(tasks_action) => {
-                self.update_tasks(&mut tasks, tasks_action);
-            }
-            Message::Application(application_action) => {
-                self.update_app(&mut tasks, application_action);
-            }
-        }
 
-        app::Task::batch(tasks)
+            Message::UpdateConfig(config) => {
+                self.config = config;
+            }
+
+            Message::LaunchUrl(url) => match open::that_detached(&url) {
+                Ok(()) => {}
+                Err(err) => {
+                    eprintln!("failed to open {url:?}: {err}");
+                }
+            },
+        }
+        Task::none()
     }
 
-    fn view(&self) -> Element<'_, Self::Message> {
-        self.content.view().map(Message::Content)
+    /// Called when a nav item is selected.
+    fn on_nav_select(&mut self, id: nav_bar::Id) -> Task<cosmic::Action<Self::Message>> {
+        // Activate the page in the model.
+        self.nav.activate(id);
+
+        self.update_title()
+    }
+}
+
+impl AppModel {
+    /// Updates the header and window titles.
+    pub fn update_title(&mut self) -> Task<cosmic::Action<Message>> {
+        let mut window_title = fl!("app-title");
+
+        if let Some(page) = self.nav.text(self.nav.active()) {
+            window_title.push_str(" — ");
+            window_title.push_str(page);
+        }
+
+        if let Some(id) = self.core.main_window_id() {
+            self.set_window_title(window_title, id)
+        } else {
+            Task::none()
+        }
+    }
+}
+
+/// The page to display in the application.
+pub enum Page {
+    Page1,
+    Page2,
+    Page3,
+}
+
+/// The context page to display in the context drawer.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub enum ContextPage {
+    #[default]
+    About,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MenuAction {
+    About,
+}
+
+impl menu::action::MenuAction for MenuAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            MenuAction::About => Message::ToggleContextPage(ContextPage::About),
+        }
     }
 }
