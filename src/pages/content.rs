@@ -36,6 +36,7 @@ pub enum Message {
     SetSort(SortType),
     SetNewTaskTitle(String),
     SearchQueryChanged(String),
+    SetConfig(Config),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -96,23 +97,42 @@ impl Content {
 
     pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
+            Message::AddTask => {
+                if let Some(list) = &self.selected_list
+                    && !self.new_task_title.is_empty()
+                {
+                    let task = Task::new(&self.new_task_title);
+                    match self.store.tasks(list.id.clone()).save(&task) {
+                        Ok(_) => {
+                            self.new_task_title.clear();
+                            self.tasks.insert(task);
+                        }
+                        Err(error) => {
+                            tracing::error!("Failed to create task: {:?}", error);
+                        }
+                    }
+                }
+            }
+            Message::SetConfig(config) => {
+                self.config = config;
+            }
             Message::SetSelectedList(list) => {
                 self.selected_list = list;
-                if let Some(ref list) = self.selected_list {
-                    if let Ok(tasks) = self.store.tasks(list.id.clone()).load_all() {
-                        for task in tasks {
-                            let task_id = self.tasks.insert(task.clone());
-                            // self.task_input_ids.insert(task_id, widget::Id::unique());
-                            // self.task_editing.insert(task_id, false);
-                            // if !task.sub_tasks.is_empty() {
-                            //     self.populate_sub_task_slotmap(task.sub_tasks);
-                            // }
-                        }
-                    } else {
-                        self.tasks = SlotMap::new();
+                self.tasks.clear();
+
+                let Some(ref list) = self.selected_list else {
+                    return None;
+                };
+
+                if let Ok(tasks) = self.store.tasks(list.id.clone()).load_all() {
+                    for task in tasks {
+                        let task_id = self.tasks.insert(task.clone());
+                        // self.task_input_ids.insert(task_id, widget::Id::unique());
+                        // self.task_editing.insert(task_id, false);
+                        // if !task.sub_tasks.is_empty() {
+                        //     self.populate_sub_task_slotmap(task.sub_tasks);
+                        // }
                     }
-                } else {
-                    self.tasks = SlotMap::new();
                 }
             }
             Message::ToggleSearchBar => {
@@ -132,16 +152,6 @@ impl Content {
             }
             Message::SetSort(sort_type) => self.sort_type = sort_type,
             Message::SetNewTaskTitle(title) => self.new_task_title = title,
-            Message::AddTask => {
-                if let Some(list) = &self.selected_list
-                    && !self.new_task_title.is_empty()
-                {
-                    let task = Task::new(&self.new_task_title);
-                    if let Err(error) = self.store.tasks(list.id.clone()).save(&task) {
-                        tracing::error!("Failed to create task: {:?}", error);
-                    }
-                }
-            }
         }
         None
     }
@@ -192,7 +202,7 @@ impl Content {
 
         column
             .push(items)
-            .padding([spacing.space_none, spacing.space_l])
+            .padding([spacing.space_none, spacing.space_xs])
             .spacing(spacing.space_s)
             .apply(widget::container)
             .height(Length::Shrink)
@@ -244,11 +254,12 @@ impl Content {
         let task_item_text = widget::text(&task.title).size(14);
 
         let row = widget::row::with_capacity(2)
+            .push(item_checkbox)
+            .push(task_item_text)
+            .push(widget::space::horizontal())
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_s])
-            .push(item_checkbox)
-            .push(task_item_text);
+            .padding([spacing.space_xxs, spacing.space_s]);
 
         widget::container(row)
             .padding(spacing.space_xxs)

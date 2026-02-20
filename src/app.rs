@@ -22,7 +22,7 @@ use cosmic::{
         alignment::{Horizontal, Vertical},
     },
     prelude::*,
-    widget::{self, about::About, menu::KeyBind, nav_bar, table::Entity},
+    widget::{self, about::About, menu::KeyBind, nav_bar},
 };
 use directories::ProjectDirs;
 use std::collections::{HashMap, VecDeque};
@@ -334,7 +334,7 @@ impl cosmic::Application for AppModel {
                         list.name.clone_from(&name.clone());
                     }) {
                         Ok(updated) => {
-                            self.nav.text_set(self.nav.active(), name.clone());
+                            self.nav.text_set(self.nav.active(), updated.name.clone());
                         }
                         Err(err) => {
                             tracing::error!("Error updating list: {err}");
@@ -410,7 +410,7 @@ impl cosmic::Application for AppModel {
                                     list.name.clone_from(&name.clone());
                                 }) {
                                     Ok(updated) => {
-                                        self.nav.text_set(self.nav.active(), name.clone());
+                                        self.nav.text_set(self.nav.active(), updated.name.clone());
                                     }
                                     Err(err) => {
                                         tracing::error!("Error updating list: {err}");
@@ -470,7 +470,20 @@ impl cosmic::Application for AppModel {
                             ContextPage::Settings,
                         ));
                     }
-                    menu::ViewAction::ToggleHideCompleted(hide_completed) => todo!(),
+                    menu::ViewAction::ToggleHideCompleted(hide_completed) => {
+                        let handler = cosmic::cosmic_config::Config::new(AppModel::APP_ID, 1).ok();
+
+                        if let Some(handler) = &handler {
+                            if let Err(err) =
+                                self.config.set_hide_completed(handler, hide_completed)
+                            {
+                                tracing::error!("{err}")
+                            }
+                            return cosmic::task::message(Message::Content(
+                                content::Message::SetConfig(self.config.clone()),
+                            ));
+                        }
+                    }
                     menu::ViewAction::About => {
                         return cosmic::task::message(Message::ToggleContextPage(
                             ContextPage::About,
