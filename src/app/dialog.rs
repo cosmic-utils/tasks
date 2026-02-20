@@ -141,7 +141,7 @@ impl DialogPage {
                             widget::container(widget::scrollable(
                                 widget::row()
                                     .push(widget::flex_row(icon_buttons))
-                                    .push(widget::horizontal_space()),
+                                    .push(widget::space::horizontal()),
                             ))
                             .height(Length::Fixed(300.0))
                             .into(),

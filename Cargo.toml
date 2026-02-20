@@ -20,6 +20,7 @@ features = ["env-filter"]
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
+branch = "iced-rebase"
 default-features = false
 features = ["multi-window", "tokio", "winit", "about", "wayland", "wgpu"]
 
@@ -47,5 +48,5 @@ features = ["v4"]
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
 
-# [patch."https://github.com/pop-os/libcosmic.git"]
-# libcosmic = { path = "../../edfloreshz-ext/libcosmic" }
+[patch."https://github.com/pop-os/libcosmic.git"]
+libcosmic = { path = "../../pop-os/libcosmic" }

@@ -19,12 +19,25 @@ use crate::{
     storage::LocalStorage,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EditState {
+    Idle,
+    FocusRequested,
+    Editing,
+}
+
+impl Default for EditState {
+    fn default() -> Self {
+        Self::Idle
+    }
+}
+
 pub struct Content {
     list: Option<List>,
     tasks: SlotMap<DefaultKey, models::Task>,
     sub_tasks: SlotMap<DefaultKey, models::Task>,
-    task_editing: SecondaryMap<DefaultKey, bool>,
-    sub_task_editing: SecondaryMap<DefaultKey, bool>,
+    task_editing: SecondaryMap<DefaultKey, EditState>,
+    sub_task_editing: SecondaryMap<DefaultKey, EditState>,
     task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     sub_task_input_ids: SecondaryMap<DefaultKey, widget::Id>,
     config: config::TasksConfig,
@@ -248,7 +261,7 @@ impl Content {
             .filter(|sub_task| task.sub_tasks.iter().any(|st| st.id == sub_task.id))
             .collect::<Vec<_>>();
 
-        let item_checkbox = widget::checkbox("", task.status == Status::Completed)
+        let item_checkbox = widget::checkbox(task.status == Status::Completed)
             .on_toggle(move |value| Message::TaskComplete(id, value));
 
         let not_empty = !sub_tasks.is_empty();
@@ -302,7 +315,10 @@ impl Content {
         let task_item_text = widget::editable_input(
             "",
             &task.title,
-            *self.task_editing.get(id).unwrap_or(&false),
+            matches!(
+                self.task_editing.get(id),
+                Some(EditState::FocusRequested | EditState::Editing)
+            ),
             move |editing| Message::TaskToggleTitleEditMode(id, editing),
         )
         .size(13)
@@ -357,7 +373,7 @@ impl Content {
             .filter(|sub_task| task.sub_tasks.iter().any(|st| st.id == sub_task.id))
             .collect::<Vec<_>>();
 
-        let item_checkbox = widget::checkbox("", task.status == Status::Completed)
+        let item_checkbox = widget::checkbox(task.status == Status::Completed)
             .on_toggle(move |value| Message::SubTaskComplete(id, value));
 
         let not_empty = !sub_tasks.is_empty();
@@ -411,7 +427,10 @@ impl Content {
         let task_item_text = widget::editable_input(
             "",
             &task.title,
-            *self.sub_task_editing.get(id).unwrap_or(&false),
+            matches!(
+                self.sub_task_editing.get(id),
+                Some(EditState::FocusRequested | EditState::Editing)
+            ),
             move |editing| Message::SubTaskToggleTitleEditMode(id, editing),
         )
         .size(13)
@@ -502,7 +521,7 @@ impl Content {
         for task in tasks {
             let task_id = self.tasks.insert(task.clone());
             self.task_input_ids.insert(task_id, widget::Id::unique());
-            self.task_editing.insert(task_id, false);
+            self.task_editing.insert(task_id, EditState::Idle);
             if !task.sub_tasks.is_empty() {
                 self.populate_sub_task_slotmap(task.sub_tasks);
             }
@@ -514,7 +533,7 @@ impl Content {
             let task_id = self.sub_tasks.insert(task.clone());
             self.sub_task_input_ids
                 .insert(task_id, widget::Id::unique());
-            self.sub_task_editing.insert(task_id, false);
+            self.sub_task_editing.insert(task_id, EditState::Idle);
             if !task.sub_tasks.is_empty() {
                 self.populate_sub_task_slotmap(task.sub_tasks);
             }
@@ -623,13 +642,26 @@ impl Content {
                 }
             }
             Message::TaskToggleTitleEditMode(id, editing) => {
-                self.task_editing.insert(id, editing);
-                if editing {
-                    tasks.push(Output::Focus(self.task_input_ids[id].clone()));
-                } else if let Some(task) = self.tasks.get(id) {
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update task: {:?}", error);
+                let current_state = self.task_editing.get(id).copied().unwrap_or_default();
+
+                // State machine transitions
+                match (current_state, editing) {
+                    (EditState::Idle, true) => {
+                        self.task_editing.insert(id, EditState::FocusRequested);
+                        tasks.push(Output::Focus(self.task_input_ids[id].clone()));
                     }
+                    (EditState::FocusRequested, true) => {
+                        self.task_editing.insert(id, EditState::Editing);
+                    }
+                    (EditState::Editing, false) => {
+                        self.task_editing.insert(id, EditState::Idle);
+                        if let Some(task) = self.tasks.get(id) {
+                            if let Err(error) = self.storage.update_task(task) {
+                                tracing::error!("Failed to update task: {:?}", error);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
             Message::TaskTitleInput(input) => self.input = input,
@@ -637,7 +669,7 @@ impl Content {
                 if let Some(task) = self.tasks.get(id) {
                     match self.storage.update_task(task) {
                         Ok(_) => {
-                            self.task_editing.insert(id, false);
+                            self.task_editing.insert(id, EditState::Idle);
                             tasks.push(Output::Focus(widget::Id::new("new-task-input")));
                         }
                         Err(error) => tracing::error!("Failed to update task: {:?}", error),
@@ -647,6 +679,9 @@ impl Content {
             Message::TaskTitleUpdate(id, title) => {
                 if let Some(task) = self.tasks.get_mut(id) {
                     task.title = title;
+                    if let Err(error) = self.storage.update_task(task) {
+                        tracing::error!("Failed to update task: {:?}", error);
+                    }
                 }
             }
             Message::TaskDelete(id) => {
@@ -683,7 +718,7 @@ impl Content {
                             let sub_task_id = self.sub_tasks.insert(sub_task);
                             self.sub_task_input_ids
                                 .insert(sub_task_id, widget::Id::unique());
-                            self.sub_task_editing.insert(sub_task_id, false);
+                            self.sub_task_editing.insert(sub_task_id, EditState::Idle);
                             tasks.push(Output::Focus(self.sub_task_input_ids[sub_task_id].clone()));
                         }
                         Err(error) => {
@@ -699,20 +734,33 @@ impl Content {
                 }
             }
             Message::SubTaskToggleTitleEditMode(id, editing) => {
-                self.sub_task_editing.insert(id, editing);
-                if editing {
-                    tasks.push(Output::Focus(self.sub_task_input_ids[id].clone()));
-                } else if let Some(task) = self.sub_tasks.get(id) {
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update sub-task: {:?}", error);
+                let current_state = self.sub_task_editing.get(id).copied().unwrap_or_default();
+
+                // State machine transitions
+                match (current_state, editing) {
+                    (EditState::Idle, true) => {
+                        self.sub_task_editing.insert(id, EditState::FocusRequested);
+                        tasks.push(Output::Focus(self.sub_task_input_ids[id].clone()));
                     }
+                    (EditState::FocusRequested, true) => {
+                        self.sub_task_editing.insert(id, EditState::Editing);
+                    }
+                    (EditState::Editing, false) => {
+                        self.sub_task_editing.insert(id, EditState::Idle);
+                        if let Some(task) = self.sub_tasks.get(id) {
+                            if let Err(error) = self.storage.update_task(task) {
+                                tracing::error!("Failed to update sub-task: {:?}", error);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
             Message::SubTaskTitleSubmit(id) => {
                 if let Some(task) = self.sub_tasks.get(id) {
                     match self.storage.update_task(task) {
                         Ok(_) => {
-                            self.sub_task_editing.insert(id, false);
+                            self.sub_task_editing.insert(id, EditState::Idle);
                             tasks.push(Output::Focus(widget::Id::new("new-task-input")));
                         }
                         Err(error) => tracing::error!("Failed to update sub-task: {:?}", error),
@@ -748,7 +796,7 @@ impl Content {
                             let sub_task_id = self.sub_tasks.insert(sub_task);
                             self.sub_task_input_ids
                                 .insert(sub_task_id, widget::Id::unique());
-                            self.sub_task_editing.insert(sub_task_id, false);
+                            self.sub_task_editing.insert(sub_task_id, EditState::Idle);
                             tasks.push(Output::Focus(self.sub_task_input_ids[sub_task_id].clone()));
                         }
                         Err(error) => {

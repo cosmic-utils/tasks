@@ -129,7 +129,7 @@ impl Details {
             )
             .add(
                 widget::settings::item::builder(fl!("favorite"))
-                    .control(widget::checkbox("", self.task.favorite).on_toggle(Message::Favorite)),
+                    .control(widget::checkbox(self.task.favorite).on_toggle(Message::Favorite)),
             )
             .add(
                 widget::settings::item::builder(fl!("priority")).control(
