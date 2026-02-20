@@ -2,8 +2,11 @@
 
 use cosmic::cosmic_config::{self, CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry};
 
+use crate::app::theme::AppTheme;
+
 #[derive(Debug, Default, Clone, CosmicConfigEntry, Eq, PartialEq)]
 #[version = 1]
 pub struct Config {
-    demo: String,
+    pub app_theme: AppTheme,
+    pub hide_completed: bool,
 }

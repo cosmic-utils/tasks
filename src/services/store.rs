@@ -1,4 +1,4 @@
-use crate::error::{AppError, Result};
+use crate::app::error::{AppError, Result};
 use crate::model::{List, Task};
 use ron::ser::PrettyConfig;
 use std::fs;
@@ -13,6 +13,7 @@ fn pretty() -> PrettyConfig {
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
+#[derive(Debug, Clone)]
 pub struct Store {
     base_dir: PathBuf,
 }

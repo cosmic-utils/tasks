@@ -37,7 +37,30 @@ pub struct Task {
     pub creation_date: UtcDateTime,
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+impl Task {
+    /// Creates a new task with the given title and default values for other fields.
+    pub fn new(title: impl ToString) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            title: title.to_string(),
+            notes: String::new(),
+            favorite: false,
+            today: false,
+            expanded: false,
+            status: Status::NotStarted,
+            priority: Priority::Normal,
+            recurrence: Recurrence::default(),
+            tags: Vec::new(),
+            sub_tasks: Vec::new(),
+            completion_date: None,
+            due_date: None,
+            reminder_date: None,
+            creation_date: UtcDateTime::now(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Status {
     #[default]
     /// The task has not been started yet.
