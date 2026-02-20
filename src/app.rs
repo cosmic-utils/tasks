@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::{
-    app::{config::Config, context::ContextPage, menu::MenuAction},
+    actions::{list::ListAction, nav_menu::NavMenuAction},
+    app::{
+        config::Config,
+        context::ContextPage,
+        dialog::{DialogAction, DialogPage},
+        menu::MenuAction,
+    },
     fl,
     model::List,
     pages::content::{self, Content, SortType},
     services::store::Store,
 };
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::{
     app::context_drawer,
     cosmic_config::{self, CosmicConfigEntry},
@@ -15,14 +22,15 @@ use cosmic::{
         alignment::{Horizontal, Vertical},
     },
     prelude::*,
-    widget::{self, about::About, menu::KeyBind, nav_bar},
+    widget::{self, about::About, menu::KeyBind, nav_bar, table::Entity},
 };
 use directories::ProjectDirs;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use uuid::Uuid;
 
 pub mod config;
 pub mod context;
+pub mod dialog;
 pub mod error;
 pub mod menu;
 pub mod theme;
@@ -37,10 +45,16 @@ pub struct AppModel {
     nav: nav_bar::Model,
     key_binds: HashMap<KeyBind, MenuAction>,
     config: Config,
+    dialog: DialogModel,
     store: Store,
     selected_list: Option<Uuid>,
     content: Content,
     app_themes: Vec<String>,
+}
+
+struct DialogModel {
+    pages: VecDeque<DialogPage>,
+    input: widget::Id,
 }
 
 #[derive(Debug, Clone)]
@@ -48,10 +62,14 @@ pub enum Message {
     LaunchUrl(String),
     ToggleContextPage(ContextPage),
     UpdateConfig(Config),
+    Focus(widget::Id),
     ToggleContextDrawer,
     Content(content::Message),
     AppTheme(usize),
     Menu(MenuAction),
+    Dialog(DialogAction),
+    List(ListAction),
+    NavMenu(NavMenuAction),
 }
 
 impl cosmic::Application for AppModel {
@@ -125,6 +143,10 @@ impl cosmic::Application for AppModel {
             nav,
             key_binds: HashMap::new(),
             config,
+            dialog: DialogModel {
+                pages: VecDeque::new(),
+                input: widget::Id::unique(),
+            },
             store: store.clone(),
             selected_list: None,
             content: Content::new(store),
@@ -139,9 +161,46 @@ impl cosmic::Application for AppModel {
         (app, Task::batch(tasks))
     }
 
+    fn dialog(&self) -> Option<Element<'_, Message>> {
+        let dialog_page = self.dialog.pages.front()?;
+        let dialog = dialog_page.view(&self.dialog.input);
+        Some(dialog.into())
+    }
+
     /// Elements to pack at the start of the header bar.
     fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
         vec![crate::app::menu::menu_bar(&self.key_binds, &self.config).into()]
+    }
+
+    fn nav_context_menu(
+        &self,
+        id: widget::nav_bar::Id,
+    ) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
+        let list = self.nav.data::<List>(id)?;
+        Some(cosmic::widget::menu::items(
+            &HashMap::new(),
+            vec![
+                cosmic::widget::menu::Item::Button(
+                    fl!("rename"),
+                    Some(widget::icon::from_name("edit-symbolic").size(14).handle()),
+                    NavMenuAction::Rename(list.id),
+                ),
+                cosmic::widget::menu::Item::Button(
+                    fl!("export"),
+                    Some(widget::icon::from_name("share-symbolic").size(18).handle()),
+                    NavMenuAction::Export(list.id),
+                ),
+                cosmic::widget::menu::Item::Button(
+                    fl!("delete"),
+                    Some(
+                        widget::icon::from_name("user-trash-full-symbolic")
+                            .size(14)
+                            .handle(),
+                    ),
+                    NavMenuAction::Delete(list.id),
+                ),
+            ],
+        ))
     }
 
     /// Enables the COSMIC application to create a nav bar with this model.
@@ -221,6 +280,70 @@ impl cosmic::Application for AppModel {
     /// on the application's async runtime.
     fn update(&mut self, message: Self::Message) -> Task<cosmic::Action<Self::Message>> {
         match message {
+            Message::Focus(id) => return widget::text_input::focus(id),
+
+            Message::NavMenu(action) => match action {
+                NavMenuAction::Rename(id) => {
+                    let list = match self.store.lists().get(id) {
+                        Ok(list) => list,
+                        Err(err) => {
+                            tracing::error!("Error fetching list: {err}");
+                            return cosmic::task::none();
+                        }
+                    };
+
+                    self.dialog
+                        .pages
+                        .push_back(DialogPage::Rename(id, list.name.clone()));
+
+                    return cosmic::task::message(Message::Focus(self.dialog.input.clone()));
+                }
+                NavMenuAction::Export(id) => todo!(),
+                NavMenuAction::Delete(id) => {
+                    self.dialog.pages.push_back(DialogPage::Delete(id));
+                    return cosmic::task::message(Message::Focus(self.dialog.input.clone()));
+                }
+            },
+
+            Message::List(action) => match action {
+                ListAction::Add(id) => match self.store.lists().get(id) {
+                    Ok(list) => {
+                        let name = list.name.clone();
+                        let mut entry = self.nav.insert().text(name);
+                        if let Some(icon) = list.icon.as_deref() {
+                            entry = entry.icon(widget::icon::from_name(icon));
+                        }
+                        entry.data(list);
+                    }
+                    Err(err) => tracing::error!("failed to find list: {}", err),
+                },
+                ListAction::Delete(id) => {
+                    if let Err(err) = self.store.lists().delete(id) {
+                        tracing::error!("Error deleting list: {err}");
+                        return cosmic::task::none();
+                    }
+
+                    self.nav.remove(self.nav.active());
+
+                    return cosmic::task::message(Message::Content(
+                        content::Message::SetSelectedList(None),
+                    ));
+                }
+                ListAction::Rename(id, name) => {
+                    match self.store.lists().update(id, |list| {
+                        list.name.clone_from(&name.clone());
+                    }) {
+                        Ok(updated) => {
+                            self.nav.text_set(self.nav.active(), name.clone());
+                        }
+                        Err(err) => {
+                            tracing::error!("Error updating list: {err}");
+                        }
+                    }
+                }
+                ListAction::Export(uuid) => todo!(),
+            },
+
             Message::Content(content_message) => {
                 let output = self.content.update(content_message);
                 match output {
@@ -239,6 +362,80 @@ impl cosmic::Application for AppModel {
                     None => {}
                 }
             }
+            Message::Dialog(dialog_action) => match dialog_action {
+                DialogAction::Open(page) => {
+                    match page {
+                        DialogPage::Rename(id, _) => {
+                            let list = match self.store.lists().get(id) {
+                                Ok(list) => list,
+                                Err(err) => {
+                                    tracing::error!("Error fetching list: {err}");
+                                    return cosmic::task::none();
+                                }
+                            };
+
+                            self.dialog
+                                .pages
+                                .push_back(DialogPage::Rename(id, list.name.clone()));
+                        }
+                        page => self.dialog.pages.push_back(page),
+                    }
+
+                    return cosmic::task::message(Message::Focus(self.dialog.input.clone()));
+                }
+                DialogAction::Update(dialog_page) => {
+                    self.dialog.pages[0] = dialog_page;
+                }
+                DialogAction::Close => {
+                    self.dialog.pages.pop_front();
+                }
+                DialogAction::Complete => {
+                    if let Some(dialog_page) = self.dialog.pages.pop_front() {
+                        match dialog_page {
+                            DialogPage::New(name) => {
+                                let list = List::new(&name);
+                                match self.store.lists().save(&list) {
+                                    Ok(_) => {
+                                        return cosmic::task::message(Message::List(
+                                            ListAction::Add(list.id),
+                                        ));
+                                    }
+                                    Err(err) => {
+                                        tracing::error!("Error creating list: {err}");
+                                    }
+                                }
+                            }
+                            DialogPage::Rename(id, name) => {
+                                match self.store.lists().update(id, |list| {
+                                    list.name.clone_from(&name.clone());
+                                }) {
+                                    Ok(updated) => {
+                                        self.nav.text_set(self.nav.active(), name.clone());
+                                    }
+                                    Err(err) => {
+                                        tracing::error!("Error updating list: {err}");
+                                    }
+                                }
+                            }
+                            DialogPage::Delete(id) => {
+                                return cosmic::task::message(Message::List(ListAction::Delete(
+                                    id,
+                                )));
+                            }
+                            DialogPage::Export(content) => {
+                                let Ok(mut clipboard) = ClipboardContext::new() else {
+                                    tracing::error!("Clipboard is not available");
+                                    return cosmic::task::none();
+                                };
+                                if let Err(error) = clipboard.set_contents(content) {
+                                    tracing::error!("Error setting clipboard contents: {error}");
+                                }
+                            }
+                        }
+                    }
+                }
+                DialogAction::None => (),
+            },
             Message::Menu(menu_action) => match menu_action {
                 MenuAction::File(file_action) => match file_action {
                     menu::FileAction::WindowNew => match std::env::current_exe() {
@@ -252,7 +449,10 @@ impl cosmic::Application for AppModel {
                             tracing::error!("failed to get current executable path: {err}");
                         }
                     },
-                    menu::FileAction::NewList => todo!(),
+                    menu::FileAction::NewList => {
+                        self.dialog.pages.push_back(DialogPage::New(String::new()));
+                        return cosmic::task::message(Message::Focus(self.dialog.input.clone()));
+                    }
                     menu::FileAction::WindowClose => {
                         if let Some(window_id) = self.core.main_window_id() {
                             return Task::batch(vec![cosmic::iced::window::close(window_id)]);
@@ -301,11 +501,9 @@ impl cosmic::Application for AppModel {
                     )]);
                 }
             }
-
             Message::ToggleContextDrawer => {
                 self.core.window.show_context = !self.core.window.show_context;
             }
-
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
                     // Close the context drawer if the toggled context page is the same.
@@ -316,11 +514,9 @@ impl cosmic::Application for AppModel {
                     self.core.window.show_context = true;
                 }
             }
-
             Message::UpdateConfig(config) => {
                 self.config = config;
             }
-
             Message::LaunchUrl(url) => match open::that_detached(&url) {
                 Ok(()) => {}
                 Err(err) => {

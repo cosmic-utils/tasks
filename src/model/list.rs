@@ -15,3 +15,15 @@ pub struct List {
     /// Whether to hide completed tasks in the list.
     pub hide_completed: bool,
 }
+
+impl List {
+    pub fn new(name: impl ToString) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: name.to_string(),
+            description: String::new(),
+            icon: None,
+            hide_completed: false,
+        }
+    }
+}
