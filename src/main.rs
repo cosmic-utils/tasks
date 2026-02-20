@@ -1,10 +1,15 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-only
+
+use directories::ProjectDirs;
 
 mod app;
 mod config;
+mod error;
 mod i18n;
+mod model;
+mod store;
 
-fn main() -> cosmic::iced::Result {
+fn main() -> error::Result<()> {
     // Get the system's preferred languages.
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
 
@@ -18,6 +23,15 @@ fn main() -> cosmic::iced::Result {
             .min_height(180.0),
     );
 
+    let project = ProjectDirs::from("dev", "edfloreshz", "Tasks")
+        .expect("Failed to determine project directories");
+
+    let flags = app::Flags {
+        store: store::Store::open(project.data_dir())?,
+    };
+
     // Starts the application's event loop with `()` as the application's flags.
-    cosmic::app::run::<app::AppModel>(settings, ())
+    cosmic::app::run::<app::AppModel>(settings, flags)?;
+
+    Ok(())
 }
