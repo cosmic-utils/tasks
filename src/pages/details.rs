@@ -1,4 +1,5 @@
-use chrono::{NaiveDate, TimeZone, Utc};
+use jiff::civil::Date;
+
 use cosmic::{
     iced::{Alignment, Length},
     theme,
@@ -9,69 +10,80 @@ use cosmic::{
     },
     Element,
 };
+use uuid::Uuid;
 
 use crate::{
-    core::icons,
     fl,
-    storage::{
-        models::{self, Priority},
-        LocalStorage,
-    },
+    model::{self, Priority},
+    services::store::Store,
 };
 
 pub struct Details {
-    pub task: models::Task,
+    pub task: model::Task,
+    pub selected_list: Option<Uuid>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub text_editor_content: widget::text_editor::Content,
-    pub storage: LocalStorage,
+    pub store: Store,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    SetTask(model::Task, Uuid),
     SetTitle(String),
     Editor(text_editor::Action),
     Favorite(bool),
     PriorityActivate(Entity),
     OpenCalendarDialog,
-    SetDueDate(NaiveDate),
+    SetDueDate(Date),
 }
 
 pub enum Output {
     OpenCalendarDialog,
-    RefreshTask(models::Task),
+    RefreshTask(model::Task),
 }
 
 impl Details {
-    pub fn new(storage: LocalStorage) -> Self {
+    pub fn new(storage: Store) -> Self {
         let priority_model = segmented_button::ModelBuilder::default()
             .insert(|entity| {
                 entity
-                    .icon(icons::get_icon("flag-outline-thin-symbolic", 14))
+                    .icon(widget::icon::from_name("security-low-symbolic").size(14))
                     .data(Priority::Low)
             })
             .insert(|entity| {
                 entity
-                    .icon(icons::get_icon("flag-outline-thick-symbolic", 14))
+                    .icon(widget::icon::from_name("security-medium-symbolic").size(14))
                     .data(Priority::Normal)
             })
             .insert(|entity| {
                 entity
-                    .icon(icons::get_icon("flag-filled-symbolic", 14))
+                    .icon(widget::icon::from_name("security-high-symbolic").size(14))
                     .data(Priority::High)
             })
             .build();
 
         Self {
-            task: models::Task::default(),
+            task: model::Task::default(),
+            selected_list: None,
             priority_model,
             text_editor_content: widget::text_editor::Content::new(),
-            storage,
+            store: storage,
         }
     }
 
-    pub fn update(&mut self, message: Message) -> Vec<Output> {
-        let mut tasks = vec![];
+    pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
+            Message::SetTask(task, list_id) => {
+                self.task = task.clone();
+                self.selected_list = Some(list_id);
+
+                let entity = self.priority_model.entity_at(task.priority as u16);
+                if let Some(entity) = entity {
+                    self.priority_model.activate(entity);
+                }
+                self.task = task.clone();
+                self.text_editor_content = widget::text_editor::Content::with_text(&task.notes);
+            }
             Message::Editor(action) => {
                 self.text_editor_content.perform(action);
                 self.task.notes.clone_from(&self.text_editor_content.text());
@@ -90,31 +102,34 @@ impl Details {
                 }
             }
             Message::OpenCalendarDialog => {
-                tasks.push(Output::OpenCalendarDialog);
+                return Some(Output::OpenCalendarDialog);
             }
             Message::SetDueDate(date) => {
-                let tz = Utc::now().timezone();
-                self.task.due_date = Some(tz.from_utc_datetime(&date.into()));
+                self.task.due_date = Some(date);
             }
         }
 
-        if let Err(e) = self.storage.update_task(&self.task) {
-            tracing::error!("Failed to update task: {}", e);
+        if let Some(list_id) = self.selected_list {
+            if let Err(e) = self
+                .store
+                .tasks(list_id)
+                .update(self.task.id, |t| *t = self.task.clone())
+            {
+                tracing::error!("Failed to update task: {}", e);
+            }
         }
-        tasks.push(Output::RefreshTask(self.task.clone()));
-        tasks
+
+        return Some(Output::RefreshTask(self.task.clone()));
     }
 
     pub fn view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         widget::settings::view_column(vec![widget::settings::section()
-            .title(fl!("details"))
             .add(
                 widget::column::with_children(vec![
                     widget::text::body(fl!("title")).into(),
                     widget::text_input(fl!("title"), &self.task.title)
-                        .style(crate::core::style::text_input())
                         .on_input(Message::SetTitle)
                         .size(13)
                         .into(),
@@ -129,14 +144,13 @@ impl Details {
             )
             .add(
                 widget::settings::item::builder(fl!("favorite"))
-                    .control(widget::checkbox("", self.task.favorite).on_toggle(Message::Favorite)),
+                    .control(widget::checkbox(self.task.favorite).on_toggle(Message::Favorite)),
             )
             .add(
                 widget::settings::item::builder(fl!("priority")).control(
                     widget::segmented_control::horizontal(&self.priority_model)
                         .button_alignment(Alignment::Center)
                         .width(Length::Shrink)
-                        .style(crate::core::style::segmented_control())
                         .on_activate(Message::PriorityActivate),
                 ),
             )
@@ -147,7 +161,7 @@ impl Details {
                             .due_date
                             .as_ref()
                             .unwrap()
-                            .format("%m-%d-%Y")
+                            .strftime("%m-%d-%Y")
                             .to_string()
                     } else {
                         fl!("select-date")
@@ -159,7 +173,7 @@ impl Details {
                 widget::column::with_children(vec![
                     widget::text::body(fl!("notes")).into(),
                     widget::text_editor(&self.text_editor_content)
-                        .class(crate::core::style::text_editor())
+                        .class(crate::app::ui::style::text_editor())
                         .padding(spacing.space_xxs)
                         .placeholder(fl!("add-notes"))
                         .height(100.0)
@@ -174,6 +188,10 @@ impl Details {
                     spacing.space_s,
                     spacing.space_none,
                 ]),
+            )
+            .add(
+                widget::settings::item::builder(fl!("created-at"))
+                    .control(widget::text(self.task.creation_date_local()).size(13)),
             )
             .into()])
         .padding([

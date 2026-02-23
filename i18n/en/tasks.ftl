@@ -13,6 +13,7 @@ favorite = Favorite
 priority = Priority
 due-date = Due date
 reminder = Reminder
+created-at = Created
 notes = Notes
 add-notes = Add notes
 
