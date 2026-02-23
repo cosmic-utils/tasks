@@ -1,3 +1,12 @@
+use std::collections::HashMap;
+
+use crate::{
+    actions::task::TaskAction,
+    app::config::Config,
+    fl,
+    model::{List, Status, Task},
+    services::store::Store,
+};
 use cosmic::{
     Apply, Element,
     iced::{
@@ -6,14 +15,9 @@ use cosmic::{
     },
     widget,
 };
-use slotmap::{DefaultKey, SlotMap};
-
-use crate::{
-    app::config::Config,
-    fl,
-    model::{List, Status, Task},
-    services::store::Store,
-};
+use rust_extensions::Toggle;
+use slotmap::{DefaultKey, SecondaryMap, SlotMap};
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct Content {
@@ -21,6 +25,8 @@ pub struct Content {
     store: Store,
     selected_list: Option<List>,
     tasks: SlotMap<DefaultKey, Task>,
+    inputs: SecondaryMap<DefaultKey, widget::Id>,
+    editing: SecondaryMap<DefaultKey, bool>,
     new_task_title: String,
     search_query: String,
     sort_type: SortType,
@@ -29,7 +35,7 @@ pub struct Content {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    AddTask,
+    Task(TaskAction),
     SetSelectedList(Option<List>),
     ToggleSearchBar,
     ToggleHideCompleted,
@@ -49,15 +55,18 @@ pub enum SortType {
 
 pub enum Output {
     ToggleHideCompleted(List),
+    ToggleTaskDetails(Uuid),
 }
 
 impl Content {
-    pub fn new(store: Store) -> Self {
+    pub fn new(store: &Store) -> Self {
         Self {
             config: Config::default(),
-            store,
+            store: store.clone(),
             selected_list: None,
             tasks: SlotMap::new(),
+            inputs: SecondaryMap::new(),
+            editing: SecondaryMap::new(),
             new_task_title: String::new(),
             sort_type: SortType::NameAsc,
             search_bar_visible: false,
@@ -95,24 +104,123 @@ impl Content {
             .padding([spacing.space_xxs, spacing.space_none])
     }
 
-    pub fn update(&mut self, message: Message) -> Option<Output> {
+    pub fn update(&mut self, message: Message) -> Option<crate::app::Message> {
         match message {
-            Message::AddTask => {
-                if let Some(list) = &self.selected_list
-                    && !self.new_task_title.is_empty()
-                {
-                    let task = Task::new(&self.new_task_title);
-                    match self.store.tasks(list.id.clone()).save(&task) {
-                        Ok(_) => {
-                            self.new_task_title.clear();
-                            self.tasks.insert(task);
-                        }
-                        Err(error) => {
-                            tracing::error!("Failed to create task: {:?}", error);
+            Message::Task(action) => match action {
+                TaskAction::Add => {
+                    if let Some(list) = &self.selected_list
+                        && !self.new_task_title.is_empty()
+                    {
+                        let task = Task::new(&self.new_task_title);
+                        match self.store.tasks(list.id.clone()).save(&task) {
+                            Ok(_) => {
+                                self.new_task_title.clear();
+                                self.tasks.insert(task);
+                            }
+                            Err(error) => {
+                                tracing::error!("Failed to create task: {:?}", error);
+                            }
                         }
                     }
                 }
-            }
+                TaskAction::Complete(id, complete) => {
+                    if let Some(task) = self.tasks.get_mut(id) {
+                        let list = self.selected_list.as_ref()?;
+
+                        task.status = if complete {
+                            Status::Completed
+                        } else {
+                            Status::NotStarted
+                        };
+
+                        if let Err(error) = self
+                            .store
+                            .tasks(list.id)
+                            .update(task.id, |t| t.status = task.status)
+                        {
+                            tracing::error!("Failed to update task: {:?}", error);
+                        }
+                    }
+                }
+                TaskAction::Expand(id) => {
+                    if let Some(task) = self.tasks.get_mut(id) {
+                        let list = self.selected_list.clone()?;
+                        match self
+                            .store
+                            .tasks(list.id)
+                            .update(task.id, |t| t.expanded.toggle())
+                        {
+                            Ok(_) => task.expanded.toggle(),
+                            Err(error) => tracing::error!("Failed to expand task: {:?}", error),
+                        }
+                    }
+                }
+                TaskAction::Edit(id) => match self.tasks.get(id) {
+                    Some(task) => {
+                        return Some(crate::app::Message::Details(
+                            crate::pages::details::Message::Open(
+                                self.selected_list.map(|l| l.id),
+                                task.id,
+                            ),
+                        ));
+                    }
+                    None => tracing::error!("Task not found for editing: {:?}", id),
+                },
+                TaskAction::Delete(id) => {
+                    if let Some(task) = self.tasks.get(id) {
+                        let list = self.selected_list.clone()?;
+                        match self.store.tasks(list.id).delete(task.id) {
+                            Ok(_) => {
+                                self.tasks.remove(id);
+                                self.inputs.remove(id);
+                                self.editing.remove(id);
+                            }
+                            Err(error) => tracing::error!("Failed to delete task: {:?}", error),
+                        }
+                    }
+                }
+                TaskAction::AddSubTask(id) => {
+                    // This is a placeholder for the actual implementation of adding a sub-task.
+                    // You would likely want to show a dialog or input field to enter the sub-task details, and then save it to the store and update the UI accordingly.
+                    tracing::info!("Add sub-task for task ID: {:?}", id);
+                }
+                TaskAction::ToggleEditMode(id, editing) => {
+                    self.editing.insert(id, editing);
+                    if editing {
+                        return Some(crate::app::Message::Focus(self.inputs[id].clone()));
+                    } else if let Some(task) = self.tasks.get(id) {
+                        if let Err(error) = self
+                            .store
+                            .tasks(self.selected_list?.id)
+                            .update(task.id, |t| t.title = task.title.clone())
+                        {
+                            tracing::error!("Failed to update task: {:?}", error);
+                        }
+                    }
+                }
+                TaskAction::TitleSubmit(id) => {
+                    if let Some(task) = self.tasks.get(id) {
+                        let list = self.selected_list.clone()?;
+                        match self
+                            .store
+                            .tasks(list.id)
+                            .update(task.id, |t| t.title = task.title.clone())
+                        {
+                            Ok(_) => {
+                                self.editing.insert(id, false);
+                            }
+                            Err(error) => {
+                                tracing::error!("Failed to update task title: {:?}", error)
+                            }
+                        }
+                    }
+                }
+                TaskAction::TitleUpdate(id, title) => {
+                    if let Some(task) = self.tasks.get_mut(id) {
+                        task.title = title;
+                    }
+                }
+            },
             Message::SetConfig(config) => {
                 self.config = config;
             }
@@ -127,16 +235,16 @@ impl Content {
                 if let Ok(tasks) = self.store.tasks(list.id.clone()).load_all() {
                     for task in tasks {
                         let task_id = self.tasks.insert(task.clone());
-                        // self.task_input_ids.insert(task_id, widget::Id::unique());
-                        // self.task_editing.insert(task_id, false);
-                        // if !task.sub_tasks.is_empty() {
-                        //     self.populate_sub_task_slotmap(task.sub_tasks);
-                        // }
+                        self.inputs.insert(task_id, widget::Id::unique());
+                        self.editing.insert(task_id, false);
+                        if !task.sub_tasks.is_empty() {
+                            self.populate_sub_tasks(task.sub_tasks);
+                        }
                     }
                 }
             }
             Message::ToggleSearchBar => {
-                self.search_bar_visible = !self.search_bar_visible;
+                self.search_bar_visible.toggle();
                 if !self.search_bar_visible {
                     self.search_query.clear();
                 }
@@ -146,8 +254,8 @@ impl Content {
             }
             Message::ToggleHideCompleted => {
                 if let Some(ref mut list) = self.selected_list {
-                    list.hide_completed = !list.hide_completed;
-                    return Some(Output::ToggleHideCompleted(list.clone()));
+                    list.hide_completed.toggle();
+                    return Some(crate::app::Message::ToggleHideCompleted(list.clone()));
                 }
             }
             Message::SetSort(sort_type) => self.sort_type = sort_type,
@@ -245,26 +353,83 @@ impl Content {
             .into()
     }
 
-    pub fn task_view<'a>(&'a self, _id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
+    pub fn task_view<'a>(&'a self, id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
         let spacing = cosmic::theme::spacing();
 
         let is_completed = task.status == Status::Completed;
-        let item_checkbox = widget::checkbox(is_completed);
+        let icon = if task.expanded {
+            "go-up-symbolic"
+        } else {
+            "go-down-symbolic"
+        };
+        let (completed, total) = task.sub_tasks.iter().fold((0, 0), |acc, subtask| {
+            if subtask.status == Status::Completed {
+                (acc.0 + 1, acc.1 + 1)
+            } else {
+                (acc.0, acc.1 + 1)
+            }
+        });
+        let subtask_count = if total > 0 {
+            Some(widget::text(format!("{}/{}", completed, total)))
+        } else {
+            None
+        };
 
-        let task_item_text = widget::text(&task.title).size(14);
+        let more_button = widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
+            Element::from(cosmic::widget::button::icon(
+                widget::icon::from_name("view-more-symbolic").size(18),
+            )),
+            widget::menu::items(
+                &HashMap::new(),
+                vec![
+                    widget::menu::Item::Button(fl!("edit"), None, TaskAction::Edit(id)),
+                    widget::menu::Item::Button(
+                        fl!("add-sub-task"),
+                        None,
+                        TaskAction::AddSubTask(id),
+                    ),
+                    widget::menu::Item::Button(fl!("delete"), None, TaskAction::Delete(id)),
+                ],
+            ),
+        )])
+        .item_height(widget::menu::ItemHeight::Dynamic(40))
+        .item_width(widget::menu::ItemWidth::Uniform(260))
+        .spacing(4.0);
 
-        let row = widget::row::with_capacity(2)
-            .push(item_checkbox)
-            .push(task_item_text)
-            .push(widget::space::horizontal())
-            .align_y(Alignment::Center)
-            .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_s]);
-
-        widget::container(row)
-            .padding(spacing.space_xxs)
-            .class(cosmic::style::Container::ContextDrawer)
-            .into()
+        widget::container(
+            widget::row()
+                .push(
+                    widget::checkbox(is_completed).on_toggle(move |complete| {
+                        Message::Task(TaskAction::Complete(id, complete))
+                    }),
+                )
+                .push(
+                    widget::editable_input(
+                        "",
+                        &task.title,
+                        *self.editing.get(id).unwrap_or(&false),
+                        move |editing| Message::Task(TaskAction::ToggleEditMode(id, editing)),
+                    )
+                    .size(13)
+                    .trailing_icon(widget::column().into())
+                    .id(self.inputs[id].clone())
+                    .on_submit(move |_| Message::Task(TaskAction::TitleSubmit(id)))
+                    .on_input(move |text| Message::Task(TaskAction::TitleUpdate(id, text))),
+                )
+                .push_maybe((!task.sub_tasks.is_empty()).then(|| {
+                    widget::button::icon(widget::icon::from_name(icon).size(18))
+                        .padding(spacing.space_xxs)
+                        .on_press(Message::Task(TaskAction::Expand(id)))
+                }))
+                .push_maybe(subtask_count)
+                .push(more_button)
+                .align_y(Alignment::Center)
+                .spacing(spacing.space_s)
+                .padding([spacing.space_xxs, spacing.space_s]),
+        )
+        .padding(spacing.space_xxs)
+        .class(cosmic::style::Container::ContextDrawer)
+        .into()
     }
 
     pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
@@ -299,18 +464,29 @@ impl Content {
                 widget::text_input(fl!("add-new-task"), &self.new_task_title)
                     .id(widget::Id::new("new-task-input"))
                     .on_input(Message::SetNewTaskTitle)
-                    .on_submit(|_| Message::AddTask)
+                    .on_submit(|_| Message::Task(TaskAction::Add))
                     .width(Length::Fill),
             )
             .push(
                 widget::button::icon(widget::icon::from_name("mail-send-symbolic").size(18))
                     .padding(spacing.space_xxs)
                     .class(cosmic::style::Button::Suggested)
-                    .on_press(Message::AddTask),
+                    .on_press(Message::Task(TaskAction::Add)),
             )
             .padding(spacing.space_xxs)
             .spacing(spacing.space_xxs)
             .align_y(Alignment::Center)
             .into()
+    }
+
+    fn populate_sub_tasks(&mut self, tasks: Vec<Task>) {
+        for task in tasks {
+            let task_id = self.tasks.insert(task.clone());
+            self.inputs.insert(task_id, widget::Id::unique());
+            self.editing.insert(task_id, false);
+            if !task.sub_tasks.is_empty() {
+                self.populate_sub_tasks(task.sub_tasks);
+            }
+        }
     }
 }

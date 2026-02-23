@@ -37,7 +37,6 @@ pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
     loader
 });
 
-
 /// Request a localized string by ID from the i18n/ directory.
 #[macro_export]
 macro_rules! fl {
@@ -49,4 +48,3 @@ macro_rules! fl {
         i18n_embed_fl::fl!($crate::i18n::LANGUAGE_LOADER, $message_id, $($args), *)
     }};
 }
-

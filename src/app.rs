@@ -10,7 +10,10 @@ use crate::{
     },
     fl,
     model::List,
-    pages::content::{self, Content, SortType},
+    pages::{
+        content::{self, Content, SortType},
+        details::{self, Details},
+    },
     services::store::Store,
 };
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
@@ -25,6 +28,7 @@ use cosmic::{
     widget::{self, about::About, menu::KeyBind, nav_bar},
 };
 use directories::ProjectDirs;
+use rust_extensions::Toggle;
 use std::collections::{HashMap, VecDeque};
 use uuid::Uuid;
 
@@ -49,6 +53,7 @@ pub struct AppModel {
     store: Store,
     selected_list: Option<Uuid>,
     content: Content,
+    details: Details,
     app_themes: Vec<String>,
 }
 
@@ -61,10 +66,12 @@ struct DialogModel {
 pub enum Message {
     LaunchUrl(String),
     ToggleContextPage(ContextPage),
+    ToggleHideCompleted(Uuid),
     UpdateConfig(Config),
     Focus(widget::Id),
     ToggleContextDrawer,
     Content(content::Message),
+    Details(details::Message),
     AppTheme(usize),
     Menu(MenuAction),
     Dialog(DialogAction),
@@ -149,7 +156,8 @@ impl cosmic::Application for AppModel {
             },
             store: store.clone(),
             selected_list: None,
-            content: Content::new(store),
+            content: Content::new(&store),
+            details: Details::new(&store),
             app_themes: vec![fl!("match-desktop"), fl!("dark"), fl!("light")],
         };
 
@@ -223,6 +231,10 @@ impl cosmic::Application for AppModel {
             ContextPage::Settings => {
                 context_drawer::context_drawer(self.settings(), Message::ToggleContextDrawer)
             }
+            ContextPage::TaskDetails => context_drawer::context_drawer(
+                self.details.view().map(Message::Details),
+                Message::ToggleContextDrawer,
+            ),
         })
     }
 
@@ -348,6 +360,11 @@ impl cosmic::Application for AppModel {
                 let output = self.content.update(content_message);
                 match output {
                     Some(content_output) => match content_output {
+                        content::Output::ToggleTaskDetails(id) => {
+                            return cosmic::task::message(Message::Details(
+                                details::Message::Open(self.selected_list, id),
+                            ));
+                        }
                         content::Output::ToggleHideCompleted(list) => {
                             if let Some(data) = self.nav.active_data_mut::<List>() {
                                 data.hide_completed = list.hide_completed;
@@ -362,6 +379,13 @@ impl cosmic::Application for AppModel {
                     None => {}
                 }
             }
+
+            Message::Details(msg) => {
+                if let Some(output) = self.details.update(msg) {
+                    return cosmic::task::message(output);
+                }
+            }
+
             Message::Dialog(dialog_action) => match dialog_action {
                 DialogAction::Open(page) => {
                     match page {
@@ -515,12 +539,12 @@ impl cosmic::Application for AppModel {
                 }
             }
             Message::ToggleContextDrawer => {
-                self.core.window.show_context = !self.core.window.show_context;
+                self.core.window.show_context.toggle();
             }
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
                     // Close the context drawer if the toggled context page is the same.
-                    self.core.window.show_context = !self.core.window.show_context;
+                    self.core.window.show_context.toggle();
                 } else {
                     // Open the context drawer to display the requested context page.
                     self.context_page = context_page;

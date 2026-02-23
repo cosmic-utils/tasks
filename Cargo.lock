@@ -4147,6 +4147,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-extensions"
+version = "0.1.0"
+source = "git+https://github.com/edfloreshz/rust-extensions.git#7bfb9abf24bab8cb27bf5e6ab515defd3e97228c"
+
+[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4650,6 +4655,7 @@ dependencies = [
  "open",
  "ron",
  "rust-embed",
+ "rust-extensions",
  "serde",
  "slotmap",
  "thiserror 2.0.18",
