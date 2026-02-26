@@ -1,9 +1,9 @@
-tasks = завдання
+tasks = Завдання
 trash = Смітник
 about = Про Завдання
 
 # Content
-add-new-task = Додати нове завдання
+add-new-task = Додати завдання
 search-tasks = Пошук завдань
 
 # Details
@@ -58,15 +58,15 @@ list-name = Назва списку
 # Context Pages
 
 ## About
-git-description = Git commit {$hash} від {$date}
+git-description = Версія {$hash} від {$date}
 
 ## Settings
 settings = Налаштування
 
 ### Appearance
-appearance = Зовнішній вигляд
+appearance = Вигляд
 theme = Тема
-match-desktop = Системна тема
+match-desktop = Системна
 dark = Темна
 light = Світла
 
@@ -90,7 +90,7 @@ menu-about = Про Завдання...
 hide-completed = Приховати виконані
 
 ## About
-repository = Репозиторій
+repository = Сховище
 support = Підтримка
 website = Вебсайт
 
@@ -103,5 +103,5 @@ error-title = Завдання - Помилка
 sort = Сортувати
 sort-name-asc = Назва A-Я
 sort-name-desc = Назва Я-A
-sort-date-asc = Дата додавання (Від старих до нових)
-sort-date-desc = Дата додавання (Від нових до старих)
+sort-date-asc = Спочатку найстаріші
+sort-date-desc = Спочатку найновіші
