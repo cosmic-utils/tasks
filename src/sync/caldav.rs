@@ -317,6 +317,29 @@ fn local_name(name: &[u8]) -> &[u8] {
     }
 }
 
+fn append_target(c: &mut DavResponse, target: &str, s: &str) {
+    match target {
+        "href" => {
+            if c.href.is_empty() {
+                c.href = s.to_string();
+            }
+        }
+        "displayname" => match &mut c.display_name {
+            Some(existing) => existing.push_str(s),
+            None => c.display_name = Some(s.to_string()),
+        },
+        "etag" => match &mut c.etag {
+            Some(existing) => existing.push_str(s),
+            None => c.etag = Some(s.to_string()),
+        },
+        "caldata" => match &mut c.calendar_data {
+            Some(existing) => existing.push_str(s),
+            None => c.calendar_data = Some(s.to_string()),
+        },
+        _ => {}
+    }
+}
+
 fn parse_multistatus(xml: &str) -> Result<Vec<DavResponse>> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);
@@ -389,18 +412,16 @@ fn parse_multistatus(xml: &str) -> Result<Vec<DavResponse>> {
             Ok(Event::Text(t)) => {
                 if let (Some(target), Some(c)) = (text_target, current.as_mut()) {
                     let s = t.unescape().map_err(|e| CalDavError::Xml(e.to_string()))?;
-                    match target {
-                        "href" => {
-                            // Only set the resource href on first occurrence within a response.
-                            if c.href.is_empty() {
-                                c.href = s.into_owned();
-                            }
-                        }
-                        "displayname" => c.display_name = Some(s.into_owned()),
-                        "etag" => c.etag = Some(s.into_owned()),
-                        "caldata" => c.calendar_data = Some(s.into_owned()),
-                        _ => {}
-                    }
+                    append_target(c, target, s.as_ref());
+                }
+            }
+            Ok(Event::CData(t)) => {
+                if let (Some(target), Some(c)) = (text_target, current.as_mut()) {
+                    let bytes = t.into_inner();
+                    let s = std::str::from_utf8(&bytes)
+                        .map_err(|e| CalDavError::Xml(e.to_string()))?
+                        .to_string();
+                    append_target(c, target, &s);
                 }
             }
             Ok(Event::End(e)) => {
