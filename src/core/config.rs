@@ -12,6 +12,9 @@ pub const CONFIG_VERSION: u64 = 1;
 pub struct TasksConfig {
     pub app_theme: AppTheme,
     pub hide_completed: bool,
+    pub sync_server_url: String,
+    pub sync_username: String,
+    pub sync_password: String,
 }
 
 impl TasksConfig {

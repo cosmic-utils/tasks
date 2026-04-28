@@ -70,6 +70,23 @@ match-desktop = Match desktop
 dark = Dark
 light = Light
 
+### Sync (CalDAV)
+sync = Sync (CalDAV)
+sync-server-url = Server URL
+sync-server-url-hint = https://mail.example.com/dav/
+sync-username = Username
+sync-username-hint = user@example.com
+sync-password = Password
+sync-password-hint = App password
+sync-test-connection = Test connection
+sync-now = Sync now
+sync-testing = Testing connection…
+sync-test-ok = Connection OK.
+sync-test-fail = Connection failed: {$error}
+sync-running = Syncing…
+sync-done = Sync complete. Lists added: {$lists}, tasks pulled: {$pulled}, pushed: {$pushed}.
+sync-fail = Sync failed: {$error}
+
 # Menu
 
 ## File

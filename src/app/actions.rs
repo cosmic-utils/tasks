@@ -46,6 +46,13 @@ pub enum ApplicationAction {
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    SetSyncServerUrl(String),
+    SetSyncUsername(String),
+    SetSyncPassword(String),
+    TestSyncConnection,
+    TestSyncConnectionResult(Result<(), String>),
+    SyncNow,
+    SyncResult(Result<crate::sync::engine::SyncReport, String>),
 }
 
 #[derive(Debug, Clone)]

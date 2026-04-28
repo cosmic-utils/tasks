@@ -65,6 +65,8 @@ pub struct Tasks {
     modifiers: Modifiers,
     dialog_pages: VecDeque<DialogPage>,
     dialog_text_input: widget::Id,
+    sync_status: String,
+    sync_in_progress: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +80,7 @@ pub enum Message {
 
 impl Tasks {
     fn settings(&self) -> Element<'_, Message> {
-        widget::scrollable(widget::settings::section().title(fl!("appearance")).add(
+        let appearance = widget::settings::section().title(fl!("appearance")).add(
             widget::settings::item::item(
                 fl!("theme"),
                 widget::dropdown(
@@ -87,7 +89,53 @@ impl Tasks {
                     |theme| Message::Application(ApplicationAction::AppTheme(theme)),
                 ),
             ),
-        ))
+        );
+
+        let url_input = widget::text_input(fl!("sync-server-url-hint"), &self.config.sync_server_url)
+            .on_input(|s| Message::Application(ApplicationAction::SetSyncServerUrl(s)));
+        let user_input = widget::text_input(fl!("sync-username-hint"), &self.config.sync_username)
+            .on_input(|s| Message::Application(ApplicationAction::SetSyncUsername(s)));
+        let pass_input = widget::secure_input(
+            fl!("sync-password-hint"),
+            &self.config.sync_password,
+            None,
+            true,
+        )
+        .on_input(|s| Message::Application(ApplicationAction::SetSyncPassword(s)));
+
+        let test_button = widget::button::standard(fl!("sync-test-connection"))
+            .on_press_maybe((!self.sync_in_progress).then_some(
+                Message::Application(ApplicationAction::TestSyncConnection),
+            ));
+        let sync_button = widget::button::suggested(fl!("sync-now"))
+            .on_press_maybe((!self.sync_in_progress).then_some(
+                Message::Application(ApplicationAction::SyncNow),
+            ));
+
+        let buttons = widget::row::with_children(vec![
+            test_button.into(),
+            widget::horizontal_space().width(cosmic::iced::Length::Fixed(8.0)).into(),
+            sync_button.into(),
+        ]);
+
+        let mut sync_section = widget::settings::section()
+            .title(fl!("sync"))
+            .add(widget::settings::item::item(fl!("sync-server-url"), url_input))
+            .add(widget::settings::item::item(fl!("sync-username"), user_input))
+            .add(widget::settings::item::item(fl!("sync-password"), pass_input))
+            .add(widget::settings::item::item("", buttons));
+
+        if !self.sync_status.is_empty() {
+            sync_section = sync_section.add(widget::settings::item::item(
+                "",
+                widget::text(self.sync_status.clone()),
+            ));
+        }
+
+        widget::scrollable(
+            widget::column::with_children(vec![appearance.into(), sync_section.into()])
+                .spacing(16),
+        )
         .into()
     }
 
@@ -405,6 +453,86 @@ impl Tasks {
                     content::SortType::DateDesc,
                 ))));
             }
+            ApplicationAction::SetSyncServerUrl(value) => {
+                if let Some(handler) = &self.config_handler {
+                    if let Err(err) = self.config.set_sync_server_url(handler, value) {
+                        tracing::error!("{err}");
+                    }
+                }
+            }
+            ApplicationAction::SetSyncUsername(value) => {
+                if let Some(handler) = &self.config_handler {
+                    if let Err(err) = self.config.set_sync_username(handler, value) {
+                        tracing::error!("{err}");
+                    }
+                }
+            }
+            ApplicationAction::SetSyncPassword(value) => {
+                if let Some(handler) = &self.config_handler {
+                    if let Err(err) = self.config.set_sync_password(handler, value) {
+                        tracing::error!("{err}");
+                    }
+                }
+            }
+            ApplicationAction::TestSyncConnection => {
+                self.sync_in_progress = true;
+                self.sync_status = fl!("sync-testing");
+                let config = self.config.clone();
+                tasks.push(cosmic::Task::perform(
+                    async move {
+                        crate::sync::engine::test_connection(&config)
+                            .await
+                            .map_err(|e| e.to_string())
+                    },
+                    |result| {
+                        cosmic::Action::App(Message::Application(
+                            ApplicationAction::TestSyncConnectionResult(result),
+                        ))
+                    },
+                ));
+            }
+            ApplicationAction::TestSyncConnectionResult(result) => {
+                self.sync_in_progress = false;
+                self.sync_status = match result {
+                    Ok(()) => fl!("sync-test-ok"),
+                    Err(e) => fl!("sync-test-fail", error = e),
+                };
+            }
+            ApplicationAction::SyncNow => {
+                self.sync_in_progress = true;
+                self.sync_status = fl!("sync-running");
+                let config = self.config.clone();
+                let storage = self.storage.clone();
+                tasks.push(cosmic::Task::perform(
+                    async move {
+                        crate::sync::engine::sync(&storage, &config)
+                            .await
+                            .map_err(|e| e.to_string())
+                    },
+                    |result| {
+                        cosmic::Action::App(Message::Application(
+                            ApplicationAction::SyncResult(result),
+                        ))
+                    },
+                ));
+            }
+            ApplicationAction::SyncResult(result) => {
+                self.sync_in_progress = false;
+                match result {
+                    Ok(report) => {
+                        self.sync_status = fl!(
+                            "sync-done",
+                            lists = report.lists_pulled,
+                            pulled = report.tasks_pulled,
+                            pushed = report.tasks_pushed
+                        );
+                        tasks.push(self.update(Message::Tasks(TasksAction::FetchLists)));
+                    }
+                    Err(e) => {
+                        self.sync_status = fl!("sync-fail", error = e);
+                    }
+                }
+            }
         }
     }
 
@@ -508,6 +636,8 @@ impl Application for Tasks {
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
+            sync_status: String::new(),
+            sync_in_progress: false,
         };
 
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
