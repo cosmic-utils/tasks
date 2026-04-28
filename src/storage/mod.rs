@@ -117,7 +117,23 @@ impl LocalStorage {
         }
     }
 
+    /// Local edit: bumps last_modified_date_time so the sync engine pushes it.
     pub fn update_task(&self, task: &Task) -> Result<(), Error> {
+        let path = task.file_path();
+        if path.exists() {
+            let mut touched = task.clone();
+            touched.last_modified_date_time = chrono::Utc::now();
+            let content = ron::to_string(&touched)?;
+            std::fs::write(path, content)?;
+            Ok(())
+        } else {
+            Err(Error::Tasks(TasksError::TaskNotFound))
+        }
+    }
+
+    /// Sync write: preserves last_modified_date_time as set by the caller.
+    /// Used when pulling remote state into local storage.
+    pub fn replace_task(&self, task: &Task) -> Result<(), Error> {
         let path = task.file_path();
         if path.exists() {
             let content = ron::to_string(&task)?;

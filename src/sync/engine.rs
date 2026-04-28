@@ -154,8 +154,8 @@ pub async fn sync(
                 }
                 Some(local) => {
                     if remote_task.last_modified_date_time > local.last_modified_date_time {
-                        if let Err(e) = storage.update_task(&remote_task) {
-                            tracing::warn!("update_task {uid} failed: {e}");
+                        if let Err(e) = storage.replace_task(&remote_task) {
+                            tracing::warn!("replace_task {uid} failed: {e}");
                         } else {
                             report.tasks_pulled += 1;
                         }

@@ -39,6 +39,7 @@ pub enum Message {
 pub enum Output {
     OpenCalendarDialog,
     RefreshTask(models::Task),
+    Mutated,
 }
 
 impl Details {
@@ -71,13 +72,16 @@ impl Details {
 
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = vec![];
+        let mut emit_mutated = true;
         match message {
             Message::Editor(action) => {
                 self.text_editor_content.perform(action);
                 self.task.notes.clone_from(&self.text_editor_content.text());
+                emit_mutated = false; // keystroke-grade; periodic sync will push it
             }
             Message::SetTitle(title) => {
                 self.task.title.clone_from(&title);
+                emit_mutated = false; // keystroke-grade
             }
             Message::Favorite(favorite) => {
                 self.task.favorite = favorite;
@@ -91,6 +95,7 @@ impl Details {
             }
             Message::OpenCalendarDialog => {
                 tasks.push(Output::OpenCalendarDialog);
+                return tasks;
             }
             Message::SetDueDate(date) => {
                 let tz = Utc::now().timezone();
@@ -102,6 +107,9 @@ impl Details {
             tracing::error!("Failed to update task: {}", e);
         }
         tasks.push(Output::RefreshTask(self.task.clone()));
+        if emit_mutated {
+            tasks.push(Output::Mutated);
+        }
         tasks
     }
 

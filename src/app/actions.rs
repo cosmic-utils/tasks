@@ -52,6 +52,7 @@ pub enum ApplicationAction {
     TestSyncConnection,
     TestSyncConnectionResult(Result<(), String>),
     SyncNow,
+    SyncTick,
     SyncResult(Result<crate::sync::engine::SyncReport, String>),
 }
 

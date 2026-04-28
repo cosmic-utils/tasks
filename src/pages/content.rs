@@ -85,6 +85,7 @@ pub enum Output {
     ToggleHideCompleted(models::List),
     Focus(widget::Id),
     OpenTaskDetails(models::Task),
+    Mutated,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -600,8 +601,9 @@ impl Content {
             Message::TaskExpand(default_key) => {
                 if let Some(task) = self.tasks.get_mut(default_key) {
                     task.expanded = !task.expanded;
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update task: {:?}", error);
+                    match self.storage.update_task(task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to update task: {:?}", error),
                     }
                 }
             }
@@ -614,6 +616,7 @@ impl Content {
                                 let id = self.tasks.insert(task);
                                 self.task_input_ids.insert(id, widget::Id::unique());
                                 self.input.clear();
+                                tasks.push(Output::Mutated);
                             }
                             Err(error) => {
                                 tracing::error!("Failed to create task: {:?}", error);
@@ -627,8 +630,9 @@ impl Content {
                 if editing {
                     tasks.push(Output::Focus(self.task_input_ids[id].clone()));
                 } else if let Some(task) = self.tasks.get(id) {
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update task: {:?}", error);
+                    match self.storage.update_task(task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to update task: {:?}", error),
                     }
                 }
             }
@@ -639,6 +643,7 @@ impl Content {
                         Ok(_) => {
                             self.task_editing.insert(id, false);
                             tasks.push(Output::Focus(widget::Id::new("new-task-input")));
+                            tasks.push(Output::Mutated);
                         }
                         Err(error) => tracing::error!("Failed to update task: {:?}", error),
                     }
@@ -651,8 +656,9 @@ impl Content {
             }
             Message::TaskDelete(id) => {
                 if let Some(task) = self.tasks.remove(id) {
-                    if let Err(error) = self.storage.delete_task(&task) {
-                        tracing::error!("Failed to delete task: {:?}", error);
+                    match self.storage.delete_task(&task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to delete task: {:?}", error),
                     }
                 }
             }
@@ -664,8 +670,9 @@ impl Content {
                     } else {
                         Status::NotStarted
                     };
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update task: {:?}", error);
+                    match self.storage.update_task(task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to update task: {:?}", error),
                     }
                 }
             }
@@ -685,6 +692,7 @@ impl Content {
                                 .insert(sub_task_id, widget::Id::unique());
                             self.sub_task_editing.insert(sub_task_id, false);
                             tasks.push(Output::Focus(self.sub_task_input_ids[sub_task_id].clone()));
+                            tasks.push(Output::Mutated);
                         }
                         Err(error) => {
                             tracing::error!("Failed to add sub-task: {:?}", error);
@@ -703,8 +711,9 @@ impl Content {
                 if editing {
                     tasks.push(Output::Focus(self.sub_task_input_ids[id].clone()));
                 } else if let Some(task) = self.sub_tasks.get(id) {
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update sub-task: {:?}", error);
+                    match self.storage.update_task(task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to update sub-task: {:?}", error),
                     }
                 }
             }
@@ -714,6 +723,7 @@ impl Content {
                         Ok(_) => {
                             self.sub_task_editing.insert(id, false);
                             tasks.push(Output::Focus(widget::Id::new("new-task-input")));
+                            tasks.push(Output::Mutated);
                         }
                         Err(error) => tracing::error!("Failed to update sub-task: {:?}", error),
                     }
@@ -725,6 +735,7 @@ impl Content {
                     if let Err(error) = self.storage.update_task(task) {
                         tracing::error!("Failed to update sub-task: {:?}", error);
                     }
+                    // No Mutated here: per-keystroke writes; periodic sync will push.
                 }
             }
             Message::SubTaskOpenDetails(id) => {
@@ -750,6 +761,7 @@ impl Content {
                                 .insert(sub_task_id, widget::Id::unique());
                             self.sub_task_editing.insert(sub_task_id, false);
                             tasks.push(Output::Focus(self.sub_task_input_ids[sub_task_id].clone()));
+                            tasks.push(Output::Mutated);
                         }
                         Err(error) => {
                             tracing::error!("Failed to add sub-task: {:?}", error);
@@ -765,23 +777,26 @@ impl Content {
                     } else {
                         Status::NotStarted
                     };
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update sub-task: {:?}", error);
+                    match self.storage.update_task(task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to update sub-task: {:?}", error),
                     }
                 }
             }
             Message::SubTaskDelete(id) => {
                 if let Some(task) = self.sub_tasks.remove(id) {
-                    if let Err(error) = self.storage.delete_task(&task) {
-                        tracing::error!("Failed to delete sub-task: {:?}", error);
+                    match self.storage.delete_task(&task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to delete sub-task: {:?}", error),
                     }
                 }
             }
             Message::SubTaskExpand(id) => {
                 if let Some(task) = self.sub_tasks.get_mut(id) {
                     task.expanded = !task.expanded;
-                    if let Err(error) = self.storage.update_task(task) {
-                        tracing::error!("Failed to update sub-task: {:?}", error);
+                    match self.storage.update_task(task) {
+                        Ok(_) => tasks.push(Output::Mutated),
+                        Err(error) => tracing::error!("Failed to update sub-task: {:?}", error),
                     }
                 }
             }

@@ -181,6 +181,9 @@ impl Tasks {
                         }
                     }
                 }
+                content::Output::Mutated => {
+                    self.maybe_trigger_sync(tasks);
+                }
             }
         }
     }
@@ -203,8 +206,24 @@ impl Tasks {
                         task.clone(),
                     ))));
                 }
+                details::Output::Mutated => {
+                    self.maybe_trigger_sync(tasks);
+                }
             }
         }
+    }
+
+    fn maybe_trigger_sync(
+        &mut self,
+        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
+    ) {
+        if self.sync_in_progress {
+            return;
+        }
+        if !crate::sync::engine::is_configured(&self.config) {
+            return;
+        }
+        tasks.push(self.update(Message::Application(ApplicationAction::SyncNow)));
     }
 
     fn update_dialog(
@@ -516,6 +535,9 @@ impl Tasks {
                     },
                 ));
             }
+            ApplicationAction::SyncTick => {
+                self.maybe_trigger_sync(tasks);
+            }
             ApplicationAction::SyncResult(result) => {
                 self.sync_in_progress = false;
                 match result {
@@ -795,6 +817,11 @@ impl Application for Tasks {
         ];
 
         subscriptions.push(self.content.subscription().map(Message::Content));
+
+        subscriptions.push(
+            cosmic::iced::time::every(std::time::Duration::from_secs(60))
+                .map(|_| Message::Application(ApplicationAction::SyncTick)),
+        );
 
         Subscription::batch(subscriptions)
     }
