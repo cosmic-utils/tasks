@@ -67,6 +67,7 @@ pub struct Tasks {
     dialog_text_input: widget::Id,
     sync_status: String,
     sync_in_progress: bool,
+    sync_password: String,
 }
 
 #[derive(Debug, Clone)]
@@ -97,7 +98,7 @@ impl Tasks {
             .on_input(|s| Message::Application(ApplicationAction::SetSyncUsername(s)));
         let pass_input = widget::secure_input(
             fl!("sync-password-hint"),
-            &self.config.sync_password,
+            &self.sync_password,
             None,
             true,
         )
@@ -213,6 +214,14 @@ impl Tasks {
         }
     }
 
+    fn sync_credentials(&self) -> crate::sync::engine::SyncCredentials {
+        crate::sync::engine::SyncCredentials {
+            server_url: self.config.sync_server_url.clone(),
+            username: self.config.sync_username.clone(),
+            password: self.sync_password.clone(),
+        }
+    }
+
     fn maybe_trigger_sync(
         &mut self,
         tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
@@ -220,7 +229,7 @@ impl Tasks {
         if self.sync_in_progress {
             return;
         }
-        if !crate::sync::engine::is_configured(&self.config) {
+        if !crate::sync::engine::is_configured(&self.sync_credentials()) {
             return;
         }
         tasks.push(self.update(Message::Application(ApplicationAction::SyncNow)));
@@ -480,26 +489,48 @@ impl Tasks {
                 }
             }
             ApplicationAction::SetSyncUsername(value) => {
+                let old = self.config.sync_username.clone();
                 if let Some(handler) = &self.config_handler {
-                    if let Err(err) = self.config.set_sync_username(handler, value) {
+                    if let Err(err) = self.config.set_sync_username(handler, value.clone()) {
                         tracing::error!("{err}");
+                    }
+                }
+                // Move existing password under the new username so the keyring
+                // entry stays addressable by the current user.
+                if old != value && !self.sync_password.is_empty() {
+                    if !value.is_empty() {
+                        if let Err(e) =
+                            crate::sync::secret::store(&value, &self.sync_password)
+                        {
+                            tracing::warn!("keyring store under new username: {e}");
+                        }
+                    }
+                    if !old.is_empty() {
+                        crate::sync::secret::delete(&old);
                     }
                 }
             }
             ApplicationAction::SetSyncPassword(value) => {
-                if let Some(handler) = &self.config_handler {
-                    if let Err(err) = self.config.set_sync_password(handler, value) {
-                        tracing::error!("{err}");
-                    }
+                self.sync_password = value;
+                let username = self.config.sync_username.clone();
+                if username.is_empty() {
+                    // No username yet — keep in memory; will be persisted once
+                    // the username is set.
+                } else if self.sync_password.is_empty() {
+                    crate::sync::secret::delete(&username);
+                } else if let Err(e) =
+                    crate::sync::secret::store(&username, &self.sync_password)
+                {
+                    tracing::warn!("keyring store: {e}");
                 }
             }
             ApplicationAction::TestSyncConnection => {
                 self.sync_in_progress = true;
                 self.sync_status = fl!("sync-testing");
-                let config = self.config.clone();
+                let creds = self.sync_credentials();
                 tasks.push(cosmic::Task::perform(
                     async move {
-                        crate::sync::engine::test_connection(&config)
+                        crate::sync::engine::test_connection(&creds)
                             .await
                             .map_err(|e| e.to_string())
                     },
@@ -520,11 +551,11 @@ impl Tasks {
             ApplicationAction::SyncNow => {
                 self.sync_in_progress = true;
                 self.sync_status = fl!("sync-running");
-                let config = self.config.clone();
+                let creds = self.sync_credentials();
                 let storage = self.storage.clone();
                 tasks.push(cosmic::Task::perform(
                     async move {
-                        crate::sync::engine::sync(&storage, &config)
+                        crate::sync::engine::sync(&storage, &creds)
                             .await
                             .map_err(|e| e.to_string())
                     },
@@ -546,7 +577,8 @@ impl Tasks {
                             "sync-done",
                             lists = report.lists_pulled,
                             pulled = report.tasks_pulled,
-                            pushed = report.tasks_pushed
+                            pushed = report.tasks_pushed,
+                            failed = report.tasks_failed
                         );
                         tasks.push(self.update(Message::Tasks(TasksAction::FetchLists)));
                     }
@@ -573,10 +605,21 @@ impl Tasks {
                 }
             },
             TasksAction::PopulateLists(lists) => {
+                let previously_active = self
+                    .nav_model
+                    .active_data::<List>()
+                    .map(|l| l.id.clone());
+                self.nav_model.clear();
                 for list in lists {
                     self.create_nav_item(&list);
                 }
-                let Some(entity) = self.nav_model.iter().next() else {
+                let restore = previously_active.and_then(|id| {
+                    self.nav_model
+                        .iter()
+                        .find(|e| self.nav_model.data::<List>(*e).map(|l| l.id == id).unwrap_or(false))
+                });
+                let target = restore.or_else(|| self.nav_model.iter().next());
+                let Some(entity) = target else {
                     return;
                 };
                 self.nav_model.activate(entity);
@@ -660,7 +703,28 @@ impl Application for Tasks {
             dialog_text_input: widget::Id::unique(),
             sync_status: String::new(),
             sync_in_progress: false,
+            sync_password: String::new(),
         };
+
+        // Load password from libsecret. If config still holds a legacy plaintext
+        // password, migrate it into the keyring and clear the config field.
+        let username = app.config.sync_username.clone();
+        if let Some(pw) = crate::sync::secret::load(&username) {
+            app.sync_password = pw;
+        } else if !app.config.sync_password.is_empty() {
+            let legacy = std::mem::take(&mut app.config.sync_password);
+            if let Err(e) = crate::sync::secret::store(&username, &legacy) {
+                tracing::warn!("Failed to migrate password to keyring: {e}");
+                app.sync_password = legacy;
+            } else {
+                app.sync_password = legacy;
+                if let Some(handler) = &app.config_handler {
+                    if let Err(e) = app.config.set_sync_password(handler, String::new()) {
+                        tracing::warn!("Failed to clear legacy password from config: {e}");
+                    }
+                }
+            }
+        }
 
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
 

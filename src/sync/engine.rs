@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use thiserror::Error;
 use url::Url;
 
-use crate::core::config::TasksConfig;
 use crate::storage::models::{List, Task};
 use crate::storage::LocalStorage;
 
@@ -23,20 +22,27 @@ pub enum SyncError {
     Url(#[from] url::ParseError),
 }
 
-pub fn is_configured(config: &TasksConfig) -> bool {
-    !config.sync_server_url.trim().is_empty()
-        && !config.sync_username.trim().is_empty()
-        && !config.sync_password.is_empty()
+#[derive(Debug, Clone)]
+pub struct SyncCredentials {
+    pub server_url: String,
+    pub username: String,
+    pub password: String,
 }
 
-pub fn make_client(config: &TasksConfig) -> Result<CalDavClient, SyncError> {
-    if !is_configured(config) {
+pub fn is_configured(creds: &SyncCredentials) -> bool {
+    !creds.server_url.trim().is_empty()
+        && !creds.username.trim().is_empty()
+        && !creds.password.is_empty()
+}
+
+pub fn make_client(creds: &SyncCredentials) -> Result<CalDavClient, SyncError> {
+    if !is_configured(creds) {
         return Err(SyncError::NotConfigured);
     }
     Ok(CalDavClient::new(
-        config.sync_server_url.trim(),
-        config.sync_username.trim(),
-        &config.sync_password,
+        creds.server_url.trim(),
+        creds.username.trim(),
+        &creds.password,
     )?)
 }
 
@@ -45,6 +51,7 @@ pub struct SyncReport {
     pub lists_pulled: usize,
     pub tasks_pulled: usize,
     pub tasks_pushed: usize,
+    pub tasks_failed: usize,
 }
 
 /// Identify the remote URL bound to a local list, if any.
@@ -76,9 +83,9 @@ fn set_list_remote_url(list: &mut List, url: &Url) {
 ///     are not propagated yet).
 pub async fn sync(
     storage: &LocalStorage,
-    config: &TasksConfig,
+    creds: &SyncCredentials,
 ) -> Result<SyncReport, SyncError> {
-    let client = make_client(config)?;
+    let client = make_client(creds)?;
     let mut report = SyncReport::default();
 
     let mut local_lists = storage.lists().map_err(|e| SyncError::Storage(e.to_string()))?;
@@ -171,7 +178,10 @@ pub async fn sync(
             match remote_by_uid.get(uid) {
                 None => match client.put_todo(&target, &ical, None).await {
                     Ok(_) => report.tasks_pushed += 1,
-                    Err(e) => tracing::warn!("PUT {uid} failed: {e}"),
+                    Err(e) => {
+                        tracing::warn!("PUT {uid} failed: {e}");
+                        report.tasks_failed += 1;
+                    }
                 },
                 Some((href, etag, _)) => {
                     let remote_task = parse_vtodo(&remote_by_uid[uid].2)
@@ -183,7 +193,10 @@ pub async fn sync(
                     if push {
                         match client.put_todo(href, &ical, etag.as_deref()).await {
                             Ok(_) => report.tasks_pushed += 1,
-                            Err(e) => tracing::warn!("PUT update {uid} failed: {e}"),
+                            Err(e) => {
+                                tracing::warn!("PUT update {uid} failed: {e}");
+                                report.tasks_failed += 1;
+                            }
                         }
                     }
                 }
@@ -194,8 +207,8 @@ pub async fn sync(
     Ok(report)
 }
 
-pub async fn test_connection(config: &TasksConfig) -> Result<(), SyncError> {
-    let client = make_client(config)?;
+pub async fn test_connection(creds: &SyncCredentials) -> Result<(), SyncError> {
+    let client = make_client(creds)?;
     client.test_connection().await?;
     Ok(())
 }

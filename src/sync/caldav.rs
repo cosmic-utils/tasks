@@ -268,10 +268,11 @@ impl CalDavClient {
                 HeaderValue::from_static("*"),
             );
         }
-        let (status, resp_headers, _) = self
+        let (status, resp_headers, body) = self
             .request(Method::PUT, href.clone(), headers, Some(ical.to_string()))
             .await?;
         if !status.is_success() {
+            tracing::warn!("PUT {href} -> {} body: {body}", status.as_u16());
             return Err(CalDavError::Status(status.as_u16()));
         }
         Ok(resp_headers
@@ -610,19 +611,40 @@ pub fn task_to_vtodo(task: &Task) -> String {
 }
 
 fn parse_ical_datetime(s: &str) -> Option<DateTime<Utc>> {
-    // Accept basic forms: 20260101T120000Z, 20260101T120000, 20260101.
+    // Accept basic iCalendar forms: 20260101T120000Z, 20260101T120000, 20260101.
+    // chrono::DateTime::parse_from_str rejects a literal 'Z' as a timezone
+    // specifier, so strip it and parse as NaiveDateTime in UTC.
     let s = s.trim();
-    if let Ok(dt) = DateTime::parse_from_str(s, "%Y%m%dT%H%M%SZ") {
-        return Some(dt.with_timezone(&Utc));
-    }
-    if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(s, "%Y%m%dT%H%M%S") {
+    let no_z = s.strip_suffix('Z').unwrap_or(s);
+    if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(no_z, "%Y%m%dT%H%M%S") {
         return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
     }
-    if let Ok(date) = chrono::NaiveDate::parse_from_str(s, "%Y%m%d") {
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(no_z, "%Y%m%d") {
         let naive = date.and_hms_opt(0, 0, 0)?;
         return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_zulu_datetime() {
+        let dt = parse_ical_datetime("20260405T170617Z").expect("should parse");
+        assert_eq!(dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(), "2026-04-05T17:06:17Z");
+    }
+
+    #[test]
+    fn parses_floating_datetime() {
+        assert!(parse_ical_datetime("20260101T120000").is_some());
+    }
+
+    #[test]
+    fn parses_date_only() {
+        assert!(parse_ical_datetime("20260330").is_some());
+    }
 }
 
 fn format_ical_datetime(dt: DateTime<Utc>) -> String {

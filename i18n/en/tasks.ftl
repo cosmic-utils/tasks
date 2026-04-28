@@ -84,7 +84,7 @@ sync-testing = Testing connection…
 sync-test-ok = Connection OK.
 sync-test-fail = Connection failed: {$error}
 sync-running = Syncing…
-sync-done = Sync complete. Lists added: {$lists}, tasks pulled: {$pulled}, pushed: {$pushed}.
+sync-done = Sync complete. Lists added: {$lists}, tasks pulled: {$pulled}, pushed: {$pushed}, failed: {$failed}.
 sync-fail = Sync failed: {$error}
 
 # Menu

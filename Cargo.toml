@@ -18,6 +18,11 @@ icalendar = "*"
 base64 = "*"
 url = "*"
 
+[dependencies.keyring]
+version = "*"
+default-features = false
+features = ["sync-secret-service", "crypto-rust"]
+
 [dependencies.reqwest]
 version = "*"
 default-features = false
