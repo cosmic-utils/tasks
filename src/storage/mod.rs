@@ -4,9 +4,9 @@ pub mod models;
 use std::path::PathBuf;
 
 use crate::{
+    Error, LocalStorageError, TasksError,
     app::markdown::Markdown,
     storage::models::{List, Task},
-    Error, LocalStorageError, TasksError,
 };
 
 #[derive(Debug, Clone)]

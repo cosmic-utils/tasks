@@ -1,6 +1,7 @@
 use cosmic::{
-    cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, Config, CosmicConfigEntry},
-    theme, Application,
+    Application,
+    cosmic_config::{self, Config, CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry},
+    theme,
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +15,6 @@ pub struct TasksConfig {
     pub hide_completed: bool,
     pub sync_server_url: String,
     pub sync_username: String,
-    pub sync_password: String,
 }
 
 impl TasksConfig {

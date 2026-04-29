@@ -1,22 +1,22 @@
 use std::collections::HashMap;
 
 use cosmic::{
+    Apply, Element,
     iced::{
-        alignment::{Horizontal, Vertical},
         Alignment, Length, Subscription,
+        alignment::{Horizontal, Vertical},
     },
     iced_widget::row,
     theme,
     widget::{self, menu::Action as MenuAction},
-    Apply, Element,
 };
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
 
 use crate::{
     core::{config, icons},
     fl,
-    storage::models::{self, List, Status},
     storage::LocalStorage,
+    storage::models::{self, List, Status},
 };
 
 pub struct Content {
@@ -42,6 +42,8 @@ pub enum SortType {
     NameDesc,
     DateAsc,
     DateDesc,
+    DueAsc,
+    DueDesc,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +75,9 @@ pub enum Message {
     SetTasks(Vec<models::Task>),
     SetConfig(config::TasksConfig),
     RefreshTask(models::Task),
+    /// Re-read tasks for the currently active list from disk. Used after
+    /// background work (e.g. a CalDAV sync) mutates the on-disk state.
+    ReloadTasks,
     Empty,
     ContextMenuOpen(bool),
 
@@ -197,6 +202,8 @@ impl Content {
         }
 
         let mut tasks_vec: Vec<_> = self.tasks.iter().collect();
+        // Primary sort by user choice; completed tasks always sink to the
+        // bottom regardless so the active list stays focused at the top.
         match self.sort_type {
             SortType::NameAsc => {
                 tasks_vec.sort_by(|a, b| a.1.title.to_lowercase().cmp(&b.1.title.to_lowercase()))
@@ -210,7 +217,23 @@ impl Content {
             SortType::DateDesc => {
                 tasks_vec.sort_by(|a, b| b.1.created_date_time.cmp(&a.1.created_date_time))
             }
+            SortType::DueAsc => tasks_vec.sort_by(|a, b| {
+                // Tasks without a due date sink below those with one.
+                match (a.1.due_date, b.1.due_date) {
+                    (Some(x), Some(y)) => x.cmp(&y),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => a.1.created_date_time.cmp(&b.1.created_date_time),
+                }
+            }),
+            SortType::DueDesc => tasks_vec.sort_by(|a, b| match (a.1.due_date, b.1.due_date) {
+                (Some(x), Some(y)) => y.cmp(&x),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => b.1.created_date_time.cmp(&a.1.created_date_time),
+            }),
         }
+        tasks_vec.sort_by_key(|(_, t)| t.status == Status::Completed);
 
         let filtered_tasks: Vec<_> = tasks_vec
             .into_iter()
@@ -300,6 +323,11 @@ impl Content {
             None
         };
 
+        let task_input_id = self
+            .task_input_ids
+            .get(id)
+            .cloned()
+            .unwrap_or_else(widget::Id::unique);
         let task_item_text = widget::editable_input(
             "",
             &task.title,
@@ -308,16 +336,24 @@ impl Content {
         )
         .size(13)
         .trailing_icon(widget::column().into())
-        .id(self.task_input_ids[id].clone())
+        .id(task_input_id)
         .on_submit(move |_| Message::TaskTitleSubmit(id))
         .on_input(move |text| Message::TaskTitleUpdate(id, text));
 
-        let row = widget::row::with_capacity(5)
+        let due_badge = task.due_date.map(|due| {
+            let label = format_due_badge(due);
+            widget::text(label)
+                .size(11)
+                .class(cosmic::style::Text::Accent)
+        });
+
+        let row = widget::row::with_capacity(6)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
             .padding([spacing.space_xxs, spacing.space_s])
             .push(item_checkbox)
             .push(task_item_text)
+            .push_maybe(due_badge)
             .push_maybe(expand_button)
             .push_maybe(subtask_count)
             .push(more_button);
@@ -409,6 +445,11 @@ impl Content {
             None
         };
 
+        let sub_task_input_id = self
+            .sub_task_input_ids
+            .get(id)
+            .cloned()
+            .unwrap_or_else(widget::Id::unique);
         let task_item_text = widget::editable_input(
             "",
             &task.title,
@@ -417,16 +458,23 @@ impl Content {
         )
         .size(13)
         .trailing_icon(widget::column().into())
-        .id(self.sub_task_input_ids[id].clone())
+        .id(sub_task_input_id)
         .on_submit(move |_| Message::SubTaskTitleSubmit(id))
         .on_input(move |text| Message::SubTaskTitleUpdate(id, text));
 
-        let row = widget::row::with_capacity(4)
+        let due_badge = task.due_date.map(|due| {
+            widget::text(format_due_badge(due))
+                .size(11)
+                .class(cosmic::style::Text::Accent)
+        });
+
+        let row = widget::row::with_capacity(5)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
             .padding([spacing.space_xxs, spacing.space_s])
             .push(item_checkbox)
             .push(task_item_text)
+            .push_maybe(due_badge)
             .push_maybe(expand_button)
             .push_maybe(subtask_count)
             .push(more_button);
@@ -577,6 +625,18 @@ impl Content {
             Message::SetConfig(config) => {
                 self.config = config;
             }
+            Message::ReloadTasks => {
+                if let Some(list) = self.list.clone() {
+                    match self.storage.tasks(&list) {
+                        Ok(reloaded) => {
+                            self.update(Message::SetTasks(reloaded));
+                        }
+                        Err(error) => {
+                            tracing::error!("Failed to reload tasks: {error:?}")
+                        }
+                    }
+                }
+            }
             Message::RefreshTask(refreshed_task) => {
                 if let Some((id, _)) = self.tasks.iter().find(|(_, t)| t.id == refreshed_task.id) {
                     if let Some(task) = self.tasks.get_mut(id) {
@@ -626,9 +686,17 @@ impl Content {
                 }
             }
             Message::TaskToggleTitleEditMode(id, editing) => {
+                if !self.tasks.contains_key(id) {
+                    // Stale key — slotmap was repopulated (e.g. by a post-sync
+                    // ReloadTasks) before this message reached us. Drop it
+                    // rather than panicking on a SecondaryMap index.
+                    return tasks;
+                }
                 self.task_editing.insert(id, editing);
                 if editing {
-                    tasks.push(Output::Focus(self.task_input_ids[id].clone()));
+                    if let Some(input_id) = self.task_input_ids.get(id) {
+                        tasks.push(Output::Focus(input_id.clone()));
+                    }
                 } else if let Some(task) = self.tasks.get(id) {
                     match self.storage.update_task(task) {
                         Ok(_) => tasks.push(Output::Mutated),
@@ -691,7 +759,9 @@ impl Content {
                             self.sub_task_input_ids
                                 .insert(sub_task_id, widget::Id::unique());
                             self.sub_task_editing.insert(sub_task_id, false);
-                            tasks.push(Output::Focus(self.sub_task_input_ids[sub_task_id].clone()));
+                            if let Some(input_id) = self.sub_task_input_ids.get(sub_task_id) {
+                                tasks.push(Output::Focus(input_id.clone()));
+                            }
                             tasks.push(Output::Mutated);
                         }
                         Err(error) => {
@@ -707,9 +777,14 @@ impl Content {
                 }
             }
             Message::SubTaskToggleTitleEditMode(id, editing) => {
+                if !self.sub_tasks.contains_key(id) {
+                    return tasks;
+                }
                 self.sub_task_editing.insert(id, editing);
                 if editing {
-                    tasks.push(Output::Focus(self.sub_task_input_ids[id].clone()));
+                    if let Some(input_id) = self.sub_task_input_ids.get(id) {
+                        tasks.push(Output::Focus(input_id.clone()));
+                    }
                 } else if let Some(task) = self.sub_tasks.get(id) {
                     match self.storage.update_task(task) {
                         Ok(_) => tasks.push(Output::Mutated),
@@ -760,7 +835,9 @@ impl Content {
                             self.sub_task_input_ids
                                 .insert(sub_task_id, widget::Id::unique());
                             self.sub_task_editing.insert(sub_task_id, false);
-                            tasks.push(Output::Focus(self.sub_task_input_ids[sub_task_id].clone()));
+                            if let Some(input_id) = self.sub_task_input_ids.get(sub_task_id) {
+                                tasks.push(Output::Focus(input_id.clone()));
+                            }
                             tasks.push(Output::Mutated);
                         }
                         Err(error) => {
@@ -846,5 +923,21 @@ impl Content {
 
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::none()
+    }
+}
+
+/// Compact human-friendly badge for a due date — "Today", "Tomorrow",
+/// "Yesterday", a weekday for nearby dates, and `YYYY-MM-DD` otherwise.
+fn format_due_badge(due: chrono::DateTime<chrono::Utc>) -> String {
+    use chrono::Local;
+    let today = Local::now().date_naive();
+    let due_local = due.with_timezone(&Local).date_naive();
+    let days = (due_local - today).num_days();
+    match days {
+        0 => fl!("due-today"),
+        1 => fl!("due-tomorrow"),
+        -1 => fl!("due-yesterday"),
+        2..=6 => due_local.format("%a").to_string(),
+        _ => due_local.format("%Y-%m-%d").to_string(),
     }
 }

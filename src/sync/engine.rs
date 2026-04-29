@@ -3,12 +3,14 @@ use std::collections::HashMap;
 use thiserror::Error;
 use url::Url;
 
-use crate::storage::models::{List, Task};
 use crate::storage::LocalStorage;
+use crate::storage::models::{List, Task};
 
-use super::caldav::{parse_vtodo, task_to_vtodo, vtodo_to_task, CalDavClient, CalDavError};
+use super::caldav::{CalDavClient, CalDavError, parse_vtodo, task_to_vtodo, vtodo_to_task};
 
-const REMOTE_MARKER: &str = "caldav:";
+/// Legacy marker used in v0.2 to embed the CalDAV URL inside the list
+/// description. Kept only for read-side migration into `List::remote_url`.
+const LEGACY_REMOTE_MARKER: &str = "caldav:";
 
 #[derive(Debug, Error)]
 pub enum SyncError {
@@ -55,24 +57,31 @@ pub struct SyncReport {
 }
 
 /// Identify the remote URL bound to a local list, if any.
+///
+/// Reads `List::remote_url` first; falls back to the legacy `caldav:URL`
+/// marker that v0.2 stored in `description`.
 fn list_remote_url(list: &List) -> Option<Url> {
+    if let Some(raw) = list.remote_url.as_deref() {
+        if let Ok(url) = Url::parse(raw) {
+            return Some(url);
+        }
+    }
     let line = list
         .description
         .lines()
-        .find(|l| l.trim().starts_with(REMOTE_MARKER))?;
-    let raw = line.trim().trim_start_matches(REMOTE_MARKER).trim();
+        .find(|l| l.trim().starts_with(LEGACY_REMOTE_MARKER))?;
+    let raw = line.trim().trim_start_matches(LEGACY_REMOTE_MARKER).trim();
     Url::parse(raw).ok()
 }
 
 fn set_list_remote_url(list: &mut List, url: &Url) {
-    let url_str = url.as_str();
-    let mut kept: Vec<&str> = list
+    list.remote_url = Some(url.as_str().to_string());
+    // Strip any legacy marker line from the description.
+    let kept: Vec<&str> = list
         .description
         .lines()
-        .filter(|l| !l.trim().starts_with(REMOTE_MARKER))
+        .filter(|l| !l.trim().starts_with(LEGACY_REMOTE_MARKER))
         .collect();
-    let line = format!("{REMOTE_MARKER}{url_str}");
-    kept.push(&line);
     list.description = kept.join("\n");
 }
 
@@ -88,15 +97,25 @@ pub async fn sync(
     let client = make_client(creds)?;
     let mut report = SyncReport::default();
 
-    let mut local_lists = storage.lists().map_err(|e| SyncError::Storage(e.to_string()))?;
+    let mut local_lists = storage
+        .lists()
+        .map_err(|e| SyncError::Storage(e.to_string()))?;
     let remote_calendars = client.list_task_calendars().await?;
 
-    // Index local lists by their bound remote URL.
+    // Index local lists by their bound remote URL, migrating legacy
+    // description-encoded markers into `List::remote_url` on the way.
     let mut by_remote: HashMap<String, usize> = HashMap::new();
-    for (i, l) in local_lists.iter().enumerate() {
-        if let Some(u) = list_remote_url(l) {
-            by_remote.insert(u.to_string(), i);
+    for (i, l) in local_lists.iter_mut().enumerate() {
+        let Some(u) = list_remote_url(l) else {
+            continue;
+        };
+        if l.remote_url.as_deref() != Some(u.as_str()) {
+            set_list_remote_url(l, &u);
+            if let Err(e) = storage.update_list(l) {
+                tracing::warn!("migrating legacy remote_url for {}: {e}", l.id);
+            }
         }
+        by_remote.insert(u.to_string(), i);
     }
 
     // Ensure a local list exists for every remote calendar.
@@ -135,7 +154,9 @@ pub async fn sync(
                     continue;
                 }
             };
-            let uid = icalendar::Component::get_uid(&todo).unwrap_or("").to_string();
+            let uid = icalendar::Component::get_uid(&todo)
+                .unwrap_or("")
+                .to_string();
             if uid.is_empty() {
                 continue;
             }
@@ -149,7 +170,9 @@ pub async fn sync(
 
         // Pull: write/update local from remote where remote is newer or local missing.
         for (uid, (_href, _etag, ical)) in &remote_by_uid {
-            let Ok(todo) = parse_vtodo(ical) else { continue };
+            let Ok(todo) = parse_vtodo(ical) else {
+                continue;
+            };
             let remote_task = vtodo_to_task(&todo, list.tasks_path());
             match local_by_uid.get(uid) {
                 None => {
@@ -211,4 +234,58 @@ pub async fn test_connection(creds: &SyncCredentials) -> Result<(), SyncError> {
     let client = make_client(creds)?;
     client.test_connection().await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn empty_list() -> List {
+        List::new("test")
+    }
+
+    #[test]
+    fn legacy_marker_in_description_is_recognized() {
+        let mut list = empty_list();
+        list.description = "notes\ncaldav:https://example.com/dav/cal/".into();
+        let url = list_remote_url(&list).expect("legacy marker should parse");
+        assert_eq!(url.as_str(), "https://example.com/dav/cal/");
+    }
+
+    #[test]
+    fn remote_url_field_takes_precedence() {
+        let mut list = empty_list();
+        list.description = "caldav:https://old.example.com/".into();
+        list.remote_url = Some("https://new.example.com/".into());
+        let url = list_remote_url(&list).unwrap();
+        assert_eq!(url.as_str(), "https://new.example.com/");
+    }
+
+    #[test]
+    fn set_remote_url_strips_legacy_marker() {
+        let mut list = empty_list();
+        list.description = "first line\ncaldav:https://x/\nlast".into();
+        let url = Url::parse("https://example.com/cal/").unwrap();
+        set_list_remote_url(&mut list, &url);
+        assert_eq!(list.remote_url.as_deref(), Some("https://example.com/cal/"));
+        assert!(!list.description.contains("caldav:"));
+        assert!(list.description.contains("first line"));
+        assert!(list.description.contains("last"));
+    }
+
+    #[test]
+    fn is_configured_requires_all_fields() {
+        let blank = SyncCredentials {
+            server_url: String::new(),
+            username: String::new(),
+            password: String::new(),
+        };
+        assert!(!is_configured(&blank));
+        let full = SyncCredentials {
+            server_url: "https://x/".into(),
+            username: "u".into(),
+            password: "p".into(),
+        };
+        assert!(is_configured(&full));
+    }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "tasks"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
@@ -44,11 +44,6 @@ features = ["fluent-system", "desktop-requester"]
 [dependencies.serde]
 version = "*"
 features = ["derive"]
-
-[dependencies.sqlx]
-version = "*"
-features = ["sqlite"]
-default-features = false
 
 [dependencies.chrono]
 version = "*"

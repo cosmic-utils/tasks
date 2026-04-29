@@ -4,7 +4,7 @@
 //! Contains stylesheet implementation for [`crate::widget::segmented_button`].
 
 use cosmic::iced::Border;
-use cosmic::iced::{border::Radius, Background};
+use cosmic::iced::{Background, border::Radius};
 use cosmic::widget::segmented_button::ItemStatusAppearance;
 use cosmic::widget::segmented_button::{Appearance, ItemAppearance};
 
@@ -59,7 +59,7 @@ fn horizontal(theme: &cosmic::Theme) -> Appearance {
 
 mod horizontal {
     use cosmic::iced::Border;
-    use cosmic::iced::{border::Radius, Background};
+    use cosmic::iced::{Background, border::Radius};
     use cosmic::widget::segmented_button::{ItemAppearance, ItemStatusAppearance};
 
     pub fn selection_active(theme: &cosmic::Theme) -> ItemStatusAppearance {

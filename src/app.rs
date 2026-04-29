@@ -15,20 +15,20 @@ use std::{
 
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cosmic::{
+    Application, ApplicationExt, Element,
     app::{self, Core},
     cosmic_config::{self, Update},
     cosmic_theme::{self, ThemeMode},
     iced::{
+        Event, Length, Subscription,
         keyboard::{Event as KeyEvent, Modifiers},
-        Event, Subscription,
     },
     widget::{
         self,
         calendar::CalendarModel,
-        menu::{key_bind::KeyBind, Action as _},
+        menu::{Action as _, key_bind::KeyBind},
         segmented_button::{Entity, EntityMut, SingleSelect},
     },
-    Application, ApplicationExt, Element,
 };
 
 use crate::{
@@ -47,7 +47,7 @@ use crate::{
         content::{self, Content},
         details::{self, Details},
     },
-    storage::{models::List, LocalStorage},
+    storage::{LocalStorage, models::List},
 };
 
 pub struct Tasks {
@@ -68,6 +68,8 @@ pub struct Tasks {
     sync_status: String,
     sync_in_progress: bool,
     sync_password: String,
+    sync_last_at: Option<chrono::DateTime<chrono::Utc>>,
+    sync_last_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -81,61 +83,148 @@ pub enum Message {
 
 impl Tasks {
     fn settings(&self) -> Element<'_, Message> {
-        let appearance = widget::settings::section().title(fl!("appearance")).add(
-            widget::settings::item::item(
-                fl!("theme"),
-                widget::dropdown(
-                    &self.app_themes,
-                    Some(self.config.app_theme.into()),
-                    |theme| Message::Application(ApplicationAction::AppTheme(theme)),
+        let spacing = cosmic::theme::active().cosmic().spacing;
+        let appearance =
+            widget::settings::section()
+                .title(fl!("appearance"))
+                .add(widget::settings::item::item(
+                    fl!("theme"),
+                    widget::dropdown(
+                        &self.app_themes,
+                        Some(self.config.app_theme.into()),
+                        |theme| Message::Application(ApplicationAction::AppTheme(theme)),
+                    ),
+                ));
+
+        let creds = self.sync_credentials();
+        let configured = crate::sync::engine::is_configured(&creds);
+
+        // --- status row -------------------------------------------------
+        let (status_icon, status_text, status_class) = if self.sync_in_progress {
+            (
+                "process-working-symbolic",
+                fl!("account-status-syncing"),
+                cosmic::style::Text::Default,
+            )
+        } else if let Some(err) = &self.sync_last_error {
+            (
+                "dialog-error-symbolic",
+                fl!("account-status-error", error = err.as_str()),
+                cosmic::style::Text::Color(cosmic::iced::Color::from_rgb(0.86, 0.30, 0.30)),
+            )
+        } else if configured {
+            (
+                "emblem-default-symbolic",
+                fl!(
+                    "account-status-ready",
+                    username = self.config.sync_username.as_str()
                 ),
-            ),
+                cosmic::style::Text::Accent,
+            )
+        } else {
+            (
+                "dialog-information-symbolic",
+                fl!("account-status-not-configured"),
+                cosmic::style::Text::Default,
+            )
+        };
+        let status_row = widget::row::with_children(vec![
+            icons::get_icon(status_icon, 16).into(),
+            widget::text(status_text).class(status_class).into(),
+        ])
+        .align_y(cosmic::iced::Alignment::Center)
+        .spacing(spacing.space_xs);
+
+        let last_sync_row = widget::settings::item::item(
+            fl!("account-last-sync"),
+            widget::text(format_relative_time(self.sync_last_at)),
         );
 
-        let url_input = widget::text_input(fl!("sync-server-url-hint"), &self.config.sync_server_url)
-            .on_input(|s| Message::Application(ApplicationAction::SetSyncServerUrl(s)));
+        // --- credential inputs -----------------------------------------
+        let url_input =
+            widget::text_input(fl!("sync-server-url-hint"), &self.config.sync_server_url)
+                .on_input(|s| Message::Application(ApplicationAction::SetSyncServerUrl(s)));
         let user_input = widget::text_input(fl!("sync-username-hint"), &self.config.sync_username)
             .on_input(|s| Message::Application(ApplicationAction::SetSyncUsername(s)));
-        let pass_input = widget::secure_input(
-            fl!("sync-password-hint"),
-            &self.sync_password,
-            None,
-            true,
-        )
-        .on_input(|s| Message::Application(ApplicationAction::SetSyncPassword(s)));
+        let pass_input =
+            widget::secure_input(fl!("sync-password-hint"), &self.sync_password, None, true)
+                .on_input(|s| Message::Application(ApplicationAction::SetSyncPassword(s)));
 
-        let test_button = widget::button::standard(fl!("sync-test-connection"))
-            .on_press_maybe((!self.sync_in_progress).then_some(
-                Message::Application(ApplicationAction::TestSyncConnection),
-            ));
-        let sync_button = widget::button::suggested(fl!("sync-now"))
-            .on_press_maybe((!self.sync_in_progress).then_some(
-                Message::Application(ApplicationAction::SyncNow),
-            ));
+        let url_field = widget::column::with_children(vec![
+            widget::text::body(fl!("sync-server-url")).into(),
+            url_input.into(),
+            widget::text::caption(fl!("sync-server-url-description")).into(),
+        ])
+        .spacing(spacing.space_xxxs);
+        let user_field = widget::column::with_children(vec![
+            widget::text::body(fl!("sync-username")).into(),
+            user_input.into(),
+            widget::text::caption(fl!("sync-username-description")).into(),
+        ])
+        .spacing(spacing.space_xxxs);
+        let pass_field = widget::column::with_children(vec![
+            widget::text::body(fl!("sync-password")).into(),
+            pass_input.into(),
+            widget::text::caption(fl!("sync-password-description")).into(),
+        ])
+        .spacing(spacing.space_xxxs);
 
-        let buttons = widget::row::with_children(vec![
+        // --- buttons ---------------------------------------------------
+        let test_button = widget::button::standard(fl!("sync-test-connection")).on_press_maybe(
+            (!self.sync_in_progress && configured)
+                .then_some(Message::Application(ApplicationAction::TestSyncConnection)),
+        );
+        let sync_button = widget::button::suggested(fl!("sync-now")).on_press_maybe(
+            (!self.sync_in_progress && configured)
+                .then_some(Message::Application(ApplicationAction::SyncNow)),
+        );
+        let mut button_children: Vec<Element<'_, Message>> = vec![
             test_button.into(),
-            widget::horizontal_space().width(cosmic::iced::Length::Fixed(8.0)).into(),
+            widget::horizontal_space()
+                .width(cosmic::iced::Length::Fixed(8.0))
+                .into(),
             sync_button.into(),
-        ]);
+        ];
+        if configured {
+            button_children.push(widget::horizontal_space().width(Length::Fill).into());
+            button_children.push(
+                widget::button::destructive(fl!("sync-sign-out"))
+                    .on_press(Message::Application(ApplicationAction::SignOut))
+                    .into(),
+            );
+        }
+        let buttons =
+            widget::row::with_children(button_children).align_y(cosmic::iced::Alignment::Center);
 
-        let mut sync_section = widget::settings::section()
-            .title(fl!("sync"))
-            .add(widget::settings::item::item(fl!("sync-server-url"), url_input))
-            .add(widget::settings::item::item(fl!("sync-username"), user_input))
-            .add(widget::settings::item::item(fl!("sync-password"), pass_input))
-            .add(widget::settings::item::item("", buttons));
+        // --- assemble --------------------------------------------------
+        let mut account_section = widget::settings::section()
+            .title(fl!("account"))
+            .add(
+                widget::column::with_children(vec![
+                    widget::text::caption(fl!("account-description")).into(),
+                    status_row.into(),
+                ])
+                .spacing(spacing.space_xs)
+                .padding([
+                    spacing.space_xs,
+                    spacing.space_none,
+                    spacing.space_s,
+                    spacing.space_none,
+                ]),
+            )
+            .add(url_field)
+            .add(user_field)
+            .add(pass_field)
+            .add(last_sync_row)
+            .add(buttons);
 
         if !self.sync_status.is_empty() {
-            sync_section = sync_section.add(widget::settings::item::item(
-                "",
-                widget::text(self.sync_status.clone()),
-            ));
+            account_section = account_section.add(widget::text::caption(self.sync_status.clone()));
         }
 
         widget::scrollable(
-            widget::column::with_children(vec![appearance.into(), sync_section.into()])
-                .spacing(16),
+            widget::column::with_children(vec![appearance.into(), account_section.into()])
+                .spacing(spacing.space_m),
         )
         .into()
     }
@@ -222,10 +311,7 @@ impl Tasks {
         }
     }
 
-    fn maybe_trigger_sync(
-        &mut self,
-        tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>,
-    ) {
+    fn maybe_trigger_sync(&mut self, tasks: &mut Vec<cosmic::Task<cosmic::Action<Message>>>) {
         if self.sync_in_progress {
             return;
         }
@@ -283,22 +369,19 @@ impl Tasks {
                             }
                         }
                         DialogPage::Rename(entity, name) => {
-                            let data = if let Some(entity) = entity {
-                                self.nav_model.data_mut::<List>(entity)
-                            } else {
-                                self.nav_model.active_data_mut::<List>()
-                            };
-                            if let Some(list) = data {
-                                list.name.clone_from(&name.clone());
+                            let target = entity.unwrap_or_else(|| self.nav_model.active());
+                            if let Some(list) = self.nav_model.data_mut::<List>(target) {
+                                list.name.clone_from(&name);
                                 let list = list.clone();
-                                self.nav_model
-                                    .text_set(self.nav_model.active(), name.clone());
+                                self.nav_model.text_set(target, name.clone());
                                 if let Err(err) = self.storage.update_list(&list) {
                                     tracing::error!("Error updating list: {err}");
                                 }
-                                tasks.push(self.update(Message::Content(
-                                    content::Message::SetList(Some(list)),
-                                )));
+                                if target == self.nav_model.active() {
+                                    tasks.push(self.update(Message::Content(
+                                        content::Message::SetList(Some(list)),
+                                    )));
+                                }
                             }
                         }
                         DialogPage::Delete(entity) => {
@@ -306,31 +389,30 @@ impl Tasks {
                                 .push(self.update(Message::Tasks(TasksAction::DeleteList(entity))));
                         }
                         DialogPage::Icon(entity, name, _) => {
-                            let data = if let Some(entity) = entity {
-                                self.nav_model.data::<List>(entity)
-                            } else {
-                                self.nav_model.active_data::<List>()
-                            };
-                            if let Some(list) = data {
-                                let entity = self.nav_model.active();
-                                self.nav_model.text_set(entity, list.name.clone());
-                                self.nav_model
-                                    .icon_set(entity, crate::app::icons::get_icon(&name, 16));
-                            }
-                            if let Some(list) = self.nav_model.active_data_mut::<List>() {
-                                list.icon = Some(name);
+                            let target = entity.unwrap_or_else(|| self.nav_model.active());
+                            if let Some(list) = self.nav_model.data_mut::<List>(target) {
+                                list.icon = Some(name.clone());
                                 let list = list.clone();
+                                self.nav_model
+                                    .icon_set(target, crate::app::icons::get_icon(&name, 16));
                                 if let Err(err) = self.storage.update_list(&list) {
                                     tracing::error!("Error updating list: {err}");
                                 }
-                                tasks.push(self.update(Message::Content(
-                                    content::Message::SetList(Some(list)),
-                                )));
+                                if target == self.nav_model.active() {
+                                    tasks.push(self.update(Message::Content(
+                                        content::Message::SetList(Some(list)),
+                                    )));
+                                }
                             }
                         }
                         DialogPage::Calendar(date) => {
-                            self.details
-                                .update(details::Message::SetDueDate(date.selected));
+                            // Route through update_details so the resulting
+                            // RefreshTask/Mutated outputs are dispatched —
+                            // calling self.details.update directly would drop
+                            // them and leave the task list stale on screen.
+                            tasks.push(self.update(Message::Details(
+                                details::Message::SetDueDate(date.selected),
+                            )));
                         }
                         DialogPage::Export(content) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
@@ -437,6 +519,9 @@ impl Tasks {
                         DialogAction::Open(DialogPage::Delete(Some(entity))),
                     ))));
                 }
+                NavMenuAction::SyncNow => {
+                    tasks.push(self.update(Message::Application(ApplicationAction::SyncNow)));
+                }
             },
             ApplicationAction::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
@@ -481,6 +566,16 @@ impl Tasks {
                     content::SortType::DateDesc,
                 ))));
             }
+            ApplicationAction::SortByDueAsc => {
+                tasks.push(self.update(Message::Content(content::Message::SetSort(
+                    content::SortType::DueAsc,
+                ))));
+            }
+            ApplicationAction::SortByDueDesc => {
+                tasks.push(self.update(Message::Content(content::Message::SetSort(
+                    content::SortType::DueDesc,
+                ))));
+            }
             ApplicationAction::SetSyncServerUrl(value) => {
                 if let Some(handler) = &self.config_handler {
                     if let Err(err) = self.config.set_sync_server_url(handler, value) {
@@ -495,17 +590,21 @@ impl Tasks {
                         tracing::error!("{err}");
                     }
                 }
-                // Move existing password under the new username so the keyring
-                // entry stays addressable by the current user.
-                if old != value && !self.sync_password.is_empty() {
-                    if !value.is_empty() {
-                        if let Err(e) =
-                            crate::sync::secret::store(&value, &self.sync_password)
-                        {
+                if old != value {
+                    // Prefer an existing keyring entry for the new username
+                    // (e.g. user is switching back to a previously configured
+                    // account); otherwise migrate the in-memory password
+                    // under the new key.
+                    if let Some(stored) = crate::sync::secret::load(&value) {
+                        self.sync_password = stored;
+                    } else if !self.sync_password.is_empty() && !value.is_empty() {
+                        if let Err(e) = crate::sync::secret::store(&value, &self.sync_password) {
                             tracing::warn!("keyring store under new username: {e}");
                         }
+                    } else if value.is_empty() {
+                        self.sync_password.clear();
                     }
-                    if !old.is_empty() {
+                    if !old.is_empty() && old != value {
                         crate::sync::secret::delete(&old);
                     }
                 }
@@ -518,9 +617,7 @@ impl Tasks {
                     // the username is set.
                 } else if self.sync_password.is_empty() {
                     crate::sync::secret::delete(&username);
-                } else if let Err(e) =
-                    crate::sync::secret::store(&username, &self.sync_password)
-                {
+                } else if let Err(e) = crate::sync::secret::store(&username, &self.sync_password) {
                     tracing::warn!("keyring store: {e}");
                 }
             }
@@ -560,9 +657,9 @@ impl Tasks {
                             .map_err(|e| e.to_string())
                     },
                     |result| {
-                        cosmic::Action::App(Message::Application(
-                            ApplicationAction::SyncResult(result),
-                        ))
+                        cosmic::Action::App(Message::Application(ApplicationAction::SyncResult(
+                            result,
+                        )))
                     },
                 ));
             }
@@ -573,6 +670,8 @@ impl Tasks {
                 self.sync_in_progress = false;
                 match result {
                     Ok(report) => {
+                        self.sync_last_at = Some(chrono::Utc::now());
+                        self.sync_last_error = None;
                         self.sync_status = fl!(
                             "sync-done",
                             lists = report.lists_pulled,
@@ -581,11 +680,34 @@ impl Tasks {
                             failed = report.tasks_failed
                         );
                         tasks.push(self.update(Message::Tasks(TasksAction::FetchLists)));
+                        // FetchLists won't reload the active list's tasks if the
+                        // selected list id is unchanged; force a re-read so newly
+                        // pulled VTODOs become visible without a manual reselect.
+                        tasks.push(self.update(Message::Content(content::Message::ReloadTasks)));
                     }
                     Err(e) => {
+                        self.sync_last_error = Some(e.clone());
                         self.sync_status = fl!("sync-fail", error = e);
                     }
                 }
+            }
+            ApplicationAction::SignOut => {
+                let username = self.config.sync_username.clone();
+                if !username.is_empty() {
+                    crate::sync::secret::delete(&username);
+                }
+                self.sync_password.clear();
+                if let Some(handler) = &self.config_handler {
+                    if let Err(err) = self.config.set_sync_server_url(handler, String::new()) {
+                        tracing::error!("{err}");
+                    }
+                    if let Err(err) = self.config.set_sync_username(handler, String::new()) {
+                        tracing::error!("{err}");
+                    }
+                }
+                self.sync_status.clear();
+                self.sync_last_at = None;
+                self.sync_last_error = None;
             }
         }
     }
@@ -605,18 +727,18 @@ impl Tasks {
                 }
             },
             TasksAction::PopulateLists(lists) => {
-                let previously_active = self
-                    .nav_model
-                    .active_data::<List>()
-                    .map(|l| l.id.clone());
+                let previously_active = self.nav_model.active_data::<List>().map(|l| l.id.clone());
                 self.nav_model.clear();
                 for list in lists {
                     self.create_nav_item(&list);
                 }
                 let restore = previously_active.and_then(|id| {
-                    self.nav_model
-                        .iter()
-                        .find(|e| self.nav_model.data::<List>(*e).map(|l| l.id == id).unwrap_or(false))
+                    self.nav_model.iter().find(|e| {
+                        self.nav_model
+                            .data::<List>(*e)
+                            .map(|l| l.id == id)
+                            .unwrap_or(false)
+                    })
                 });
                 let target = restore.or_else(|| self.nav_model.iter().next());
                 let Some(entity) = target else {
@@ -673,7 +795,7 @@ impl Application for Tasks {
         let about = widget::about::About::default()
             .name(fl!("tasks"))
             .icon(widget::icon::from_name(Self::APP_ID))
-            .version("0.2.0")
+            .version(env!("CARGO_PKG_VERSION"))
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
             .links([
@@ -704,26 +826,14 @@ impl Application for Tasks {
             sync_status: String::new(),
             sync_in_progress: false,
             sync_password: String::new(),
+            sync_last_at: None,
+            sync_last_error: None,
         };
 
-        // Load password from libsecret. If config still holds a legacy plaintext
-        // password, migrate it into the keyring and clear the config field.
+        // Load CalDAV password from the system keyring (Secret Service / cosmic-keyring).
         let username = app.config.sync_username.clone();
         if let Some(pw) = crate::sync::secret::load(&username) {
             app.sync_password = pw;
-        } else if !app.config.sync_password.is_empty() {
-            let legacy = std::mem::take(&mut app.config.sync_password);
-            if let Err(e) = crate::sync::secret::store(&username, &legacy) {
-                tracing::warn!("Failed to migrate password to keyring: {e}");
-                app.sync_password = legacy;
-            } else {
-                app.sync_password = legacy;
-                if let Some(handler) = &app.config_handler {
-                    if let Err(e) = app.config.set_sync_password(handler, String::new()) {
-                        tracing::warn!("Failed to clear legacy password from config: {e}");
-                    }
-                }
-            }
         }
 
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
@@ -772,6 +882,30 @@ impl Application for Tasks {
         vec![menu::menu_bar(&self.key_binds, &self.config)]
     }
 
+    fn header_end(&self) -> Vec<Element<'_, Self::Message>> {
+        let creds = self.sync_credentials();
+        if !crate::sync::engine::is_configured(&creds) {
+            return vec![];
+        }
+        let icon = if self.sync_in_progress {
+            "process-working-symbolic"
+        } else {
+            "emblem-synchronizing-symbolic"
+        };
+        let mut button = widget::button::icon(icons::get_handle(icon, 18));
+        if !self.sync_in_progress {
+            button = button.on_press(Message::Application(ApplicationAction::SyncNow));
+        }
+        vec![
+            widget::tooltip(
+                button,
+                widget::text(fl!("sync-now")),
+                widget::tooltip::Position::Bottom,
+            )
+            .into(),
+        ]
+    }
+
     fn nav_context_menu(
         &self,
         id: widget::nav_bar::Id,
@@ -793,6 +927,11 @@ impl Application for Tasks {
                     fl!("export"),
                     Some(icons::get_handle("share-symbolic", 18)),
                     NavMenuAction::Export(id),
+                ),
+                cosmic::widget::menu::Item::Button(
+                    fl!("sync-now"),
+                    Some(icons::get_handle("emblem-synchronizing-symbolic", 14)),
+                    NavMenuAction::SyncNow,
                 ),
                 cosmic::widget::menu::Item::Button(
                     fl!("delete"),
@@ -917,5 +1056,24 @@ impl Application for Tasks {
 
     fn view(&self) -> Element<'_, Self::Message> {
         self.content.view().map(Message::Content)
+    }
+}
+
+/// Render `at` as a coarse human-friendly relative timestamp ("just now",
+/// "5 minutes ago"). Used for the last-sync row in settings.
+fn format_relative_time(at: Option<chrono::DateTime<chrono::Utc>>) -> String {
+    let Some(at) = at else {
+        return fl!("account-last-sync-never");
+    };
+    let secs = (chrono::Utc::now() - at).num_seconds().max(0);
+    let n = |s: i64| (s.max(0)) as i32;
+    if secs < 60 {
+        fl!("account-last-sync-just-now")
+    } else if secs < 60 * 60 {
+        fl!("account-last-sync-minutes", count = n(secs / 60))
+    } else if secs < 60 * 60 * 24 {
+        fl!("account-last-sync-hours", count = n(secs / 3600))
+    } else {
+        fl!("account-last-sync-days", count = n(secs / 86400))
     }
 }

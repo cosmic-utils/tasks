@@ -1,12 +1,12 @@
 use cosmic::{
     iced::{
-        alignment::{Horizontal, Vertical},
         Length,
+        alignment::{Horizontal, Vertical},
     },
     widget::{self, calendar::CalendarModel, segmented_button},
 };
 
-use crate::{app::actions::ApplicationAction, app::Message, fl};
+use crate::{app::Message, app::actions::ApplicationAction, fl};
 
 #[derive(Debug, Clone)]
 pub enum DialogAction {

@@ -1,8 +1,8 @@
 use crate::{
     app::{
+        Message,
         context::ContextPage,
         dialog::{DialogAction, DialogPage},
-        Message,
     },
     storage::models::List,
 };
@@ -26,6 +26,9 @@ pub enum Action {
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    SortByDueAsc,
+    SortByDueDesc,
+    SyncNow,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +49,8 @@ pub enum ApplicationAction {
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    SortByDueAsc,
+    SortByDueDesc,
     SetSyncServerUrl(String),
     SetSyncUsername(String),
     SetSyncPassword(String),
@@ -54,6 +59,7 @@ pub enum ApplicationAction {
     SyncNow,
     SyncTick,
     SyncResult(Result<crate::sync::engine::SyncReport, String>),
+    SignOut,
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +101,9 @@ impl MenuAction for Action {
             Action::SortByNameDesc => Message::Application(ApplicationAction::SortByNameDesc),
             Action::SortByDateAsc => Message::Application(ApplicationAction::SortByDateAsc),
             Action::SortByDateDesc => Message::Application(ApplicationAction::SortByDateDesc),
+            Action::SortByDueAsc => Message::Application(ApplicationAction::SortByDueAsc),
+            Action::SortByDueDesc => Message::Application(ApplicationAction::SortByDueDesc),
+            Action::SyncNow => Message::Application(ApplicationAction::SyncNow),
         }
     }
 }
@@ -105,6 +114,7 @@ pub enum NavMenuAction {
     SetIcon(segmented_button::Entity),
     Export(segmented_button::Entity),
     Delete(segmented_button::Entity),
+    SyncNow,
 }
 
 impl MenuAction for NavMenuAction {

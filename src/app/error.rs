@@ -8,8 +8,6 @@ pub enum Error {
     RonSpanned(#[from] ron::error::SpannedError),
     #[error("Ron deserialization error: {0}")]
     RonDeserialization(#[from] ron::de::Error),
-    #[error("Sqlx error: {0}")]
-    Sqlx(#[from] sqlx::Error),
     #[error("{0}")]
     Tasks(#[from] TasksError),
     #[error("{0}")]

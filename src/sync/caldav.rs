@@ -1,9 +1,9 @@
 use base64::Engine as _;
-use chrono::{DateTime, Utc};
-use icalendar::{Calendar as ICalendar, Component, Todo};
-use quick_xml::events::Event;
+use chrono::{DateTime, NaiveDate, Utc};
+use icalendar::{Calendar as ICalendar, CalendarDateTime, Component, DatePerhapsTime, Todo};
 use quick_xml::Reader;
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, CONTENT_TYPE};
+use quick_xml::events::Event;
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, Method};
 use thiserror::Error;
 use url::Url;
@@ -55,10 +55,10 @@ pub struct RemoteTodo {
 impl CalDavClient {
     pub fn new(base_url: &str, username: &str, password: &str) -> Result<Self> {
         let base_url = Url::parse(base_url)?;
-        let token = base64::engine::general_purpose::STANDARD
-            .encode(format!("{username}:{password}"));
-        let auth_header = HeaderValue::from_str(&format!("Basic {token}"))
-            .map_err(|_| CalDavError::Header)?;
+        let token =
+            base64::engine::general_purpose::STANDARD.encode(format!("{username}:{password}"));
+        let auth_header =
+            HeaderValue::from_str(&format!("Basic {token}")).map_err(|_| CalDavError::Header)?;
         let http = Client::builder()
             .user_agent("cosmic-tasks-caldav/0.1")
             .build()?;
@@ -143,8 +143,8 @@ impl CalDavClient {
         if !(status.is_success() || status.as_u16() == 207) {
             return Err(CalDavError::Status(status.as_u16()));
         }
-        let href = first_inner_href(&text, "current-user-principal")
-            .ok_or(CalDavError::NoPrincipal)?;
+        let href =
+            first_inner_href(&text, "current-user-principal").ok_or(CalDavError::NoPrincipal)?;
         Ok(self.base_url.join(&href)?)
     }
 
@@ -162,8 +162,8 @@ impl CalDavClient {
         if !(status.is_success() || status.as_u16() == 207) {
             return Err(CalDavError::Status(status.as_u16()));
         }
-        let href = first_inner_href(&text, "calendar-home-set")
-            .ok_or(CalDavError::NoCalendarHome)?;
+        let href =
+            first_inner_href(&text, "calendar-home-set").ok_or(CalDavError::NoCalendarHome)?;
         Ok(self.base_url.join(&href)?)
     }
 
@@ -197,14 +197,24 @@ impl CalDavClient {
             if !r.supports_vtodo {
                 continue;
             }
-            let url = self.base_url.join(&r.href)?;
+            let mut url = self.base_url.join(&r.href)?;
             // Skip the home itself if it appeared in the listing.
             if url == home {
                 continue;
             }
+            // CalDAV collections are always directories; ensure the trailing
+            // slash so `Url::join("uid.ics")` appends rather than replacing
+            // the last segment.
+            if !url.path().ends_with('/') {
+                url.set_path(&format!("{}/", url.path()));
+            }
             let display_name = r.display_name.unwrap_or_else(|| {
                 url.path_segments()
-                    .and_then(|s| s.filter(|x| !x.is_empty()).last().map(|x| x.to_string()))
+                    .and_then(|s| {
+                        s.filter(|x| !x.is_empty())
+                            .next_back()
+                            .map(|x| x.to_string())
+                    })
                     .unwrap_or_else(|| "Calendar".to_string())
             });
             out.push(RemoteCalendar { url, display_name });
@@ -367,14 +377,6 @@ fn parse_multistatus(xml: &str) -> Result<Vec<DavResponse>> {
                     b"displayname" => text_target = Some("displayname"),
                     b"getetag" => text_target = Some("etag"),
                     b"calendar-data" => text_target = Some("caldata"),
-                    b"collection" => {
-                        // Inside <resourcetype>; combined with <calendar/> sibling means a calendar collection.
-                        if let Some(c) = current.as_mut() {
-                            // mark provisional; finalized when we also see <calendar/>
-                            c.is_collection_calendar |= stack.iter().any(|n| n == b"resourcetype")
-                                && false; // placeholder
-                        }
-                    }
                     b"calendar" => {
                         if let Some(c) = current.as_mut() {
                             if stack.iter().any(|n| n == b"resourcetype") {
@@ -490,9 +492,7 @@ fn first_inner_href(xml: &str, parent_local: &str) -> Option<String> {
 // --- VTODO <-> Task mapping -------------------------------------------------
 
 pub fn parse_vtodo(ical: &str) -> std::result::Result<Todo, CalDavError> {
-    let cal: ICalendar = ical
-        .parse()
-        .map_err(|e: String| CalDavError::ICal(e))?;
+    let cal: ICalendar = ical.parse().map_err(|e: String| CalDavError::ICal(e))?;
     cal.components
         .into_iter()
         .find_map(|c| match c {
@@ -524,20 +524,28 @@ pub fn vtodo_to_task(todo: &Todo, list_path: std::path::PathBuf) -> Task {
         None => Priority::Low,
     };
 
+    // DUE accepts every variant the icalendar crate understands: DATE,
+    // DATE-TIME UTC (`...Z`), floating DATE-TIME, and DATE-TIME with a TZID
+    // parameter. Falls back to a textual parse for the loose forms some
+    // servers emit (e.g. ISO-8601 with separators).
     let due_date = todo
-        .property_value("DUE")
-        .and_then(parse_ical_datetime);
-    let completion_date = todo
-        .property_value("COMPLETED")
-        .and_then(parse_ical_datetime);
+        .get_due()
+        .map(date_perhaps_time_to_utc)
+        .or_else(|| todo.property_value("DUE").and_then(parse_ical_datetime));
+    let completion_date = todo.get_completed().or_else(|| {
+        todo.property_value("COMPLETED")
+            .and_then(parse_ical_datetime)
+    });
     let created = todo
         .property_value("CREATED")
         .and_then(parse_ical_datetime)
+        .or_else(|| todo.property_value("DTSTAMP").and_then(parse_ical_datetime))
         .unwrap_or(now);
     let last_modified = todo
         .property_value("LAST-MODIFIED")
         .and_then(parse_ical_datetime)
-        .unwrap_or(now);
+        .or_else(|| todo.property_value("DTSTAMP").and_then(parse_ical_datetime))
+        .unwrap_or(created);
     let tags = todo
         .property_value("CATEGORIES")
         .map(|s| {
@@ -591,38 +599,95 @@ pub fn task_to_vtodo(task: &Task) -> String {
     };
     todo.add_property("PRIORITY", prio);
     if let Some(due) = task.due_date {
-        todo.add_property("DUE", &format_ical_datetime(due));
+        // The UI only picks dates (no time-of-day), and SetDueDate stores a
+        // local-midnight value. Detect that and emit VALUE=DATE so other
+        // CalDAV clients show the same calendar day regardless of timezone.
+        if is_local_date_only(due) {
+            todo.due(due.with_timezone(&chrono::Local).date_naive());
+        } else {
+            todo.due(due);
+        }
     }
     if let Some(c) = task.completion_date {
-        todo.add_property("COMPLETED", &format_ical_datetime(c));
+        todo.completed(c);
     }
     if !task.tags.is_empty() {
-        todo.add_property("CATEGORIES", &task.tags.join(","));
+        todo.add_property("CATEGORIES", task.tags.join(","));
     }
-    todo.add_property("CREATED", &format_ical_datetime(task.created_date_time));
+    todo.add_property("CREATED", format_ical_datetime(task.created_date_time));
     todo.add_property(
         "LAST-MODIFIED",
-        &format_ical_datetime(task.last_modified_date_time),
+        format_ical_datetime(task.last_modified_date_time),
     );
+    todo.add_property("DTSTAMP", format_ical_datetime(Utc::now()));
 
     let mut cal = ICalendar::new();
     cal.push(todo.done());
     cal.to_string()
 }
 
+/// True if `dt`, viewed in the user's local timezone, falls exactly on
+/// midnight — the encoding the date picker emits for an all-day due date.
+fn is_local_date_only(dt: DateTime<Utc>) -> bool {
+    use chrono::Timelike;
+    let local = dt.with_timezone(&chrono::Local);
+    local.hour() == 0 && local.minute() == 0 && local.second() == 0 && local.nanosecond() == 0
+}
+
+/// Reduce any iCalendar date/date-time variant into a UTC instant suitable
+/// for the local Task model. Floating and TZID-bearing times are taken at
+/// face value (chrono-tz is not enabled, so TZID can't be resolved).
+fn date_perhaps_time_to_utc(dpt: DatePerhapsTime) -> DateTime<Utc> {
+    match dpt {
+        DatePerhapsTime::Date(d) => date_at_midnight_utc(d),
+        DatePerhapsTime::DateTime(CalendarDateTime::Utc(dt)) => dt,
+        DatePerhapsTime::DateTime(CalendarDateTime::Floating(naive)) => {
+            DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)
+        }
+        DatePerhapsTime::DateTime(CalendarDateTime::WithTimezone { date_time, .. }) => {
+            DateTime::<Utc>::from_naive_utc_and_offset(date_time, Utc)
+        }
+    }
+}
+
+fn date_at_midnight_utc(d: NaiveDate) -> DateTime<Utc> {
+    DateTime::<Utc>::from_naive_utc_and_offset(d.and_hms_opt(0, 0, 0).unwrap_or_default(), Utc)
+}
+
+/// Loose textual parser used as a fallback when the icalendar crate refuses
+/// the input. Accepts:
+///   - `20260101T120000Z` / `20260101T120000`        (basic iCal)
+///   - `20260101`                                    (DATE)
+///   - `2026-01-01T12:00:00Z` / `2026-01-01T12:00:00` (extended ISO-8601)
+///   - `2026-01-01`                                  (extended date)
+///   - `2026-01-01T12:00:00+02:00` (with offset)
 fn parse_ical_datetime(s: &str) -> Option<DateTime<Utc>> {
-    // Accept basic iCalendar forms: 20260101T120000Z, 20260101T120000, 20260101.
-    // chrono::DateTime::parse_from_str rejects a literal 'Z' as a timezone
-    // specifier, so strip it and parse as NaiveDateTime in UTC.
     let s = s.trim();
+    if s.is_empty() {
+        return None;
+    }
+
+    // RFC 3339 / ISO-8601 with offset.
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        return Some(dt.with_timezone(&Utc));
+    }
+
     let no_z = s.strip_suffix('Z').unwrap_or(s);
-    if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(no_z, "%Y%m%dT%H%M%S") {
-        return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
+
+    // Basic and extended date-time forms.
+    for fmt in ["%Y%m%dT%H%M%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"] {
+        if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(no_z, fmt) {
+            return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
+        }
     }
-    if let Ok(date) = chrono::NaiveDate::parse_from_str(no_z, "%Y%m%d") {
-        let naive = date.and_hms_opt(0, 0, 0)?;
-        return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
+
+    // Date-only forms.
+    for fmt in ["%Y%m%d", "%Y-%m-%d"] {
+        if let Ok(date) = NaiveDate::parse_from_str(no_z, fmt) {
+            return Some(date_at_midnight_utc(date));
+        }
     }
+
     None
 }
 
@@ -633,7 +698,10 @@ mod tests {
     #[test]
     fn parses_zulu_datetime() {
         let dt = parse_ical_datetime("20260405T170617Z").expect("should parse");
-        assert_eq!(dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(), "2026-04-05T17:06:17Z");
+        assert_eq!(
+            dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+            "2026-04-05T17:06:17Z"
+        );
     }
 
     #[test]
@@ -644,6 +712,65 @@ mod tests {
     #[test]
     fn parses_date_only() {
         assert!(parse_ical_datetime("20260330").is_some());
+    }
+
+    #[test]
+    fn parses_iso8601_extended_date_time() {
+        let dt = parse_ical_datetime("2026-04-05T17:06:17Z").expect("iso-8601 utc");
+        assert_eq!(
+            dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+            "2026-04-05T17:06:17Z"
+        );
+    }
+
+    #[test]
+    fn parses_iso8601_with_offset() {
+        let dt = parse_ical_datetime("2026-04-05T19:06:17+02:00").expect("iso-8601 offset");
+        assert_eq!(
+            dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+            "2026-04-05T17:06:17Z"
+        );
+    }
+
+    #[test]
+    fn parses_iso8601_extended_date_only() {
+        assert!(parse_ical_datetime("2026-04-05").is_some());
+    }
+
+    #[test]
+    fn rejects_garbage() {
+        assert!(parse_ical_datetime("not a date").is_none());
+        assert!(parse_ical_datetime("").is_none());
+    }
+
+    #[test]
+    fn date_only_round_trip_emits_value_date() {
+        use chrono::{Local, TimeZone};
+        // Construct a local-midnight value, the same way the date picker does.
+        let local_midnight = Local
+            .from_local_datetime(
+                &NaiveDate::from_ymd_opt(2026, 4, 28)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
+            .single()
+            .unwrap()
+            .with_timezone(&Utc);
+        let task = Task {
+            id: "abc".into(),
+            path: std::path::PathBuf::from("/tmp"),
+            title: "t".into(),
+            due_date: Some(local_midnight),
+            created_date_time: Utc::now(),
+            last_modified_date_time: Utc::now(),
+            ..Default::default()
+        };
+        let ical = task_to_vtodo(&task);
+        assert!(
+            ical.contains("DUE;VALUE=DATE:20260428"),
+            "expected DUE as VALUE=DATE for local 2026-04-28; got:\n{ical}"
+        );
     }
 }
 
