@@ -43,6 +43,21 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.3.0" date="2026-04-28">
+        <description>
+            <p>CalDAV sync 🌐</p>
+            <ul>
+                <li>Two-way sync against any CalDAV server (Nextcloud, Radicale, SOGo, Fastmail, …)</li>
+                <li>Auto-discovers task calendars from your account</li>
+                <li>Pushes edits as you go and runs a periodic sync in the background</li>
+                <li>One-click sync from the header bar, View menu, and per-list right-click menu</li>
+                <li>Account credentials are stored in the system keyring (Secret Service / cosmic-keyring)</li>
+                <li>Accepts the full range of iCalendar date forms (UTC, floating, TZID, all-day, ISO-8601)</li>
+                <li>Pulled VTODOs now appear immediately in the active list — no need to reselect</li>
+                <li>Internet must be enabled in flatpak permissions to use sync</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.0" date="2025-05-27">
         <description>
             <p>Powerful new features! 🚀</p>
@@ -126,7 +141,7 @@
   </categories>
   <requires>
     <display_length compare="ge">360</display_length>
-    <internet>offline-only</internet>
+    <internet>always</internet>
   </requires>
   <supports>
     <control>keyboard</control>

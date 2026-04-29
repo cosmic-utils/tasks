@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use cosmic::{
-    widget::menu::{items, key_bind::KeyBind, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
     Element,
+    widget::menu::{Item, ItemHeight, ItemWidth, MenuBar, Tree, items, key_bind::KeyBind, root},
 };
 
 use crate::{
@@ -81,6 +81,12 @@ pub fn menu_bar<'a>(
                         Action::Settings,
                     ),
                     Item::Divider,
+                    Item::Button(
+                        fl!("sync-now"),
+                        Some(icons::get_handle("emblem-synchronizing-symbolic", 14)),
+                        Action::SyncNow,
+                    ),
+                    Item::Divider,
                     Item::CheckBox(
                         fl!("hide-completed"),
                         None,
@@ -103,8 +109,12 @@ pub fn menu_bar<'a>(
                 vec![
                     Item::Button(fl!("sort-name-asc"), None, Action::SortByNameAsc),
                     Item::Button(fl!("sort-name-desc"), None, Action::SortByNameDesc),
+                    Item::Divider,
                     Item::Button(fl!("sort-date-asc"), None, Action::SortByDateAsc),
                     Item::Button(fl!("sort-date-desc"), None, Action::SortByDateDesc),
+                    Item::Divider,
+                    Item::Button(fl!("sort-due-asc"), None, Action::SortByDueAsc),
+                    Item::Button(fl!("sort-due-desc"), None, Action::SortByDueDesc),
                 ],
             ),
         ),

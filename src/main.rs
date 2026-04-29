@@ -2,6 +2,7 @@ mod app;
 mod core;
 mod pages;
 mod storage;
+mod sync;
 
 use core::settings;
 
