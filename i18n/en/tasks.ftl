@@ -47,15 +47,9 @@ select-date = Select a date
 # Export Dialog
 export = Export
 export-save-to-file = Save to file…
-export-save-path-label = Save to
-export-save-path-hint = /home/you/Documents/list.md
 
-# Import Dialog
+# Import (file → File menu entry)
 import = Import from markdown
-import-action = Import
-import-description = Pick a markdown file to import. The first heading becomes the list name; sub-headings become parent tasks; bullets become tasks.
-import-path-label = Markdown file
-import-path-hint = /home/you/todo.md
 
 # Dialogs
 cancel = Cancel

@@ -425,7 +425,7 @@ impl Tasks {
                                 details::Message::SetDueDate(date.selected),
                             )));
                         }
-                        DialogPage::Export(content, _path) => {
+                        DialogPage::Export(content, _filename) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
                                 tracing::error!("Clipboard is not available");
                                 return;
@@ -434,74 +434,8 @@ impl Tasks {
                                 tracing::error!("Error setting clipboard contents: {error}");
                             }
                         }
-                        DialogPage::Import { path, .. } => {
-                            let trimmed = path.trim();
-                            if trimmed.is_empty() {
-                                return;
-                            }
-                            let expanded = expand_user_path(trimmed);
-                            match std::fs::read_to_string(&expanded) {
-                                Ok(text) => {
-                                    let parsed =
-                                        crate::app::markdown::parse_import(&text);
-                                    let fallback = expanded
-                                        .file_stem()
-                                        .and_then(|s| s.to_str())
-                                        .unwrap_or("Imported")
-                                        .to_string();
-                                    match self.storage.import_list(parsed, &fallback) {
-                                        Ok(list) => {
-                                            tasks.push(self.update(Message::Tasks(
-                                                TasksAction::AddList(list),
-                                            )));
-                                        }
-                                        Err(err) => {
-                                            tracing::error!("Import failed: {err}");
-                                            self.dialog_pages.push_front(DialogPage::Import {
-                                                path: path.clone(),
-                                                status: format!("Import failed: {err}"),
-                                            });
-                                        }
-                                    }
-                                }
-                                Err(err) => {
-                                    tracing::error!(
-                                        "Reading {} failed: {err}",
-                                        expanded.display()
-                                    );
-                                    self.dialog_pages.push_front(DialogPage::Import {
-                                        path: path.clone(),
-                                        status: format!("Could not read file: {err}"),
-                                    });
-                                }
-                            }
-                        }
                     }
                 }
-            }
-            DialogAction::ExportSave => {
-                let Some(DialogPage::Export(content, save_path)) = self.dialog_pages.front()
-                else {
-                    return;
-                };
-                let trimmed = save_path.trim();
-                if trimmed.is_empty() {
-                    return;
-                }
-                let target = expand_user_path(trimmed);
-                if let Some(parent) = target.parent() {
-                    if !parent.as_os_str().is_empty() && !parent.exists() {
-                        if let Err(err) = std::fs::create_dir_all(parent) {
-                            tracing::error!("create dir {}: {err}", parent.display());
-                            return;
-                        }
-                    }
-                }
-                if let Err(err) = std::fs::write(&target, content.as_bytes()) {
-                    tracing::error!("write {}: {err}", target.display());
-                    return;
-                }
-                self.dialog_pages.pop_front();
             }
             DialogAction::None => (),
         }
@@ -579,10 +513,10 @@ impl Tasks {
                         match self.storage.tasks(list) {
                             Ok(data) => {
                                 let exported_markdown = LocalStorage::export_list(list, &data);
-                                let default_path = default_export_path(&list.name);
+                                let default_filename = default_export_filename(&list.name);
                                 tasks.push(self.update(Message::Application(
                                     ApplicationAction::Dialog(DialogAction::Open(
-                                        DialogPage::Export(exported_markdown, default_path),
+                                        DialogPage::Export(exported_markdown, default_filename),
                                     )),
                                 )));
                             }
@@ -654,6 +588,56 @@ impl Tasks {
                     content::SortType::DueDesc,
                 ))));
             }
+            ApplicationAction::ImportFromFile => {
+                tasks.push(cosmic::Task::perform(
+                    pick_and_read_markdown(),
+                    |result| {
+                        cosmic::Action::App(Message::Application(
+                            ApplicationAction::ImportFromFileResult(result),
+                        ))
+                    },
+                ));
+            }
+            ApplicationAction::ImportFromFileResult(result) => match result {
+                Ok((filename, text)) => {
+                    let parsed = crate::app::markdown::parse_import(&text);
+                    let fallback = std::path::Path::new(&filename)
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("Imported")
+                        .to_string();
+                    match self.storage.import_list(parsed, &fallback) {
+                        Ok(list) => {
+                            tasks.push(self.update(Message::Tasks(TasksAction::AddList(list))));
+                        }
+                        Err(err) => tracing::error!("import failed: {err}"),
+                    }
+                }
+                Err(e) if e == "cancelled" => {}
+                Err(e) => tracing::error!("import picker: {e}"),
+            },
+            ApplicationAction::SaveExportToFile => {
+                let Some(DialogPage::Export(content, default_filename)) =
+                    self.dialog_pages.front().cloned()
+                else {
+                    return;
+                };
+                tasks.push(cosmic::Task::perform(
+                    pick_and_save_markdown(content, default_filename),
+                    |result| {
+                        cosmic::Action::App(Message::Application(
+                            ApplicationAction::SaveExportToFileResult(result),
+                        ))
+                    },
+                ));
+            }
+            ApplicationAction::SaveExportToFileResult(result) => match result {
+                Ok(_) => {
+                    self.dialog_pages.pop_front();
+                }
+                Err(e) if e == "cancelled" => {}
+                Err(e) => tracing::error!("export save: {e}"),
+            },
             ApplicationAction::ToggleEncryptNotes(value) => {
                 if let Some(handler) = &self.config_handler {
                     if let Err(err) = self.config.set_encrypt_notes(handler, value) {
@@ -1158,40 +1142,54 @@ impl Application for Tasks {
     }
 }
 
-/// Resolve a user-typed path: expand a leading `~` (and `~/`) to the user's
-/// home dir; leave anything else untouched.
-fn expand_user_path(input: &str) -> std::path::PathBuf {
-    let trimmed = input.trim();
-    if let Some(rest) = trimmed.strip_prefix("~/") {
-        if let Some(home) = dirs::home_dir() {
-            return home.join(rest);
-        }
-    } else if trimmed == "~" {
-        if let Some(home) = dirs::home_dir() {
-            return home;
-        }
-    }
-    std::path::PathBuf::from(trimmed)
-}
-
-/// Suggest a default destination for "Save to file" — the user's documents
-/// directory if available, otherwise their home dir, falling back to the
-/// current working directory. The filename is the list name slugified.
-fn default_export_path(list_name: &str) -> String {
+/// Slugified default filename to seed the portal Save dialog with.
+fn default_export_filename(list_name: &str) -> String {
     let slug: String = list_name
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
         .collect();
     let slug = slug.trim_matches('-');
-    let filename = if slug.is_empty() {
+    if slug.is_empty() {
         "tasks.md".to_string()
     } else {
         format!("{slug}.md")
-    };
-    let dir = dirs::document_dir()
-        .or_else(dirs::home_dir)
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
-    dir.join(filename).display().to_string()
+    }
+}
+
+/// Open the portal file chooser and return `(filename, contents)` for the
+/// picked markdown file. Uses `rfd`'s xdg-portal backend so it works
+/// inside a Flatpak sandbox without needing `--filesystem=home`. The
+/// `"cancelled"` sentinel signals user cancellation, which the caller
+/// treats as a no-op.
+async fn pick_and_read_markdown() -> Result<(String, String), String> {
+    let handle = rfd::AsyncFileDialog::new()
+        .set_title(&fl!("import"))
+        .add_filter("Markdown / text", &["md", "markdown", "txt"])
+        .pick_file()
+        .await
+        .ok_or_else(|| "cancelled".to_string())?;
+    let bytes = handle.read().await;
+    let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+    Ok((handle.file_name(), text))
+}
+
+/// Open the portal Save dialog and write `content` to the chosen path.
+async fn pick_and_save_markdown(
+    content: String,
+    default_filename: String,
+) -> Result<std::path::PathBuf, String> {
+    let handle = rfd::AsyncFileDialog::new()
+        .set_title(&fl!("export-save-to-file"))
+        .set_file_name(&default_filename)
+        .add_filter("Markdown", &["md"])
+        .save_file()
+        .await
+        .ok_or_else(|| "cancelled".to_string())?;
+    handle
+        .write(content.as_bytes())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(handle.path().to_path_buf())
 }
 
 /// Render `at` as a coarse human-friendly relative timestamp ("just now",

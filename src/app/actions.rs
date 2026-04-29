@@ -53,6 +53,16 @@ pub enum ApplicationAction {
     SortByDueAsc,
     SortByDueDesc,
     ToggleEncryptNotes(bool),
+    /// Open the portal file picker to choose a markdown file, then read +
+    /// parse it. The result is delivered via `ImportFromFileResult`.
+    ImportFromFile,
+    /// `(filename, contents)` on success, or a short error string. The
+    /// "cancelled" sentinel is treated as a no-op.
+    ImportFromFileResult(Result<(String, String), String>),
+    /// Open the portal Save dialog for the currently displayed Export
+    /// payload and write the markdown to the chosen path.
+    SaveExportToFile,
+    SaveExportToFileResult(Result<std::path::PathBuf, String>),
     SetSyncServerUrl(String),
     SetSyncUsername(String),
     SetSyncPassword(String),
@@ -87,12 +97,9 @@ impl MenuAction for Action {
             Action::NewList => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::New(String::new()),
             ))),
-            Action::ImportList => Message::Application(ApplicationAction::Dialog(
-                DialogAction::Open(DialogPage::Import {
-                    path: String::new(),
-                    status: String::new(),
-                }),
-            )),
+            Action::ImportList => {
+                Message::Application(ApplicationAction::ImportFromFile)
+            }
             Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::Icon(None, String::new(), String::new()),
             ))),
