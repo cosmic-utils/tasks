@@ -17,6 +17,8 @@ quick-xml = "*"
 icalendar = "*"
 base64 = "*"
 url = "*"
+chacha20poly1305 = "*"
+rand = "*"
 
 [dependencies.keyring]
 version = "*"

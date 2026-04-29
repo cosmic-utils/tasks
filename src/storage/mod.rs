@@ -1,17 +1,25 @@
 pub mod migration;
 pub mod models;
+pub mod notes_crypto;
 
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
     Error, LocalStorageError, TasksError,
-    app::markdown::Markdown,
-    storage::models::{List, Task},
+    app::markdown::{ImportedList, ImportedTask, Markdown},
+    storage::models::{List, Status, Task},
 };
 
 #[derive(Debug, Clone)]
 pub struct LocalStorage {
     paths: LocalStoragePaths,
+    /// Whether new writes should encrypt `Task::notes`. Reads always
+    /// auto-detect, so this only governs the *outgoing* shape. Wrapped
+    /// in `Arc<AtomicBool>` so all clones in the app see the latest
+    /// value the moment the user toggles the setting.
+    encrypt_notes: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,9 +48,45 @@ impl LocalStorage {
         }
         let storage = Self {
             paths: LocalStoragePaths { lists: lists_path },
+            encrypt_notes: Arc::new(AtomicBool::new(false)),
         };
 
         Ok(storage)
+    }
+
+    pub fn set_encrypt_notes(&self, on: bool) {
+        self.encrypt_notes.store(on, Ordering::Relaxed);
+    }
+
+    pub fn encrypt_notes_enabled(&self) -> bool {
+        self.encrypt_notes.load(Ordering::Relaxed)
+    }
+
+    /// Decrypt `task.notes` in place. Errors are downgraded to a warning
+    /// and the (still-encrypted) value is left as-is — that way a missing
+    /// key (e.g. on a fresh machine that hasn't unlocked the keyring yet)
+    /// does not crash list views.
+    fn decrypt_notes(task: &mut Task) {
+        if !notes_crypto::is_encrypted(&task.notes) {
+            return;
+        }
+        match notes_crypto::decrypt(&task.notes) {
+            Ok(plain) => task.notes = plain,
+            Err(e) => tracing::warn!("decrypt notes for task {}: {e}", task.id),
+        }
+    }
+
+    fn encrypt_notes_for_write(&self, task: &mut Task) {
+        if !self.encrypt_notes_enabled() {
+            return;
+        }
+        if task.notes.is_empty() {
+            return;
+        }
+        match notes_crypto::encrypt(&task.notes) {
+            Ok(ct) => task.notes = ct,
+            Err(e) => tracing::warn!("encrypt notes for task {}: {e}", task.id),
+        }
     }
 
     pub fn tasks(&self, list: &List) -> Result<Vec<Task>, Error> {
@@ -57,6 +101,7 @@ impl LocalStorage {
             if path.is_file() {
                 let content = std::fs::read_to_string(&path)?;
                 let mut task: Task = ron::from_str(&content)?;
+                Self::decrypt_notes(&mut task);
                 if let Some(stem) = path.file_stem() {
                     let folder_path = path.parent().unwrap().join(stem);
                     if folder_path.is_dir() {
@@ -81,6 +126,7 @@ impl LocalStorage {
             if path.is_file() {
                 let content = std::fs::read_to_string(&path)?;
                 let mut task: Task = ron::from_str(&content)?;
+                Self::decrypt_notes(&mut task);
                 if let Some(stem) = path.file_stem() {
                     let folder_path = path.parent().unwrap().join(stem);
                     if folder_path.is_dir() {
@@ -109,7 +155,9 @@ impl LocalStorage {
         let path = task.file_path();
         if !path.exists() {
             std::fs::create_dir_all(&task.path)?;
-            let content = ron::to_string(&task)?;
+            let mut to_write = task.clone();
+            self.encrypt_notes_for_write(&mut to_write);
+            let content = ron::to_string(&to_write)?;
             std::fs::write(path, content)?;
             Ok(task.clone())
         } else {
@@ -123,6 +171,7 @@ impl LocalStorage {
         if path.exists() {
             let mut touched = task.clone();
             touched.last_modified_date_time = chrono::Utc::now();
+            self.encrypt_notes_for_write(&mut touched);
             let content = ron::to_string(&touched)?;
             std::fs::write(path, content)?;
             Ok(())
@@ -136,7 +185,9 @@ impl LocalStorage {
     pub fn replace_task(&self, task: &Task) -> Result<(), Error> {
         let path = task.file_path();
         if path.exists() {
-            let content = ron::to_string(&task)?;
+            let mut to_write = task.clone();
+            self.encrypt_notes_for_write(&mut to_write);
+            let content = ron::to_string(&to_write)?;
             std::fs::write(path, content)?;
             Ok(())
         } else {
@@ -196,5 +247,54 @@ impl LocalStorage {
         let markdown = list.markdown();
         let tasks_markdown: String = tasks.iter().map(Markdown::markdown).collect();
         format!("{markdown}\n{tasks_markdown}")
+    }
+
+    /// Materialize a parsed markdown document as a brand-new local list with
+    /// its tasks (and sub-task tree) on disk. The list is created fresh so
+    /// it does not collide with any existing CalDAV-bound list; users can
+    /// later attach a remote URL via sync. Returns the persisted `List`.
+    pub fn import_list(&self, parsed: ImportedList, fallback_name: &str) -> Result<List, Error> {
+        let name = parsed
+            .name
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(fallback_name);
+        let list = List::new(name);
+        let list = self.create_list(&list)?;
+        let tasks_path = list.tasks_path();
+        if !tasks_path.exists() {
+            std::fs::create_dir_all(&tasks_path)?;
+        }
+        for task in &parsed.tasks {
+            self.write_imported_task(task, &tasks_path)?;
+        }
+        Ok(list)
+    }
+
+    fn write_imported_task(
+        &self,
+        task: &ImportedTask,
+        parent_dir: &std::path::Path,
+    ) -> Result<(), Error> {
+        let now = chrono::Utc::now();
+        let mut model = Task::new(task.title.clone(), parent_dir.to_path_buf());
+        model.status = if task.completed {
+            Status::Completed
+        } else {
+            Status::NotStarted
+        };
+        if task.completed {
+            model.completion_date = Some(now);
+        }
+        self.create_task(&model)?;
+        if !task.children.is_empty() {
+            let sub_dir = model.sub_tasks_path();
+            std::fs::create_dir_all(&sub_dir)?;
+            for child in &task.children {
+                self.write_imported_task(child, &sub_dir)?;
+            }
+        }
+        Ok(())
     }
 }

@@ -210,11 +210,7 @@ impl CalDavClient {
             }
             let display_name = r.display_name.unwrap_or_else(|| {
                 url.path_segments()
-                    .and_then(|s| {
-                        s.filter(|x| !x.is_empty())
-                            .next_back()
-                            .map(|x| x.to_string())
-                    })
+                    .and_then(|mut s| s.rfind(|x| !x.is_empty()).map(|x| x.to_string()))
                     .unwrap_or_else(|| "Calendar".to_string())
             });
             out.push(RemoteCalendar { url, display_name });
@@ -332,7 +328,7 @@ fn append_target(c: &mut DavResponse, target: &str, s: &str) {
     match target {
         "href" => {
             if c.href.is_empty() {
-                c.href = s.to_string();
+                c.href = s.to_string()
             }
         }
         "displayname" => match &mut c.display_name {
@@ -378,10 +374,10 @@ fn parse_multistatus(xml: &str) -> Result<Vec<DavResponse>> {
                     b"getetag" => text_target = Some("etag"),
                     b"calendar-data" => text_target = Some("caldata"),
                     b"calendar" => {
-                        if let Some(c) = current.as_mut() {
-                            if stack.iter().any(|n| n == b"resourcetype") {
-                                c.is_collection_calendar = true;
-                            }
+                        if let Some(c) = current.as_mut()
+                            && stack.iter().any(|n| n == b"resourcetype")
+                        {
+                            c.is_collection_calendar = true;
                         }
                     }
                     _ => {}
@@ -391,12 +387,13 @@ fn parse_multistatus(xml: &str) -> Result<Vec<DavResponse>> {
                 let local = local_name(e.name().as_ref()).to_vec();
                 match local.as_slice() {
                     b"calendar" => {
-                        if let Some(c) = current.as_mut() {
-                            if stack.iter().any(|n| n == b"resourcetype") {
-                                c.is_collection_calendar = true;
-                            }
+                        if let Some(c) = current.as_mut()
+                            && stack.iter().any(|n| n == b"resourcetype")
+                        {
+                            c.is_collection_calendar = true;
                         }
                     }
+
                     b"comp" => {
                         // <c:comp name="VTODO"/> inside supported-calendar-component-set
                         if let Some(c) = current.as_mut() {

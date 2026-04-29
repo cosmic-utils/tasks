@@ -96,6 +96,13 @@ impl Tasks {
                     ),
                 ));
 
+        let privacy = widget::settings::section()
+            .title(fl!("privacy"))
+            .add(widget::settings::item::builder(fl!("encrypt-notes")).description(fl!("encrypt-notes-description")).control(
+                widget::toggler(self.config.encrypt_notes)
+                    .on_toggle(|on| Message::Application(ApplicationAction::ToggleEncryptNotes(on))),
+            ));
+
         let creds = self.sync_credentials();
         let configured = crate::sync::engine::is_configured(&creds);
 
@@ -223,8 +230,12 @@ impl Tasks {
         }
 
         widget::scrollable(
-            widget::column::with_children(vec![appearance.into(), account_section.into()])
-                .spacing(spacing.space_m),
+            widget::column::with_children(vec![
+                appearance.into(),
+                privacy.into(),
+                account_section.into(),
+            ])
+            .spacing(spacing.space_m),
         )
         .into()
     }
@@ -414,7 +425,7 @@ impl Tasks {
                                 details::Message::SetDueDate(date.selected),
                             )));
                         }
-                        DialogPage::Export(content) => {
+                        DialogPage::Export(content, _path) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
                                 tracing::error!("Clipboard is not available");
                                 return;
@@ -423,8 +434,74 @@ impl Tasks {
                                 tracing::error!("Error setting clipboard contents: {error}");
                             }
                         }
+                        DialogPage::Import { path, .. } => {
+                            let trimmed = path.trim();
+                            if trimmed.is_empty() {
+                                return;
+                            }
+                            let expanded = expand_user_path(trimmed);
+                            match std::fs::read_to_string(&expanded) {
+                                Ok(text) => {
+                                    let parsed =
+                                        crate::app::markdown::parse_import(&text);
+                                    let fallback = expanded
+                                        .file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .unwrap_or("Imported")
+                                        .to_string();
+                                    match self.storage.import_list(parsed, &fallback) {
+                                        Ok(list) => {
+                                            tasks.push(self.update(Message::Tasks(
+                                                TasksAction::AddList(list),
+                                            )));
+                                        }
+                                        Err(err) => {
+                                            tracing::error!("Import failed: {err}");
+                                            self.dialog_pages.push_front(DialogPage::Import {
+                                                path: path.clone(),
+                                                status: format!("Import failed: {err}"),
+                                            });
+                                        }
+                                    }
+                                }
+                                Err(err) => {
+                                    tracing::error!(
+                                        "Reading {} failed: {err}",
+                                        expanded.display()
+                                    );
+                                    self.dialog_pages.push_front(DialogPage::Import {
+                                        path: path.clone(),
+                                        status: format!("Could not read file: {err}"),
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
+            }
+            DialogAction::ExportSave => {
+                let Some(DialogPage::Export(content, save_path)) = self.dialog_pages.front()
+                else {
+                    return;
+                };
+                let trimmed = save_path.trim();
+                if trimmed.is_empty() {
+                    return;
+                }
+                let target = expand_user_path(trimmed);
+                if let Some(parent) = target.parent() {
+                    if !parent.as_os_str().is_empty() && !parent.exists() {
+                        if let Err(err) = std::fs::create_dir_all(parent) {
+                            tracing::error!("create dir {}: {err}", parent.display());
+                            return;
+                        }
+                    }
+                }
+                if let Err(err) = std::fs::write(&target, content.as_bytes()) {
+                    tracing::error!("write {}: {err}", target.display());
+                    return;
+                }
+                self.dialog_pages.pop_front();
             }
             DialogAction::None => (),
         }
@@ -502,9 +579,10 @@ impl Tasks {
                         match self.storage.tasks(list) {
                             Ok(data) => {
                                 let exported_markdown = LocalStorage::export_list(list, &data);
+                                let default_path = default_export_path(&list.name);
                                 tasks.push(self.update(Message::Application(
                                     ApplicationAction::Dialog(DialogAction::Open(
-                                        DialogPage::Export(exported_markdown),
+                                        DialogPage::Export(exported_markdown, default_path),
                                     )),
                                 )));
                             }
@@ -575,6 +653,22 @@ impl Tasks {
                 tasks.push(self.update(Message::Content(content::Message::SetSort(
                     content::SortType::DueDesc,
                 ))));
+            }
+            ApplicationAction::ToggleEncryptNotes(value) => {
+                if let Some(handler) = &self.config_handler {
+                    if let Err(err) = self.config.set_encrypt_notes(handler, value) {
+                        tracing::error!("{err}");
+                    }
+                }
+                self.storage.set_encrypt_notes(value);
+                if value {
+                    // Force the keyring entry to materialize now so the user
+                    // gets an immediate prompt-to-unlock if needed, rather
+                    // than the first time they edit a note's text.
+                    if let Err(err) = crate::storage::notes_crypto::encrypt("warmup") {
+                        tracing::warn!("notes encryption warmup failed: {err}");
+                    }
+                }
             }
             ApplicationAction::SetSyncServerUrl(value) => {
                 if let Some(handler) = &self.config_handler {
@@ -836,6 +930,11 @@ impl Application for Tasks {
             app.sync_password = pw;
         }
 
+        // Propagate the persisted encryption preference into the storage
+        // layer. The flag governs writes; reads always auto-detect, so this
+        // is safe whether or not the keyring entry already exists.
+        app.storage.set_encrypt_notes(app.config.encrypt_notes);
+
         let mut tasks = vec![app.update(Message::Tasks(TasksAction::FetchLists))];
 
         if let Some(id) = app.core.main_window_id() {
@@ -1057,6 +1156,42 @@ impl Application for Tasks {
     fn view(&self) -> Element<'_, Self::Message> {
         self.content.view().map(Message::Content)
     }
+}
+
+/// Resolve a user-typed path: expand a leading `~` (and `~/`) to the user's
+/// home dir; leave anything else untouched.
+fn expand_user_path(input: &str) -> std::path::PathBuf {
+    let trimmed = input.trim();
+    if let Some(rest) = trimmed.strip_prefix("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(rest);
+        }
+    } else if trimmed == "~" {
+        if let Some(home) = dirs::home_dir() {
+            return home;
+        }
+    }
+    std::path::PathBuf::from(trimmed)
+}
+
+/// Suggest a default destination for "Save to file" — the user's documents
+/// directory if available, otherwise their home dir, falling back to the
+/// current working directory. The filename is the list name slugified.
+fn default_export_path(list_name: &str) -> String {
+    let slug: String = list_name
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    let slug = slug.trim_matches('-');
+    let filename = if slug.is_empty() {
+        "tasks.md".to_string()
+    } else {
+        format!("{slug}.md")
+    };
+    let dir = dirs::document_dir()
+        .or_else(dirs::home_dir)
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    dir.join(filename).display().to_string()
 }
 
 /// Render `at` as a coarse human-friendly relative timestamp ("just now",

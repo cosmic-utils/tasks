@@ -14,6 +14,9 @@ pub enum DialogAction {
     Update(DialogPage),
     Close,
     Complete,
+    /// "Save to file" branch of the Export dialog; runs alongside the
+    /// primary "Copy to clipboard" action.
+    ExportSave,
     None,
 }
 
@@ -24,7 +27,14 @@ pub enum DialogPage {
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
     Calendar(CalendarModel),
-    Export(String),
+    /// (markdown_contents, save_path). `save_path` is the file path the
+    /// user typed for "Save to file"; empty until they fill it in.
+    Export(String, String),
+    /// Path to a markdown file on disk plus a status line for feedback.
+    Import {
+        path: String,
+        status: String,
+    },
 }
 
 impl DialogPage {
@@ -181,24 +191,88 @@ impl DialogPage {
                     );
                 dialog
             }
-            DialogPage::Export(contents) => {
-                let dialog = widget::dialog()
+            DialogPage::Export(contents, save_path) => {
+                let preview = widget::container(
+                    widget::scrollable(widget::text(contents)).width(Length::Fill),
+                )
+                .height(Length::Fixed(200.0))
+                .width(Length::Fill);
+
+                let path_input = widget::text_input(fl!("export-save-path-hint"), save_path)
+                    .on_input({
+                        let contents = contents.clone();
+                        move |s| {
+                            Message::Application(ApplicationAction::Dialog(DialogAction::Update(
+                                DialogPage::Export(contents.clone(), s),
+                            )))
+                        }
+                    });
+
+                let save_path_field = widget::column::with_children(vec![
+                    widget::text::caption(fl!("export-save-path-label")).into(),
+                    path_input.into(),
+                ])
+                .spacing(spacing.space_xxxs);
+
+                widget::dialog()
                     .title(fl!("export"))
                     .control(
-                        widget::container(
-                            widget::scrollable(widget::text(contents)).width(Length::Fill),
-                        )
-                        .height(Length::Fixed(200.0))
-                        .width(Length::Fill),
+                        widget::column::with_children(vec![preview.into(), save_path_field.into()])
+                            .spacing(spacing.space_s),
                     )
-                    .primary_action(widget::button::suggested(fl!("copy")).on_press_maybe(Some(
+                    .primary_action(widget::button::suggested(fl!("copy")).on_press(
                         Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                    )))
+                    ))
                     .secondary_action(widget::button::standard(fl!("cancel")).on_press(
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                    ));
+                    ))
+                    .tertiary_action(
+                        widget::button::standard(fl!("export-save-to-file")).on_press_maybe(
+                            (!save_path.trim().is_empty()).then_some(Message::Application(
+                                ApplicationAction::Dialog(DialogAction::ExportSave),
+                            )),
+                        ),
+                    )
+            }
+            DialogPage::Import { path, status } => {
+                let path_input = widget::text_input(fl!("import-path-hint"), path)
+                    .id(text_input_id.clone())
+                    .on_input(move |p| {
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Update(
+                            DialogPage::Import {
+                                path: p,
+                                status: String::new(),
+                            },
+                        )))
+                    })
+                    .on_submit(|_| {
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Complete))
+                    });
 
-                dialog
+                let mut children: Vec<cosmic::Element<'_, Message>> = vec![
+                    widget::text::caption(fl!("import-description")).into(),
+                    widget::text::body(fl!("import-path-label")).into(),
+                    path_input.into(),
+                ];
+                if !status.is_empty() {
+                    children.push(widget::text::caption(status.clone()).into());
+                }
+
+                widget::dialog()
+                    .title(fl!("import"))
+                    .primary_action(
+                        widget::button::suggested(fl!("import-action")).on_press_maybe(
+                            (!path.trim().is_empty()).then_some(Message::Application(
+                                ApplicationAction::Dialog(DialogAction::Complete),
+                            )),
+                        ),
+                    )
+                    .secondary_action(widget::button::standard(fl!("cancel")).on_press(
+                        Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
+                    ))
+                    .control(
+                        widget::column::with_children(children).spacing(spacing.space_xxs),
+                    )
             }
         }
     }

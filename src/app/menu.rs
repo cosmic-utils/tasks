@@ -36,6 +36,11 @@ pub fn menu_bar<'a>(
                         Some(icons::get_handle("plus-square-filled-symbolic", 14)),
                         Action::NewList,
                     ),
+                    Item::Button(
+                        fl!("import"),
+                        Some(icons::get_handle("document-open-symbolic", 14)),
+                        Action::ImportList,
+                    ),
                     Item::Divider,
                     Item::Button(
                         fl!("quit"),

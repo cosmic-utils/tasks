@@ -20,6 +20,7 @@ pub enum Action {
     NewList,
     DeleteList,
     RenameList,
+    ImportList,
     Icon,
     ToggleHideCompleted(bool),
     SortByNameAsc,
@@ -51,6 +52,7 @@ pub enum ApplicationAction {
     SortByDateDesc,
     SortByDueAsc,
     SortByDueDesc,
+    ToggleEncryptNotes(bool),
     SetSyncServerUrl(String),
     SetSyncUsername(String),
     SetSyncPassword(String),
@@ -85,6 +87,12 @@ impl MenuAction for Action {
             Action::NewList => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::New(String::new()),
             ))),
+            Action::ImportList => Message::Application(ApplicationAction::Dialog(
+                DialogAction::Open(DialogPage::Import {
+                    path: String::new(),
+                    status: String::new(),
+                }),
+            )),
             Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::Icon(None, String::new(), String::new()),
             ))),

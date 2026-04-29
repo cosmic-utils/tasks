@@ -15,6 +15,11 @@ pub struct TasksConfig {
     pub hide_completed: bool,
     pub sync_server_url: String,
     pub sync_username: String,
+    /// When true, the storage layer encrypts `Task::notes` at rest using a
+    /// key from the system keyring. Reads always auto-detect, so flipping
+    /// this off is non-destructive for already-encrypted files (they get
+    /// re-saved as plaintext the next time they're touched).
+    pub encrypt_notes: bool,
 }
 
 impl TasksConfig {

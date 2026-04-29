@@ -46,6 +46,16 @@ select-date = Select a date
 
 # Export Dialog
 export = Export
+export-save-to-file = Save to file…
+export-save-path-label = Save to
+export-save-path-hint = /home/you/Documents/list.md
+
+# Import Dialog
+import = Import from markdown
+import-action = Import
+import-description = Pick a markdown file to import. The first heading becomes the list name; sub-headings become parent tasks; bullets become tasks.
+import-path-label = Markdown file
+import-path-hint = /home/you/todo.md
 
 # Dialogs
 cancel = Cancel
@@ -69,6 +79,11 @@ theme = Theme
 match-desktop = Match desktop
 dark = Dark
 light = Light
+
+### Privacy
+privacy = Privacy
+encrypt-notes = Encrypt notes at rest
+encrypt-notes-description = Encrypt the notes field of each task using a key stored in the system keyring. Reads always auto-detect, so toggling this on or off does not require a migration. CalDAV sync still pushes plaintext to the server (decryption happens locally before upload).
 
 ### Account (CalDAV sync)
 account = Account
