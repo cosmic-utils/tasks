@@ -1,7 +1,7 @@
 use cosmic::{
+    Application,
     app::Settings,
     iced::{Limits, Size},
-    Application,
 };
 use std::sync::Mutex;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -10,12 +10,12 @@ use crate::{
     app::Tasks,
     core::{
         config::TasksConfig,
-        icons::{IconCache, ICON_CACHE},
+        icons::{ICON_CACHE, IconCache},
         localize::localize,
     },
     storage::{
-        migration::{migrate_data, migrate_data_dir},
         LocalStorage,
+        migration::{migrate_data, migrate_data_dir},
     },
 };
 

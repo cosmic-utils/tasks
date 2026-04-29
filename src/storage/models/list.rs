@@ -16,9 +16,10 @@ pub struct List {
     pub icon: Option<String>,
     #[serde(default)]
     pub hide_completed: bool,
+    /// CalDAV resource URL bound to this list, if any.
+    #[serde(default)]
+    pub remote_url: Option<String>,
 }
-
-unsafe impl Send for List {}
 
 impl FromIterator<List> for List {
     fn from_iter<T: IntoIterator<Item = List>>(iter: T) -> Self {
@@ -46,6 +47,7 @@ impl List {
             description: String::new(),
             icon: Some("view-list-symbolic".to_string()),
             hide_completed: false,
+            remote_url: None,
         }
     }
 

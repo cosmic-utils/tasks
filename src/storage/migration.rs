@@ -1,6 +1,6 @@
+use crate::Error;
 use crate::app::Tasks;
 use crate::storage::models::{List, Task};
-use crate::Error;
 use cosmic::Application;
 use ron::de::from_str;
 use ron::ser::to_string;

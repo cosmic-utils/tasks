@@ -13,6 +13,35 @@
   </a>
 </div>
 
+# CalDAV sync
+
+This fork adds two-way CalDAV sync so your task lists can stay in sync with
+servers like Nextcloud, Radicale, SOGo, and Fastmail.
+
+Configure it from **Settings → Sync (CalDAV)**:
+
+- **Server URL** — the root DAV path, e.g. `https://cloud.example.com/remote.php/dav/`
+- **Username** — your account name
+- **Password** — an app password (recommended for Nextcloud / Fastmail). Stored
+  in the system keyring (Secret Service / cosmic-keyring), never on disk.
+
+Then hit **Test connection** and **Sync now**. Once configured:
+
+- Edits push automatically a moment after they happen.
+- A periodic sync runs in the background every 60 seconds.
+- A sync icon appears in the header bar and as a "Sync now" entry in the
+  **View** menu and per-list right-click menu.
+
+Remote calendars that support `VTODO` are auto-discovered; one local list is
+created for each. Conflicts use `LAST-MODIFIED` to pick a winner. Deletes are
+not yet propagated — see [CHANGELOG.md](CHANGELOG.md).
+
+### Flatpak permissions
+
+The Flatpak manifest already requests `--share=network` and the secret service.
+If you build a sandboxed copy yourself, make sure those are present, otherwise
+the keyring write or the HTTPS request will silently fail.
+
 # Installation
 ```
 git clone https://github.com/edfloreshz/tasks.git

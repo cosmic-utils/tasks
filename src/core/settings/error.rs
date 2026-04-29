@@ -1,7 +1,8 @@
 use cosmic::{
+    Application, ApplicationExt, Core,
     app::Settings,
-    iced::{alignment::Horizontal, Color, Limits, Size},
-    widget, Application, ApplicationExt, Core,
+    iced::{Color, Limits, Size, alignment::Horizontal},
+    widget,
 };
 
 use crate::{

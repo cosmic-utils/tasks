@@ -1,5 +1,6 @@
-use chrono::{NaiveDate, TimeZone, Utc};
+use chrono::{Local, NaiveDate, TimeZone, Utc};
 use cosmic::{
+    Element,
     iced::{Alignment, Length},
     theme,
     widget::{
@@ -7,15 +8,14 @@ use cosmic::{
         segmented_button::{self, Entity},
         text_editor,
     },
-    Element,
 };
 
 use crate::{
     core::icons,
     fl,
     storage::{
-        models::{self, Priority},
         LocalStorage,
+        models::{self, Priority},
     },
 };
 
@@ -39,6 +39,7 @@ pub enum Message {
 pub enum Output {
     OpenCalendarDialog,
     RefreshTask(models::Task),
+    Mutated,
 }
 
 impl Details {
@@ -71,13 +72,16 @@ impl Details {
 
     pub fn update(&mut self, message: Message) -> Vec<Output> {
         let mut tasks = vec![];
+        let mut emit_mutated = true;
         match message {
             Message::Editor(action) => {
                 self.text_editor_content.perform(action);
                 self.task.notes.clone_from(&self.text_editor_content.text());
+                emit_mutated = false; // keystroke-grade; periodic sync will push it
             }
             Message::SetTitle(title) => {
                 self.task.title.clone_from(&title);
+                emit_mutated = false; // keystroke-grade
             }
             Message::Favorite(favorite) => {
                 self.task.favorite = favorite;
@@ -91,10 +95,18 @@ impl Details {
             }
             Message::OpenCalendarDialog => {
                 tasks.push(Output::OpenCalendarDialog);
+                return tasks;
             }
             Message::SetDueDate(date) => {
-                let tz = Utc::now().timezone();
-                self.task.due_date = Some(tz.from_utc_datetime(&date.into()));
+                // Store as local-midnight rather than UTC-midnight so the
+                // date the user picked stays the same date when rendered or
+                // exported to CalDAV — UTC-midnight gets shifted into the
+                // adjacent day for any non-zero local offset.
+                let naive = date.and_hms_opt(0, 0, 0).unwrap_or_default();
+                self.task.due_date = Local
+                    .from_local_datetime(&naive)
+                    .single()
+                    .map(|dt| dt.with_timezone(&Utc));
             }
         }
 
@@ -102,80 +114,80 @@ impl Details {
             tracing::error!("Failed to update task: {}", e);
         }
         tasks.push(Output::RefreshTask(self.task.clone()));
+        if emit_mutated {
+            tasks.push(Output::Mutated);
+        }
         tasks
     }
 
     pub fn view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        widget::settings::view_column(vec![widget::settings::section()
-            .title(fl!("details"))
-            .add(
-                widget::column::with_children(vec![
-                    widget::text::body(fl!("title")).into(),
-                    widget::text_input(fl!("title"), &self.task.title)
-                        .style(crate::core::style::text_input())
-                        .on_input(Message::SetTitle)
-                        .size(13)
-                        .into(),
-                ])
-                .padding([
-                    spacing.space_s,
-                    spacing.space_none,
-                    spacing.space_s,
-                    spacing.space_none,
-                ])
-                .spacing(spacing.space_xxs),
-            )
-            .add(
-                widget::settings::item::builder(fl!("favorite"))
-                    .control(widget::checkbox("", self.task.favorite).on_toggle(Message::Favorite)),
-            )
-            .add(
-                widget::settings::item::builder(fl!("priority")).control(
-                    widget::segmented_control::horizontal(&self.priority_model)
-                        .button_alignment(Alignment::Center)
-                        .width(Length::Shrink)
-                        .style(crate::core::style::segmented_control())
-                        .on_activate(Message::PriorityActivate),
-                ),
-            )
-            .add(
-                widget::settings::item::builder(fl!("due-date")).control(
-                    widget::button::text(if self.task.due_date.is_some() {
-                        self.task
-                            .due_date
-                            .as_ref()
-                            .unwrap()
-                            .format("%m-%d-%Y")
-                            .to_string()
-                    } else {
-                        fl!("select-date")
-                    })
-                    .on_press(Message::OpenCalendarDialog),
-                ),
-            )
-            .add(
-                widget::column::with_children(vec![
-                    widget::text::body(fl!("notes")).into(),
-                    widget::text_editor(&self.text_editor_content)
-                        .class(crate::core::style::text_editor())
-                        .padding(spacing.space_xxs)
-                        .placeholder(fl!("add-notes"))
-                        .height(100.0)
-                        .size(13)
-                        .on_action(Message::Editor)
-                        .into(),
-                ])
-                .spacing(spacing.space_xxs)
-                .padding([
-                    spacing.space_s,
-                    spacing.space_none,
-                    spacing.space_s,
-                    spacing.space_none,
-                ]),
-            )
-            .into()])
+        widget::settings::view_column(vec![
+            widget::settings::section()
+                .title(fl!("details"))
+                .add(
+                    widget::column::with_children(vec![
+                        widget::text::body(fl!("title")).into(),
+                        widget::text_input(fl!("title"), &self.task.title)
+                            .style(crate::core::style::text_input())
+                            .on_input(Message::SetTitle)
+                            .size(13)
+                            .into(),
+                    ])
+                    .padding([
+                        spacing.space_s,
+                        spacing.space_none,
+                        spacing.space_s,
+                        spacing.space_none,
+                    ])
+                    .spacing(spacing.space_xxs),
+                )
+                .add(
+                    widget::settings::item::builder(fl!("favorite")).control(
+                        widget::checkbox("", self.task.favorite).on_toggle(Message::Favorite),
+                    ),
+                )
+                .add(
+                    widget::settings::item::builder(fl!("priority")).control(
+                        widget::segmented_control::horizontal(&self.priority_model)
+                            .button_alignment(Alignment::Center)
+                            .width(Length::Shrink)
+                            .style(crate::core::style::segmented_control())
+                            .on_activate(Message::PriorityActivate),
+                    ),
+                )
+                .add(
+                    widget::settings::item::builder(fl!("due-date")).control(
+                        widget::button::text(match self.task.due_date {
+                            Some(due) => due.with_timezone(&Local).format("%Y-%m-%d").to_string(),
+                            None => fl!("select-date"),
+                        })
+                        .on_press(Message::OpenCalendarDialog),
+                    ),
+                )
+                .add(
+                    widget::column::with_children(vec![
+                        widget::text::body(fl!("notes")).into(),
+                        widget::text_editor(&self.text_editor_content)
+                            .class(crate::core::style::text_editor())
+                            .padding(spacing.space_xxs)
+                            .placeholder(fl!("add-notes"))
+                            .height(100.0)
+                            .size(13)
+                            .on_action(Message::Editor)
+                            .into(),
+                    ])
+                    .spacing(spacing.space_xxs)
+                    .padding([
+                        spacing.space_s,
+                        spacing.space_none,
+                        spacing.space_s,
+                        spacing.space_none,
+                    ]),
+                )
+                .into(),
+        ])
         .padding([
             spacing.space_none,
             spacing.space_s,

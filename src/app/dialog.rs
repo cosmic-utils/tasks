@@ -1,12 +1,12 @@
 use cosmic::{
     iced::{
-        alignment::{Horizontal, Vertical},
         Length,
+        alignment::{Horizontal, Vertical},
     },
     widget::{self, calendar::CalendarModel, segmented_button},
 };
 
-use crate::{app::actions::ApplicationAction, app::Message, fl};
+use crate::{app::Message, app::actions::ApplicationAction, fl};
 
 #[derive(Debug, Clone)]
 pub enum DialogAction {
@@ -24,7 +24,10 @@ pub enum DialogPage {
     Rename(Option<segmented_button::Entity>, String),
     Delete(Option<segmented_button::Entity>),
     Calendar(CalendarModel),
-    Export(String),
+    /// (markdown_contents, default_filename_for_save_picker). The filename
+    /// is what the portal Save dialog will pre-fill when the user clicks
+    /// "Save to file…".
+    Export(String, String),
 }
 
 impl DialogPage {
@@ -181,24 +184,28 @@ impl DialogPage {
                     );
                 dialog
             }
-            DialogPage::Export(contents) => {
-                let dialog = widget::dialog()
+            DialogPage::Export(contents, default_filename) => {
+                let preview = widget::container(
+                    widget::scrollable(widget::text(contents)).width(Length::Fill),
+                )
+                .height(Length::Fixed(220.0))
+                .width(Length::Fill);
+
+                let _ = text_input_id;
+                let _ = default_filename; // consumed by the SaveExportToFile path
+
+                widget::dialog()
                     .title(fl!("export"))
-                    .control(
-                        widget::container(
-                            widget::scrollable(widget::text(contents)).width(Length::Fill),
-                        )
-                        .height(Length::Fixed(200.0))
-                        .width(Length::Fill),
-                    )
-                    .primary_action(widget::button::suggested(fl!("copy")).on_press_maybe(Some(
+                    .control(preview)
+                    .primary_action(widget::button::suggested(fl!("copy")).on_press(
                         Message::Application(ApplicationAction::Dialog(DialogAction::Complete)),
-                    )))
+                    ))
                     .secondary_action(widget::button::standard(fl!("cancel")).on_press(
                         Message::Application(ApplicationAction::Dialog(DialogAction::Close)),
-                    ));
-
-                dialog
+                    ))
+                    .tertiary_action(widget::button::standard(fl!("export-save-to-file")).on_press(
+                        Message::Application(ApplicationAction::SaveExportToFile),
+                    ))
             }
         }
     }

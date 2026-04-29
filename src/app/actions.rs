@@ -1,8 +1,8 @@
 use crate::{
     app::{
+        Message,
         context::ContextPage,
         dialog::{DialogAction, DialogPage},
-        Message,
     },
     storage::models::List,
 };
@@ -20,12 +20,16 @@ pub enum Action {
     NewList,
     DeleteList,
     RenameList,
+    ImportList,
     Icon,
     ToggleHideCompleted(bool),
     SortByNameAsc,
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    SortByDueAsc,
+    SortByDueDesc,
+    SyncNow,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +50,28 @@ pub enum ApplicationAction {
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    SortByDueAsc,
+    SortByDueDesc,
+    ToggleEncryptNotes(bool),
+    /// Open the portal file picker to choose a markdown file, then read +
+    /// parse it. The result is delivered via `ImportFromFileResult`.
+    ImportFromFile,
+    /// `(filename, contents)` on success, or a short error string. The
+    /// "cancelled" sentinel is treated as a no-op.
+    ImportFromFileResult(Result<(String, String), String>),
+    /// Open the portal Save dialog for the currently displayed Export
+    /// payload and write the markdown to the chosen path.
+    SaveExportToFile,
+    SaveExportToFileResult(Result<std::path::PathBuf, String>),
+    SetSyncServerUrl(String),
+    SetSyncUsername(String),
+    SetSyncPassword(String),
+    TestSyncConnection,
+    TestSyncConnectionResult(Result<(), String>),
+    SyncNow,
+    SyncTick,
+    SyncResult(Result<crate::sync::engine::SyncReport, String>),
+    SignOut,
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +97,9 @@ impl MenuAction for Action {
             Action::NewList => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::New(String::new()),
             ))),
+            Action::ImportList => {
+                Message::Application(ApplicationAction::ImportFromFile)
+            }
             Action::Icon => Message::Application(ApplicationAction::Dialog(DialogAction::Open(
                 DialogPage::Icon(None, String::new(), String::new()),
             ))),
@@ -87,6 +116,9 @@ impl MenuAction for Action {
             Action::SortByNameDesc => Message::Application(ApplicationAction::SortByNameDesc),
             Action::SortByDateAsc => Message::Application(ApplicationAction::SortByDateAsc),
             Action::SortByDateDesc => Message::Application(ApplicationAction::SortByDateDesc),
+            Action::SortByDueAsc => Message::Application(ApplicationAction::SortByDueAsc),
+            Action::SortByDueDesc => Message::Application(ApplicationAction::SortByDueDesc),
+            Action::SyncNow => Message::Application(ApplicationAction::SyncNow),
         }
     }
 }
@@ -97,6 +129,7 @@ pub enum NavMenuAction {
     SetIcon(segmented_button::Entity),
     Export(segmented_button::Entity),
     Delete(segmented_button::Entity),
+    SyncNow,
 }
 
 impl MenuAction for NavMenuAction {

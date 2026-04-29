@@ -1,21 +1,42 @@
 [package]
 name = "tasks"
-version = "0.2.0"
-edition = "2021"
+version = "0.3.0"
+edition = "2024"
 
 [dependencies]
-i18n-embed-fl = "0.10.0"
-rust-embed = "8"
-open = "5.3.2"
-dirs = "6.0.0"
-cli-clipboard = "0.4.0"
-slotmap = "1.0.7"
-ron = "0.11.0"
-thiserror = "2.0.17"
-tracing = "0.1.41"
+i18n-embed-fl = "*"
+rust-embed = "*"
+open = "*"
+dirs = "*"
+cli-clipboard = "*"
+slotmap = "*"
+ron = "*"
+thiserror = "*"
+tracing = "*"
+quick-xml = "*"
+icalendar = "*"
+base64 = "*"
+url = "*"
+chacha20poly1305 = "*"
+rand = "*"
+
+[dependencies.rfd]
+version = "0.16"
+default-features = false
+features = ["xdg-portal", "tokio"]
+
+[dependencies.keyring]
+version = "*"
+default-features = false
+features = ["sync-secret-service", "crypto-rust"]
+
+[dependencies.reqwest]
+version = "*"
+default-features = false
+features = ["rustls-tls", "gzip"]
 
 [dependencies.tracing-subscriber]
-version = "0.3.20"
+version = "*"
 features = ["env-filter"]
 
 [dependencies.libcosmic]
@@ -28,16 +49,11 @@ version = "0.16.0"
 features = ["fluent-system", "desktop-requester"]
 
 [dependencies.serde]
-version = "1"
+version = "*"
 features = ["derive"]
 
-[dependencies.sqlx]
-version = "0.8.6"
-features = ["sqlite"]
-default-features = false
-
 [dependencies.chrono]
-version = "0.4.42"
+version = "*"
 features = ["serde"]
 
 [dependencies.uuid]
@@ -45,7 +61,7 @@ version = "1.18.1"
 features = ["v4"]
 
 [patch."https://github.com/smithay/client-toolkit.git"]
-sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
+sctk = { package = "smithay-client-toolkit", version = "*" }
 
 # [patch."https://github.com/pop-os/libcosmic.git"]
 # libcosmic = { path = "../../edfloreshz-ext/libcosmic" }
