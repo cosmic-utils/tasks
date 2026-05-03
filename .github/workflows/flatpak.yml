@@ -1,4 +1,4 @@
-name: Flatpak
+name: CI
 
 on:
   push:
@@ -19,16 +19,14 @@ jobs:
       - name: Install flatpak-cargo-generator deps
         run: pip3 install aiohttp toml
 
-      - name: Download flatpak-cargo-generator
+      - name: Generate cargo-sources.json
         run: |
           curl -Lo flatpak-cargo-generator.py \
             https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
-
-      - name: Generate cargo-sources.json
-        run: python3 flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
+          python3 flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: tasks.flatpak
           manifest-path: dev.edfloreshz.Tasks.json
-          cache-key: flatpak-builder-${{ github.sha }}
+          cache-key: flatpak-builder-${{ hashFiles('Cargo.lock') }}
