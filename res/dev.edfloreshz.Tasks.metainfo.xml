@@ -43,6 +43,23 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.2.1" date="2026-05-03">
+        <description>
+            <p>Bug fixes and improvements</p>
+            <ul>
+                <li>Fixed a layout invalidation issue with sub-tasks.</li>
+                <li>Fixed a bug causing due dates to revert to their previous value.</li>
+                <li>Fixed a bug where lists were deleted from the filesystem but the change wasn't reflected in the UI.</li>
+                <li>Menu options are now disabled when no list is selected.</li>
+                <li>Added migration code to handle the legacy store schema.</li>
+            </ul>
+            <p>Internationalization improvements</p>
+            <ul>
+                <li>Added a new translation key to support displaying creation timestamps.</li>
+                <li>Updated French, Czech, and Ukrainian translations.</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.0" date="2025-05-27">
         <description>
             <p>Powerful new features! 🚀</p>
