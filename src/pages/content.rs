@@ -19,18 +19,18 @@ use crate::{
     services::store::Store,
 };
 
-/// Represents the edit state of an input field to prevent feedback loops
+/// Represents the edit state of an input field.
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq)]
 enum EditState {
-    /// Input is not in edit mode
+    /// Input is not in edit mode.
     #[default]
     Idle,
-    /// Edit mode requested, waiting to focus
+    /// Programmatic focus was requested (e.g. a newly created sub-task).
+    /// The widget has not yet self-focused via a user click, so we wait for
+    /// the first `on_toggle_edit` callback before moving to `Editing`.
     Entering,
-    /// Input is actively being edited
+    /// The input is actively being edited.
     Editing,
-    /// Edit mode exit requested, waiting to blur
-    Exiting,
 }
 
 /// Holds the state of a task pending deletion so it can be undone.
@@ -148,7 +148,7 @@ impl Content {
 
         column
             .max_width(800.)
-            .padding([spacing.space_xxs, spacing.space_none])
+            .padding([spacing.space_xxs, spacing.space_xxxs])
             .spacing(spacing.space_xxs)
             .apply(widget::container)
             .height(Length::Fill)
@@ -266,16 +266,32 @@ impl Content {
 
                 let current_state = self.editing.get(id).copied().unwrap_or_default();
 
-                // State machine to prevent feedback loops
                 let new_state = match (current_state, editing) {
-                    // Request to enter edit mode from idle state
-                    (EditState::Idle, true) => {
-                        output = Some(Output::Focus(self.inputs[id].clone()));
-                        Some(EditState::Entering)
-                    }
-                    // Confirmation that edit mode was entered (from widget after focus)
+                    // User clicked the widget – it already self-focused internally.
+                    // Going straight to Editing avoids sending a redundant programmatic
+                    // focus command that would reset LAST_FOCUS_UPDATE and immediately
+                    // unfocus the widget, requiring a second click.
+                    (EditState::Idle, true) => Some(EditState::Editing),
+                    // A programmatic focus (e.g. new sub-task) was requested and the
+                    // widget has now confirmed it entered edit mode.
                     (EditState::Entering, true) => Some(EditState::Editing),
-                    // Request to exit edit mode
+                    // Sub-task lost focus before the user submitted – save and return.
+                    (EditState::Entering, false) => {
+                        if let Some(task) = self.tasks.get(id) {
+                            if let Err(error) = self
+                                .store
+                                .tasks(list.id)
+                                .update(task.id, |t| *t = task.clone())
+                            {
+                                tracing::error!("Failed to update task: {:?}", error);
+                            }
+                        }
+                        Some(EditState::Idle)
+                    }
+                    // User clicked away – save and return to idle.
+                    // A second on_toggle_edit(false) may fire from the widget's own
+                    // focus-loss handler, but (Idle, false) is ignored below, so it
+                    // is harmless.
                     (EditState::Editing, false) => {
                         if let Some(task) = self.tasks.get(id) {
                             if let Err(error) = self
@@ -286,16 +302,9 @@ impl Content {
                                 tracing::error!("Failed to update task: {:?}", error);
                             }
                         }
-                        Some(EditState::Exiting)
+                        Some(EditState::Idle)
                     }
-                    // Confirmation that edit mode was exited (from widget after blur)
-                    (EditState::Exiting, false) => Some(EditState::Idle),
-                    // Ignore redundant state changes that would cause loops
-                    (EditState::Entering, false) | (EditState::Exiting, true) => {
-                        tracing::debug!("Ignoring redundant edit state change for task {:?}", id);
-                        None
-                    }
-                    // Already in requested state, ignore
+                    // Already in the requested state – nothing to do.
                     (EditState::Idle, false) | (EditState::Editing, true) => None,
                 };
 
