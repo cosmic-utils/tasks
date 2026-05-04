@@ -19,7 +19,7 @@ impl AppModel {
         match action {
             DialogAction::Open(page) => {
                 match page {
-                    DialogPage::Rename(entity, _) => {
+                    DialogPage::RenameList(entity, _) => {
                         let data = if let Some(entity) = entity {
                             self.nav.data::<crate::model::List>(entity)
                         } else {
@@ -27,7 +27,7 @@ impl AppModel {
                         };
                         if let Some(list) = data {
                             self.dialog_pages
-                                .push_back(DialogPage::Rename(entity, list.name.clone()));
+                                .push_back(DialogPage::RenameList(entity, list.name.clone()));
                         }
                     }
                     page => self.dialog_pages.push_back(page),
@@ -45,7 +45,7 @@ impl AppModel {
             DialogAction::Complete => {
                 if let Some(dialog_page) = self.dialog_pages.pop_front() {
                     match dialog_page {
-                        DialogPage::New(name) => {
+                        DialogPage::NewList(name) => {
                             let list = List::new(&name);
                             match self.store.lists().save(&list) {
                                 Ok(_) => {
@@ -58,7 +58,7 @@ impl AppModel {
                                 }
                             }
                         }
-                        DialogPage::Rename(entity, name) => {
+                        DialogPage::RenameList(entity, name) => {
                             let data = if let Some(entity) = entity {
                                 self.nav.data_mut::<List>(entity)
                             } else {
@@ -85,12 +85,18 @@ impl AppModel {
                                 }
                             }
                         }
-                        DialogPage::Delete(entity) => {
+                        DialogPage::DeleteList(entity) => {
                             return cosmic::task::message(Message::Tasks(TasksAction::DeleteList(
                                 entity,
                             )));
                         }
-                        DialogPage::Icon(entity, name, _) => {
+                        DialogPage::DeleteTask(key, list_id, task_id) => {
+                            let tasks: Vec<cosmic::Task<Message>> = vec![cosmic::task::message(
+                                Message::Tasks(TasksAction::DeleteTask(key, list_id, task_id)),
+                            )];
+                            return cosmic::task::batch(tasks);
+                        }
+                        DialogPage::SetListIcon(entity, name, _) => {
                             let data = if let Some(entity) = entity {
                                 self.nav.data::<List>(entity)
                             } else {

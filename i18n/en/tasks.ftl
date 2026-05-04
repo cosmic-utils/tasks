@@ -32,9 +32,13 @@ create-list = Create a new list
 # Rename List Dialog
 rename-list = Rename list
 
-# Rename List Dialog
+# Delete List Dialog
 delete-list = The selected list is about to be deleted
 delete-list-confirm = Are you sure you want to delete this list?
+
+# Delete Task Dialog
+delete-task = The selected task is about to be deleted
+delete-task-confirm = Are you sure you want to delete this task?
 
 # Icon Dialog
 icon = Set icon

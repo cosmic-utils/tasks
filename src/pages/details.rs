@@ -10,6 +10,7 @@ use cosmic::{
     },
     Element,
 };
+use slotmap::DefaultKey;
 use uuid::Uuid;
 
 use crate::{
@@ -20,6 +21,7 @@ use crate::{
 
 pub struct Details {
     pub task: model::Task,
+    pub task_key: DefaultKey,
     pub selected_list: Option<Uuid>,
     pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub text_editor_content: widget::text_editor::Content,
@@ -28,11 +30,12 @@ pub struct Details {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SetTask(model::Task, Uuid),
+    SetTask(DefaultKey, model::Task, Uuid),
     SetTitle(String),
     Editor(text_editor::Action),
     Favorite(bool),
     PriorityActivate(Entity),
+    Delete,
     OpenCalendarDialog,
     SetDueDate(Date),
 }
@@ -40,6 +43,7 @@ pub enum Message {
 pub enum Output {
     OpenCalendarDialog,
     RefreshTask(model::Task),
+    OpenTaskDeletionDialog(DefaultKey, Uuid, Uuid),
 }
 
 impl Details {
@@ -64,6 +68,7 @@ impl Details {
 
         Self {
             task: model::Task::default(),
+            task_key: DefaultKey::default(),
             selected_list: None,
             priority_model,
             text_editor_content: widget::text_editor::Content::new(),
@@ -73,7 +78,8 @@ impl Details {
 
     pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
-            Message::SetTask(task, list_id) => {
+            Message::SetTask(key, task, list_id) => {
+                self.task_key = key;
                 self.task = task.clone();
                 self.selected_list = Some(list_id);
 
@@ -100,6 +106,17 @@ impl Details {
                 if let Some(priority) = priority {
                     self.task.priority = *priority;
                 }
+            }
+            Message::Delete => {
+                let Some(list_id) = self.selected_list else {
+                    return None;
+                };
+
+                return Some(Output::OpenTaskDeletionDialog(
+                    self.task_key,
+                    list_id,
+                    self.task.id,
+                ));
             }
             Message::OpenCalendarDialog => {
                 return Some(Output::OpenCalendarDialog);
@@ -193,6 +210,7 @@ impl Details {
                 widget::settings::item::builder(fl!("created-at"))
                     .control(widget::text(self.task.creation_date_local()).size(13)),
             )
+            .add(widget::button::destructive(fl!("delete")).on_press(Message::Delete))
             .into()])
         .padding([
             spacing.space_none,

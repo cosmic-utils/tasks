@@ -7,6 +7,8 @@ use cosmic::{
     },
     widget::{self, calendar::CalendarModel, segmented_button},
 };
+use slotmap::DefaultKey;
+use uuid::Uuid;
 
 use crate::{app::Message, fl};
 
@@ -21,10 +23,11 @@ pub enum DialogAction {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogPage {
-    New(String),
-    Icon(Option<segmented_button::Entity>, String, String),
-    Rename(Option<segmented_button::Entity>, String),
-    Delete(Option<segmented_button::Entity>),
+    NewList(String),
+    SetListIcon(Option<segmented_button::Entity>, String, String),
+    RenameList(Option<segmented_button::Entity>, String),
+    DeleteList(Option<segmented_button::Entity>),
+    DeleteTask(DefaultKey, Uuid, Uuid),
     Calendar(CalendarModel),
     Export(String),
 }
@@ -70,7 +73,7 @@ impl DialogPage {
         let spacing = cosmic::theme::active().cosmic().spacing;
 
         match self {
-            DialogPage::New(name) => widget::dialog()
+            DialogPage::NewList(name) => widget::dialog()
                 .title(fl!("create-list"))
                 .primary_action(
                     widget::button::suggested(fl!("save"))
@@ -86,14 +89,14 @@ impl DialogPage {
                         widget::text_input("", name.as_str())
                             .id(text_input_id.clone())
                             .on_input(move |name| {
-                                Message::Dialog(DialogAction::Update(DialogPage::New(name)))
+                                Message::Dialog(DialogAction::Update(DialogPage::NewList(name)))
                             })
                             .on_submit(|_| Message::Dialog(DialogAction::Complete))
                             .into(),
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::Rename(entity, name) => widget::dialog()
+            DialogPage::RenameList(entity, name) => widget::dialog()
                 .title(fl!("rename-list"))
                 .primary_action(
                     widget::button::suggested(fl!("save"))
@@ -109,7 +112,7 @@ impl DialogPage {
                         widget::text_input("", name.as_str())
                             .id(text_input_id.clone())
                             .on_input(move |name| {
-                                Message::Dialog(DialogAction::Update(DialogPage::Rename(
+                                Message::Dialog(DialogAction::Update(DialogPage::RenameList(
                                     *entity, name,
                                 )))
                             })
@@ -118,7 +121,7 @@ impl DialogPage {
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::Delete(_) => widget::dialog()
+            DialogPage::DeleteList(_) => widget::dialog()
                 .title(fl!("delete-list"))
                 .body(fl!("delete-list-confirm"))
                 .primary_action(
@@ -129,7 +132,7 @@ impl DialogPage {
                     widget::button::standard(fl!("cancel"))
                         .on_press(Message::Dialog(DialogAction::Close)),
                 ),
-            DialogPage::Icon(entity, icon, search) => {
+            DialogPage::SetListIcon(entity, icon, search) => {
                 let search_lower = search.to_lowercase();
                 let icon_buttons = get_all_icon_handles(20)
                     .iter()
@@ -137,11 +140,9 @@ impl DialogPage {
                     .map(|(name, icon)| {
                         widget::button::icon(icon.clone())
                             .medium()
-                            .on_press(Message::Dialog(DialogAction::Update(DialogPage::Icon(
-                                *entity,
-                                name.clone(),
-                                search.clone(),
-                            ))))
+                            .on_press(Message::Dialog(DialogAction::Update(
+                                DialogPage::SetListIcon(*entity, name.clone(), search.clone()),
+                            )))
                             .into()
                     })
                     .collect();
@@ -152,7 +153,7 @@ impl DialogPage {
                         let entity = *entity;
                         let icon = icon.clone();
                         move |s| {
-                            Message::Dialog(DialogAction::Update(DialogPage::Icon(
+                            Message::Dialog(DialogAction::Update(DialogPage::SetListIcon(
                                 entity,
                                 icon.clone(),
                                 s.to_string(),
@@ -187,6 +188,17 @@ impl DialogPage {
 
                 dialog
             }
+            DialogPage::DeleteTask(_, _, _) => widget::dialog()
+                .title(fl!("delete-task"))
+                .body(fl!("delete-task-confirm"))
+                .primary_action(
+                    widget::button::destructive(fl!("delete"))
+                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                ),
             DialogPage::Calendar(date) => {
                 let dialog = widget::dialog()
                     .title(fl!("select-date"))
