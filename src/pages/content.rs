@@ -44,16 +44,10 @@ pub struct Content {
     search_bar_visible: bool,
     add_task_input: String,
     search_query: String,
-    sort_type: SortType,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum SortType {
-    NameAsc,
-    NameDesc,
-    DateAsc,
-    DateDesc,
-}
+/// Re-export for convenience so callers can use `content::SortBy`.
+pub use crate::config::SortBy;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -81,7 +75,7 @@ pub enum Message {
 
     ToggleSearchBar,
     SearchQueryChanged(String),
-    SetSort(SortType),
+    SetSort(SortBy),
 }
 
 pub enum Output {
@@ -427,8 +421,8 @@ impl Content {
                     }
                 }
             }
-            Message::SetSort(sort_type) => {
-                self.sort_type = sort_type;
+            Message::SetSort(sort_by) => {
+                self.config.sort_by = sort_by;
             }
         }
         output
@@ -447,7 +441,6 @@ impl Content {
             store: storage,
             search_bar_visible: false,
             search_query: String::new(),
-            sort_type: SortType::DateAsc,
         }
     }
 
@@ -559,15 +552,15 @@ impl Content {
     fn sort_tasks(&self) -> Vec<(DefaultKey, &model::Task)> {
         let mut tasks: Vec<_> = self.tasks.iter().collect();
 
-        match self.sort_type {
-            SortType::NameAsc => {
+        match self.config.sort_by {
+            SortBy::NameAsc => {
                 tasks.sort_by(|a, b| a.1.title.to_lowercase().cmp(&b.1.title.to_lowercase()))
             }
-            SortType::NameDesc => {
+            SortBy::NameDesc => {
                 tasks.sort_by(|a, b| b.1.title.to_lowercase().cmp(&a.1.title.to_lowercase()))
             }
-            SortType::DateAsc => tasks.sort_by(|a, b| a.1.creation_date.cmp(&b.1.creation_date)),
-            SortType::DateDesc => tasks.sort_by(|a, b| b.1.creation_date.cmp(&a.1.creation_date)),
+            SortBy::DateAsc => tasks.sort_by(|a, b| a.1.creation_date.cmp(&b.1.creation_date)),
+            SortBy::DateDesc => tasks.sort_by(|a, b| b.1.creation_date.cmp(&a.1.creation_date)),
         }
 
         tasks

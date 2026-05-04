@@ -7,6 +7,7 @@ use crate::{
         core::{AppModel, ContextPage, Message},
         dialogs::{DialogAction, DialogPage},
     },
+    config,
     pages::content,
 };
 
@@ -117,23 +118,47 @@ impl AppModel {
                 )));
             }
             MenuAction::SortByNameAsc => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::NameAsc)
+                {
+                    tracing::error!("{err}")
+                }
                 return cosmic::task::message(Message::Content(content::Message::SetSort(
-                    content::SortType::NameAsc,
+                    content::SortBy::NameAsc,
                 )));
             }
             MenuAction::SortByNameDesc => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::NameDesc)
+                {
+                    tracing::error!("{err}")
+                }
                 return cosmic::task::message(Message::Content(content::Message::SetSort(
-                    content::SortType::NameDesc,
+                    content::SortBy::NameDesc,
                 )));
             }
             MenuAction::SortByDateAsc => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::DateAsc)
+                {
+                    tracing::error!("{err}")
+                }
                 return cosmic::task::message(Message::Content(content::Message::SetSort(
-                    content::SortType::DateAsc,
+                    content::SortBy::DateAsc,
                 )));
             }
             MenuAction::SortByDateDesc => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::DateDesc)
+                {
+                    tracing::error!("{err}")
+                }
                 return cosmic::task::message(Message::Content(content::Message::SetSort(
-                    content::SortType::DateDesc,
+                    content::SortBy::DateDesc,
                 )));
             }
         }

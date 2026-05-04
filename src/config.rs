@@ -7,10 +7,12 @@ use serde::{Deserialize, Serialize};
 pub const CONFIG_VERSION: u64 = 1;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, CosmicConfigEntry)]
+#[version = 1]
 pub struct AppConfig {
     pub app_theme: AppTheme,
     pub hide_completed: bool,
     pub show_favorites: bool,
+    pub sort_by: SortBy,
 }
 
 impl Default for AppConfig {
@@ -19,8 +21,19 @@ impl Default for AppConfig {
             app_theme: AppTheme::default(),
             hide_completed: false,
             show_favorites: true,
+            sort_by: SortBy::default(),
         }
     }
+}
+
+/// The sort order for tasks in the content view.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub enum SortBy {
+    NameAsc,
+    NameDesc,
+    #[default]
+    DateAsc,
+    DateDesc,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
