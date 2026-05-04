@@ -29,6 +29,17 @@ impl AppModel {
                                 .push_back(DialogPage::RenameList(entity, list.name.clone()));
                         }
                     }
+                    DialogPage::DeleteList(entity, _) => {
+                        let data = if let Some(entity) = entity {
+                            self.nav.data::<crate::model::List>(entity)
+                        } else {
+                            self.nav.active_data::<crate::model::List>()
+                        };
+                        if let Some(list) = data {
+                            self.dialog_pages
+                                .push_back(DialogPage::DeleteList(entity, list.name.clone()));
+                        }
+                    }
                     page => self.dialog_pages.push_back(page),
                 }
                 return cosmic::widget::text_input::focus(self.dialog_text_input.clone());
@@ -82,7 +93,7 @@ impl AppModel {
                                 }
                             }
                         }
-                        DialogPage::DeleteList(entity) => {
+                        DialogPage::DeleteList(entity, _) => {
                             return cosmic::task::message(Message::Tasks(TasksAction::DeleteList(
                                 entity,
                             )));

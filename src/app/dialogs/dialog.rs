@@ -24,7 +24,7 @@ pub enum DialogPage {
     NewList(String),
     SetListIcon(Option<segmented_button::Entity>, String, String),
     RenameList(Option<segmented_button::Entity>, String),
-    DeleteList(Option<segmented_button::Entity>),
+    DeleteList(Option<segmented_button::Entity>, String),
     Calendar(CalendarModel),
     Export(String),
 }
@@ -118,9 +118,9 @@ impl DialogPage {
                     ])
                     .spacing(spacing.space_xxs),
                 ),
-            DialogPage::DeleteList(_) => widget::dialog()
+            DialogPage::DeleteList(_, name) => widget::dialog()
                 .title(fl!("delete-list"))
-                .body(fl!("delete-list-confirm"))
+                .body(fl!("delete-list-confirm", name = name.as_str()))
                 .primary_action(
                     widget::button::suggested(fl!("ok"))
                         .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),

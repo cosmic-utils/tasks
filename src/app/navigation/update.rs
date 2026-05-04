@@ -109,7 +109,7 @@ impl AppModel {
             }
             NavMenuAction::Delete(entity) => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::DeleteList(Some(entity)),
+                    DialogPage::DeleteList(Some(entity), String::new()),
                 )));
             }
             NavMenuAction::TrashEmptyAll => {

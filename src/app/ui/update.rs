@@ -96,7 +96,7 @@ impl AppModel {
             }
             MenuAction::DeleteList => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::DeleteList(None),
+                    DialogPage::DeleteList(None, String::new()),
                 )));
             }
             MenuAction::RenameList => {

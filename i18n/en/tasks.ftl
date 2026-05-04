@@ -49,7 +49,7 @@ rename-list = Rename list
 
 # Delete List Dialog
 delete-list = The selected list is about to be deleted
-delete-list-confirm = Are you sure you want to delete this list?
+delete-list-confirm = Are you sure you want to delete "{ $name }"?
 
 # Deletion undo banner
 undo = Undo
