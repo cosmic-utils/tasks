@@ -47,3 +47,29 @@ pub fn nav_context_menu(
         ],
     ))
 }
+
+pub fn trash_context_menu() -> Option<Vec<widget::menu::Tree<cosmic::Action<Message>>>> {
+    Some(cosmic::widget::menu::items(
+        &HashMap::new(),
+        vec![
+            cosmic::widget::menu::Item::Button(
+                fl!("restore-all"),
+                Some(
+                    widget::icon::from_name("edit-undo-symbolic")
+                        .size(14)
+                        .handle(),
+                ),
+                NavMenuAction::TrashRestoreAll,
+            ),
+            cosmic::widget::menu::Item::Button(
+                fl!("empty-trash"),
+                Some(
+                    widget::icon::from_name("user-trash-full-symbolic")
+                        .size(14)
+                        .handle(),
+                ),
+                NavMenuAction::TrashEmptyAll,
+            ),
+        ],
+    ))
+}

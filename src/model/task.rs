@@ -129,6 +129,31 @@ pub enum Priority {
     High,
 }
 
+/// Represents a task that has been moved to the trash.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrashedTask {
+    /// The task that was trashed.
+    pub task: Task,
+    /// The list the task originally belonged to.
+    pub original_list_id: uuid::Uuid,
+    /// When the task was moved to trash.
+    pub deleted_at: jiff::Timestamp,
+}
+
+impl TrashedTask {
+    pub fn new(task: Task, original_list_id: uuid::Uuid) -> Self {
+        Self {
+            task,
+            original_list_id,
+            deleted_at: jiff::Timestamp::now(),
+        }
+    }
+    /// Returns `deleted_at` formatted in the system's local timezone.
+    pub fn deleted_at_local(&self) -> String {
+        Task::format_timestamp(&self.deleted_at)
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Recurrence {
     pub monday: bool,

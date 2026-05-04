@@ -16,6 +16,8 @@ pub enum NavMenuAction {
     SetIcon(segmented_button::Entity),
     Export(segmented_button::Entity),
     Delete(segmented_button::Entity),
+    TrashEmptyAll,
+    TrashRestoreAll,
 }
 
 impl Action for NavMenuAction {

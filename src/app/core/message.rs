@@ -5,7 +5,7 @@ use crate::{
         ui::{ApplicationAction, MenuAction},
     },
     config::AppConfig,
-    pages::{content, details},
+    pages::{content, details, trash},
 };
 
 use super::ContextPage;
@@ -23,4 +23,5 @@ pub enum Message {
     ToggleContextPage(ContextPage),
     Open(String),
     UpdateConfig(AppConfig),
+    Trash(trash::Message),
 }

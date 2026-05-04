@@ -1,4 +1,4 @@
-use crate::model::{List, Task};
+use crate::model::{List, Task, TrashedTask};
 use crate::StoreError;
 use crate::{Error, Result};
 use ron::ser::PrettyConfig;
@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 const LISTS_REGISTRY: &str = "lists.ron";
+const TRASH_DIR: &str = "_trash";
 
 fn pretty() -> PrettyConfig {
     PrettyConfig::new().depth_limit(6).struct_names(true)
@@ -28,6 +29,10 @@ impl Store {
         ListStore { store: self }
     }
 
+    pub fn trash(&self) -> TrashStore<'_> {
+        TrashStore { store: self }
+    }
+
     pub fn tasks(&self, list_id: Uuid) -> TaskStore<'_> {
         TaskStore {
             store: self,
@@ -39,12 +44,65 @@ impl Store {
         self.base_dir.join(LISTS_REGISTRY)
     }
 
+    fn trash_dir(&self) -> PathBuf {
+        self.base_dir.join(TRASH_DIR)
+    }
+
+    fn trashed_task_path(&self, task_id: Uuid) -> PathBuf {
+        self.trash_dir().join(format!("{task_id}.ron"))
+    }
+
     fn list_dir(&self, list_id: Uuid) -> PathBuf {
         self.base_dir.join(list_id.to_string())
     }
 
     fn task_path(&self, list_id: Uuid, task_id: Uuid) -> PathBuf {
         self.list_dir(list_id).join(format!("{task_id}.ron"))
+    }
+}
+
+pub struct TrashStore<'s> {
+    store: &'s Store,
+}
+
+impl TrashStore<'_> {
+    /// Persist a trashed task.
+    pub fn save(&self, trashed: &TrashedTask) -> crate::Result<()> {
+        fs::create_dir_all(self.store.trash_dir())?;
+        let path = self.store.trashed_task_path(trashed.task.id);
+        let content = ron::ser::to_string_pretty(trashed, pretty())?;
+        fs::write(path, content)?;
+        Ok(())
+    }
+
+    /// Load all trashed tasks, sorted newest-first.
+    pub fn load_all(&self) -> crate::Result<Vec<TrashedTask>> {
+        let trash_dir = self.store.trash_dir();
+        if !trash_dir.exists() {
+            return Ok(vec![]);
+        }
+        let mut tasks = Vec::new();
+        for entry in fs::read_dir(&trash_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
+                continue;
+            }
+            match fs::read_to_string(&path).map(|s| ron::from_str::<TrashedTask>(&s)) {
+                Ok(Ok(task)) => tasks.push(task),
+                Ok(Err(e)) => tracing::error!("skipping {:?}: {e}", path.file_name()),
+                Err(e) => tracing::error!("could not read {:?}: {e}", path.file_name()),
+            }
+        }
+        tasks.sort_by(|a, b| b.deleted_at.cmp(&a.deleted_at));
+        Ok(tasks)
+    }
+
+    /// Permanently delete a single trashed task.
+    pub fn delete(&self, task_id: Uuid) -> crate::Result<()> {
+        let path = self.store.trashed_task_path(task_id);
+        fs::remove_file(&path)
+            .map_err(|_| crate::Error::Store(crate::StoreError::TaskNotFound(task_id)))
     }
 }
 

@@ -1,5 +1,15 @@
 tasks = Tasks
 trash = Trash
+empty-trash = Empty trash
+no-trash = Trash is empty
+no-trash-suggestion = Deleted tasks will appear here
+restore = Restore
+restore-all = Restore all
+delete-permanently = Delete permanently
+deleted-from = Deleted from "{ $list }"
+deleted-at = Deleted { $date }
+unknown-list = Unknown list
+trash-emptied = Trash emptied
 about = About
 
 # Content
@@ -26,6 +36,7 @@ no-list-suggestion = Create or select a new list to get started
 
 sub-tasks = Sub-tasks
 add-sub-task = Add sub-task
+move-to-trash = Move to trash
 
 # New List Dialog
 create-list = Create a new list
