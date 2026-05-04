@@ -321,10 +321,12 @@ impl Content {
                 let task = self.tasks.get_mut(id);
                 if let Some(task) = task {
                     task.status = if complete {
+                        task.completion_date = Some(jiff::Timestamp::now());
                         Status::Completed
                     } else {
                         Status::NotStarted
                     };
+
                     if let Err(error) = self
                         .store
                         .tasks(list.id)

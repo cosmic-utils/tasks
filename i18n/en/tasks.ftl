@@ -14,6 +14,7 @@ priority = Priority
 due-date = Due date
 reminder = Reminder
 created-at = Created
+completed-at = Completed
 notes = Notes
 add-notes = Add notes
 
