@@ -10,7 +10,7 @@ use cosmic::{
 use crate::{
     app::{dialogs::DialogPage, ui::MenuAction},
     config,
-    pages::{content::Content, details::Details},
+    pages::{content::Content, details::Details, trash::Trash},
     services::store::Store,
 };
 
@@ -45,4 +45,8 @@ pub struct AppModel {
     pub(crate) content: Content,
     /// The details view for tasks.
     pub(crate) details: Details,
+    /// The trash page.
+    pub(crate) trash: Trash,
+    /// The nav bar entity for the trash item (kept so we can always reposition it last).
+    pub(crate) trash_entity: nav_bar::Id,
 }

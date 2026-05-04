@@ -20,7 +20,7 @@ use crate::{
     config::AppConfig,
     fl,
     model::List,
-    pages::{content, details},
+    pages::{content, details, trash},
 };
 
 impl Application for AppModel {
@@ -80,6 +80,9 @@ impl Application for AppModel {
         &self,
         id: widget::nav_bar::Id,
     ) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
+        if self.nav.data::<crate::model::TrashMarker>(id).is_some() {
+            return navigation::trash_context_menu();
+        }
         navigation::nav_context_menu(id)
     }
 
@@ -100,6 +103,17 @@ impl Application for AppModel {
     fn on_nav_select(&mut self, entity: Entity) -> app::Task<Self::Message> {
         let mut tasks = vec![];
         self.nav.activate(entity);
+
+        // Check if trash was selected
+        if self.nav.data::<crate::model::TrashMarker>(entity).is_some() {
+            // Clear the content selection so that switching back to any list
+            // (including the same one) always triggers a fresh task reload.
+            return app::Task::batch(vec![
+                self.update(Message::Content(content::Message::SetList(None))),
+                self.update(Message::Trash(trash::Message::Load)),
+            ]);
+        }
+
         let location_opt = self.nav.data::<List>(entity);
 
         if let Some(list) = location_opt {
@@ -136,11 +150,11 @@ impl Application for AppModel {
             }),
         ];
 
-        // Tick the deletion countdown once per second while a task is pending.
-        if self.content.has_pending_deletion() {
+        // Tick the trash deletion countdown once per second while a task is pending.
+        if self.trash.has_pending_deletion() {
             subscriptions.push(
                 cosmic::iced::time::every(std::time::Duration::from_secs(1))
-                    .map(|_| Message::Content(content::Message::TaskDeletionTick)),
+                    .map(|_| Message::Trash(trash::Message::TaskDeletionTick)),
             );
         }
 
@@ -239,6 +253,9 @@ impl Application for AppModel {
                     }
                 }
             }
+            Message::Trash(msg) => {
+                self.trash.update(msg);
+            }
             Message::Tasks(action) => {
                 return self.update_tasks(action);
             }
@@ -271,6 +288,14 @@ impl Application for AppModel {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        self.content.view().map(Message::Content)
+        if self
+            .nav
+            .active_data::<crate::model::TrashMarker>()
+            .is_some()
+        {
+            self.trash.view().map(Message::Trash)
+        } else {
+            self.content.view().map(Message::Content)
+        }
     }
 }

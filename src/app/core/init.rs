@@ -13,7 +13,7 @@ use cosmic::{
 use crate::{
     app::{navigation::TasksAction, ui::MenuAction},
     fl,
-    pages::{content::Content, details::Details},
+    pages::{content::Content, details::Details, trash::Trash},
 };
 
 use super::{context::ContextPage, flags::Flags, message::Message, model::AppModel};
@@ -34,10 +34,12 @@ impl AppModel {
             config: flags.config.clone(),
             store: flags.store.clone(),
             content: Content::new(flags.store.clone(), flags.config),
-            details: Details::new(flags.store),
+            details: Details::new(flags.store.clone()),
+            trash: Trash::new(flags.store),
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
+            trash_entity: widget::segmented_button::Entity::default(),
         };
 
         let mut tasks = vec![cosmic::task::message(Message::Tasks(
@@ -49,6 +51,17 @@ impl AppModel {
         }
 
         app.core.nav_bar_toggle_condensed();
+
+        // Insert the trash nav item and remember its entity so we can always
+        // reposition it to the bottom after new lists are added.
+        let trash_icon = widget::icon::from_name("user-trash-full-symbolic").size(16);
+        app.trash_entity = app
+            .nav
+            .insert()
+            .text(fl!("trash"))
+            .icon(trash_icon)
+            .data(crate::model::TrashMarker)
+            .id();
 
         (app, app::Task::batch(tasks))
     }

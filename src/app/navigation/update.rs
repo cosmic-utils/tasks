@@ -29,6 +29,7 @@ impl AppModel {
                 for list in lists {
                     self.create_nav_item(&list);
                 }
+                self.reposition_trash();
                 let Some(entity) = self.nav.iter().next() else {
                     return app::Task::none();
                 };
@@ -37,7 +38,19 @@ impl AppModel {
             }
             TasksAction::AddList(list) => {
                 self.create_nav_item(&list);
-                let Some(entity) = self.nav.iter().last() else {
+                self.reposition_trash();
+                // Select the newly added list, which is now second-to-last
+                // (last is always trash). Find it by its data.
+                let entity = self
+                    .nav
+                    .iter()
+                    .find(|e| {
+                        self.nav
+                            .data::<crate::model::List>(*e)
+                            .is_some_and(|l| l.id == list.id)
+                    })
+                    .or_else(|| self.nav.iter().last());
+                let Some(entity) = entity else {
                     return app::Task::none();
                 };
                 return self.on_nav_select(entity);
@@ -98,6 +111,16 @@ impl AppModel {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
                     DialogPage::DeleteList(Some(entity)),
                 )));
+            }
+            NavMenuAction::TrashEmptyAll => {
+                return cosmic::task::message(Message::Trash(
+                    crate::pages::trash::Message::EmptyTrash,
+                ));
+            }
+            NavMenuAction::TrashRestoreAll => {
+                return cosmic::task::message(Message::Trash(
+                    crate::pages::trash::Message::RestoreAll,
+                ));
             }
         }
 
