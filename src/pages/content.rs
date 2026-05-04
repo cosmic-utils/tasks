@@ -162,7 +162,9 @@ impl Content {
         match message {
             Message::ToggleSearchBar => {
                 self.search_bar_visible = !self.search_bar_visible;
-                if !self.search_bar_visible {
+                if self.search_bar_visible {
+                    output = Some(Output::Focus(widget::Id::new("search-tasks-input")));
+                } else {
                     self.search_query.clear();
                 }
             }
@@ -208,6 +210,9 @@ impl Content {
                     _ => {}
                 }
                 self.selected_list.clone_from(&list);
+                if list.is_some() {
+                    return Some(Output::Focus(widget::Id::new("new-task-input")));
+                }
             }
             Message::SetConfig(config) => {
                 self.config = config;
@@ -532,7 +537,9 @@ impl Content {
     /// Creates the search input field
     fn create_search_input<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
         widget::text_input(fl!("search-tasks"), &self.search_query)
+            .id(widget::Id::new("search-tasks-input"))
             .on_input(Message::SearchQueryChanged)
+            .on_unfocus(Message::ToggleSearchBar)
             .width(Length::Fill)
             .padding([spacing.space_xxs, spacing.space_xxs])
             .into()
@@ -566,7 +573,7 @@ impl Content {
         widget::button::icon(widget::icon::from_name("edit-find-symbolic").size(18))
             .selected(self.search_bar_visible)
             .padding(spacing.space_xxs)
-            .on_press(Message::ToggleSearchBar)
+            .on_press_maybe((!self.search_bar_visible).then_some(Message::ToggleSearchBar))
             .into()
     }
 

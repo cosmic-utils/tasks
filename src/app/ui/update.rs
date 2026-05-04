@@ -31,9 +31,6 @@ impl AppModel {
             ApplicationAction::Modifiers(modifiers) => {
                 self.modifiers = modifiers;
             }
-            ApplicationAction::Focus(id) => {
-                return cosmic::task::message(Message::Application(ApplicationAction::Focus(id)));
-            }
         }
 
         app::Task::none()

@@ -6,7 +6,6 @@ use crate::{
     app::{
         core::{AppModel, Message},
         navigation::TasksAction,
-        ui::ApplicationAction,
     },
     model::List,
     pages::{content, details},
@@ -32,9 +31,7 @@ impl AppModel {
                     }
                     page => self.dialog_pages.push_back(page),
                 }
-                return cosmic::task::message(Message::Application(ApplicationAction::Focus(
-                    self.dialog_text_input.clone(),
-                )));
+                return cosmic::widget::text_input::focus(self.dialog_text_input.clone());
             }
             DialogAction::Update(dialog_page) => {
                 self.dialog_pages[0] = dialog_page;

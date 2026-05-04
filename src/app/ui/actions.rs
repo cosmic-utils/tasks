@@ -1,6 +1,6 @@
 use cosmic::{
     iced::keyboard::{Key, Modifiers},
-    widget::{self, menu::Action},
+    widget::menu::Action,
 };
 
 use crate::app::core::{ContextPage, Message};
@@ -27,7 +27,6 @@ pub enum ApplicationAction {
     Key(Modifiers, Key),
     Modifiers(Modifiers),
     AppTheme(usize),
-    Focus(widget::Id),
 }
 
 impl Action for MenuAction {
