@@ -13,7 +13,7 @@ use cosmic::{
 use crate::{
     app::{navigation::TasksAction, ui::MenuAction},
     fl,
-    pages::{content::Content, details::Details, trash::Trash},
+    pages::{content::Content, details::Details, favorites::Favorites, trash::Trash},
 };
 
 use super::{context::ContextPage, flags::Flags, message::Message, model::AppModel};
@@ -35,11 +35,13 @@ impl AppModel {
             store: flags.store.clone(),
             content: Content::new(flags.store.clone(), flags.config),
             details: Details::new(flags.store.clone()),
-            trash: Trash::new(flags.store),
+            trash: Trash::new(flags.store.clone()),
             modifiers: Modifiers::empty(),
             dialog_pages: VecDeque::new(),
             dialog_text_input: widget::Id::unique(),
             trash_entity: widget::segmented_button::Entity::default(),
+            favorites: Favorites::new(flags.store.clone()),
+            favorites_entity: widget::segmented_button::Entity::default(),
         };
 
         let mut tasks = vec![cosmic::task::message(Message::Tasks(
@@ -51,6 +53,15 @@ impl AppModel {
         }
 
         app.core.nav_bar_toggle_condensed();
+
+        let favorites_icon = widget::icon::from_name("starred-symbolic").size(16);
+        app.favorites_entity = app
+            .nav
+            .insert()
+            .text(fl!("favorites"))
+            .icon(favorites_icon)
+            .data(crate::model::FavoritesMarker)
+            .id();
 
         // Insert the trash nav item and remember its entity so we can always
         // reposition it to the bottom after new lists are added.

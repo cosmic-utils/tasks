@@ -1,6 +1,9 @@
 tasks = Tasks
+favorites = Favorites
 trash = Trash
 empty-trash = Empty trash
+no-favorites = No favorites
+no-favorites-suggestion = Mark tasks as favorites to see them here
 no-trash = Trash is empty
 no-trash-suggestion = Deleted tasks will appear here
 restore = Restore
