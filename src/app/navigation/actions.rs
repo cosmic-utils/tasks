@@ -1,5 +1,7 @@
 use crate::model::List;
-use cosmic::{widget::segmented_button, widget::menu::Action};
+use cosmic::{widget::menu::Action, widget::segmented_button};
+use slotmap::DefaultKey;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub enum TasksAction {
@@ -7,6 +9,7 @@ pub enum TasksAction {
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
     FetchLists,
+    DeleteTask(DefaultKey, Uuid, Uuid),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

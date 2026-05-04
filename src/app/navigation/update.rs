@@ -5,6 +5,7 @@ use crate::{
         core::{AppModel, Message},
         dialogs::{DialogAction, DialogPage},
         navigation::TasksAction,
+        ContextPage,
     },
     pages::content,
 };
@@ -59,6 +60,23 @@ impl AppModel {
                 }
                 self.nav.remove(self.nav.active());
             }
+            TasksAction::DeleteTask(id, list_id, task_id) => {
+                if let Err(err) = self.store.tasks(list_id).delete(task_id) {
+                    tracing::error!("Error deleting task: {err}");
+                }
+
+                let mut tasks: Vec<cosmic::Task<Message>> = vec![cosmic::task::message(
+                    Message::Content(content::Message::TaskDelete(id)),
+                )];
+
+                if self.core.window.show_context {
+                    tasks.push(cosmic::task::message(Message::ToggleContextPage(
+                        ContextPage::TaskDetails,
+                    )));
+                }
+
+                return cosmic::task::batch(tasks);
+            }
         }
 
         app::Task::none()
@@ -68,12 +86,12 @@ impl AppModel {
         match action {
             NavMenuAction::Rename(entity) => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::Rename(Some(entity), String::new()),
+                    DialogPage::RenameList(Some(entity), String::new()),
                 )))
             }
             NavMenuAction::SetIcon(entity) => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::Icon(Some(entity), String::new(), String::new()),
+                    DialogPage::SetListIcon(Some(entity), String::new(), String::new()),
                 )))
             }
             NavMenuAction::Export(entity) => {
@@ -93,7 +111,7 @@ impl AppModel {
             }
             NavMenuAction::Delete(entity) => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::Delete(Some(entity)),
+                    DialogPage::DeleteList(Some(entity)),
                 )));
             }
         }

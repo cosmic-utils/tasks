@@ -65,22 +65,22 @@ impl AppModel {
             },
             MenuAction::NewList => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::New(String::new()),
+                    DialogPage::NewList(String::new()),
                 )));
             }
             MenuAction::DeleteList => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::Delete(None),
+                    DialogPage::DeleteList(None),
                 )));
             }
             MenuAction::RenameList => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::Rename(None, String::new()),
+                    DialogPage::RenameList(None, String::new()),
                 )));
             }
             MenuAction::Icon => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::Icon(None, String::new(), String::new()),
+                    DialogPage::SetListIcon(None, String::new(), String::new()),
                 )));
             }
             MenuAction::ToggleHideCompleted(completed) => {

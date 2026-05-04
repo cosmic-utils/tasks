@@ -41,7 +41,6 @@ pub struct Content {
     config: config::AppConfig,
     store: Store,
 
-    context_drawer_open: bool,
     search_bar_visible: bool,
     add_task_input: String,
     search_query: String,
@@ -77,7 +76,7 @@ pub enum Message {
     SetConfig(config::AppConfig),
     RefreshTask(model::Task),
     Empty,
-    ContextDrawerOpen(bool),
+    OpenTaskDeletionDialog(DefaultKey),
 
     ToggleSearchBar,
     SearchQueryChanged(String),
@@ -87,7 +86,8 @@ pub enum Message {
 pub enum Output {
     ToggleHideCompleted(model::List),
     Focus(widget::Id),
-    OpenTaskDetails(Uuid),
+    OpenTaskDetails(DefaultKey, Uuid),
+    OpenTaskDeletionDialog(DefaultKey, Uuid, Uuid),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -104,7 +104,7 @@ impl MenuAction for TaskAction {
         match self {
             TaskAction::Edit(id) => Message::TaskOpenDetails(*id),
             TaskAction::AddSubTask(id) => Message::TaskAddSubTask(*id),
-            TaskAction::Delete(id) => Message::TaskDelete(*id),
+            TaskAction::Delete(id) => Message::OpenTaskDeletionDialog(*id),
         }
     }
 }
@@ -122,16 +122,11 @@ impl Content {
             .push(self.new_task_view())
             .spacing(spacing.space_xxs)
             .max_width(800.)
-            .padding([spacing.space_xxs, spacing.space_none]);
-
-        if !self.context_drawer_open {
-            return content
-                .apply(widget::container)
-                .height(Length::Fill)
-                .width(Length::Fill)
-                .center(Length::Fill)
-                .into();
-        }
+            .padding([spacing.space_xxs, spacing.space_none])
+            .apply(widget::container)
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .center(Length::Fill);
 
         content.into()
     }
@@ -149,9 +144,6 @@ impl Content {
                 self.search_query = query;
             }
             Message::Empty => (),
-            Message::ContextDrawerOpen(open) => {
-                self.context_drawer_open = open;
-            }
             Message::SetTasks(tasks) => {
                 self.tasks.clear();
                 self.inputs.clear();
@@ -197,9 +189,9 @@ impl Content {
                     tracing::warn!("Task with ID {:?} not found", refreshed_task.id);
                 }
             }
-            Message::TaskOpenDetails(id) => match self.tasks.get(id) {
-                Some(task) => output = Some(Output::OpenTaskDetails(task.id)),
-                None => tracing::warn!("Task with ID {:?} not found", id),
+            Message::TaskOpenDetails(key) => match self.tasks.get(key) {
+                Some(task) => output = Some(Output::OpenTaskDetails(key, task.id)),
+                None => tracing::warn!("Task with ID {:?} not found", key),
             },
             Message::TaskExpand(default_key) => {
                 let Some(list) = &self.selected_list else {
@@ -305,16 +297,19 @@ impl Content {
                     task.title = title;
                 }
             }
-            Message::TaskDelete(id) => {
+            Message::OpenTaskDeletionDialog(id) => {
                 let Some(list) = &self.selected_list else {
                     tracing::warn!("No list selected");
                     return None;
                 };
 
-                if let Some(task) = self.tasks.remove(id) {
-                    if let Err(error) = self.store.tasks(list.id).delete(task.id) {
-                        tracing::error!("Failed to delete task: {:?}", error);
-                    }
+                if let Some(task) = self.tasks.get_mut(id) {
+                    return Some(Output::OpenTaskDeletionDialog(id, list.id, task.id));
+                }
+            }
+            Message::TaskDelete(id) => {
+                if let None = self.tasks.remove(id) {
+                    tracing::error!("Failed to remove task: {:?}", id);
                 }
             }
             Message::TaskComplete(id, complete) => {
@@ -407,7 +402,6 @@ impl Content {
             add_task_input: String::new(),
             config: config,
             store: storage,
-            context_drawer_open: false,
             search_bar_visible: false,
             search_query: String::new(),
             sort_type: SortType::DateAsc,

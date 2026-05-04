@@ -156,7 +156,7 @@ impl Application for AppModel {
                 if let Some(output) = self.content.update(message) {
                     match output {
                         content::Output::Focus(id) => return cosmic::widget::text_input::focus(id),
-                        content::Output::OpenTaskDetails(id) => {
+                        content::Output::OpenTaskDetails(key, id) => {
                             let Some(list_id) = self
                                 .nav
                                 .active_data::<crate::model::List>()
@@ -173,13 +173,18 @@ impl Application for AppModel {
 
                             let tasks = vec![
                                 cosmic::task::message(Message::Details(details::Message::SetTask(
-                                    task, list_id,
+                                    key, task, list_id,
                                 ))),
                                 cosmic::task::message(Message::ToggleContextPage(
                                     ContextPage::TaskDetails,
                                 )),
                             ];
                             return app::Task::batch(tasks);
+                        }
+                        content::Output::OpenTaskDeletionDialog(id, list_id, task_id) => {
+                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                                DialogPage::DeleteTask(id, list_id, task_id),
+                            )));
                         }
                         content::Output::ToggleHideCompleted(list) => {
                             if let Some(data) = self.nav.active_data_mut::<crate::model::List>() {
@@ -192,6 +197,11 @@ impl Application for AppModel {
             Message::Details(message) => {
                 if let Some(output) = self.details.update(message) {
                     match output {
+                        details::Output::OpenTaskDeletionDialog(id, list_id, task_id) => {
+                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                                DialogPage::DeleteTask(id, list_id, task_id),
+                            )));
+                        }
                         details::Output::OpenCalendarDialog => {
                             return cosmic::task::message(Message::Dialog(DialogAction::Open(
                                 DialogPage::Calendar(CalendarModel::now()),
@@ -224,18 +234,12 @@ impl Application for AppModel {
                     self.context_page = page;
                     self.core.window.show_context = true;
                 }
-                return cosmic::task::message(Message::Content(
-                    content::Message::ContextDrawerOpen(self.core.window.show_context),
-                ));
             }
             Message::NavMenu(action) => {
                 return self.update_nav_menu(action);
             }
             Message::ToggleContextDrawer => {
                 self.core.window.show_context = !self.core.window.show_context;
-                return cosmic::task::message(Message::Content(
-                    content::Message::ContextDrawerOpen(self.core.window.show_context),
-                ));
             }
         }
 

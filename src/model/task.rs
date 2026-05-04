@@ -86,12 +86,6 @@ impl Task {
         self.completion_date.as_ref().map(Self::format_timestamp)
     }
 
-    /// Returns `reminder_date` formatted in the system's local timezone,
-    /// or `None` if no reminder has been set.
-    pub fn reminder_date_local(&self) -> Option<String> {
-        self.reminder_date.as_ref().map(Self::format_timestamp)
-    }
-
     /// Creates a new task with the given title and default values for other fields.
     pub fn new(title: impl ToString) -> Self {
         Self {
