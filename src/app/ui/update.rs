@@ -1,6 +1,6 @@
 use std::{env, process};
 
-use cosmic::{app, widget::menu::Action as _};
+use cosmic::{app, widget::menu::Action as _, Application};
 
 use crate::{
     app::{
@@ -20,6 +20,34 @@ impl AppModel {
                     tracing::error!("{err}")
                 }
                 return cosmic::command::set_theme(self.config.app_theme.theme());
+            }
+            ApplicationAction::ToggleShowFavorites(show) => {
+                if let Err(err) = self.config.set_show_favorites(&self.handler, show) {
+                    tracing::error!("{err}");
+                }
+                if show {
+                    self.show_favorites_nav_item();
+                } else {
+                    // Remove the nav item unconditionally first.
+                    self.hide_favorites_nav_item();
+                    // If the user was viewing favorites, navigate them to the first list.
+                    if self
+                        .nav
+                        .active_data::<crate::model::FavoritesMarker>()
+                        .is_some()
+                    {
+                        let entity = self
+                            .nav
+                            .iter()
+                            .find(|e| self.nav.data::<crate::model::List>(*e).is_some())
+                            .unwrap_or_else(|| self.nav.iter().last().unwrap_or_default());
+                        return self.update(crate::app::core::Message::Content(
+                            crate::pages::content::Message::SetList(
+                                self.nav.data::<crate::model::List>(entity).cloned(),
+                            ),
+                        ));
+                    }
+                }
             }
             ApplicationAction::Key(modifiers, key) => {
                 for (key_bind, action) in self.key_binds.clone().into_iter() {

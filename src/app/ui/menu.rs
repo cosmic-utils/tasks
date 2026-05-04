@@ -131,19 +131,6 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
                         MenuAction::Settings,
                     ),
                     Item::Divider,
-                    list_selected
-                        .then_some(Item::CheckBox(
-                            fl!("hide-completed"),
-                            None,
-                            state.config.hide_completed,
-                            MenuAction::ToggleHideCompleted(!&state.config.hide_completed),
-                        ))
-                        .unwrap_or(Item::ButtonDisabled(
-                            fl!("hide-completed"),
-                            None,
-                            MenuAction::ToggleHideCompleted(!&state.config.hide_completed),
-                        )),
-                    Item::Divider,
                     Item::Button(
                         fl!("menu-about"),
                         Some(

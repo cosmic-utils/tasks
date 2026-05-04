@@ -6,10 +6,21 @@ use serde::{Deserialize, Serialize};
 
 pub const CONFIG_VERSION: u64 = 1;
 
-#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, CosmicConfigEntry)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, CosmicConfigEntry)]
 pub struct AppConfig {
     pub app_theme: AppTheme,
     pub hide_completed: bool,
+    pub show_favorites: bool,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            app_theme: AppTheme::default(),
+            hide_completed: false,
+            show_favorites: true,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]

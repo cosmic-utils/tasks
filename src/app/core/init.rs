@@ -54,17 +54,7 @@ impl AppModel {
 
         app.core.nav_bar_toggle_condensed();
 
-        let favorites_icon = widget::icon::from_name("starred-symbolic").size(16);
-        app.favorites_entity = app
-            .nav
-            .insert()
-            .text(fl!("favorites"))
-            .icon(favorites_icon)
-            .data(crate::model::FavoritesMarker)
-            .id();
-
-        // Insert the trash nav item and remember its entity so we can always
-        // reposition it to the bottom after new lists are added.
+        // Insert the trash nav item.
         let trash_icon = widget::icon::from_name("user-trash-full-symbolic").size(16);
         app.trash_entity = app
             .nav
@@ -73,6 +63,11 @@ impl AppModel {
             .icon(trash_icon)
             .data(crate::model::TrashMarker)
             .id();
+
+        // Conditionally insert the favorites nav item based on config.
+        if app.config.show_favorites {
+            app.show_favorites_nav_item();
+        }
 
         (app, app::Task::batch(tasks))
     }
