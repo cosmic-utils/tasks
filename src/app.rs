@@ -270,7 +270,44 @@ impl Application for AppModel {
                 self.trash.update(msg);
             }
             Message::Favorites(msg) => {
-                self.favorites.update(msg);
+                if let Some(output) = self.favorites.update(msg) {
+                    match output {
+                        favorites::Output::OpenTask { task, list_id } => {
+                            // Find the nav entity for this list and activate it.
+                            let entity = self.nav.iter().find(|e| {
+                                self.nav
+                                    .data::<crate::model::List>(*e)
+                                    .is_some_and(|l| l.id == list_id)
+                            });
+                            let Some(entity) = entity else {
+                                tracing::error!("Nav entity not found for list {list_id}");
+                                return app::Task::none();
+                            };
+                            self.nav.activate(entity);
+
+                            let mut tasks = vec![cosmic::task::message(
+                                Message::ToggleContextPage(ContextPage::TaskDetails),
+                            )];
+
+                            if let Some(list) = self.nav.data::<crate::model::List>(entity) {
+                                tasks.push(self.update(Message::Content(
+                                    content::Message::SetList(Some(list.clone())),
+                                )));
+                            }
+
+                            let Some(key) = self.content.find_task_key(task.id) else {
+                                tracing::error!("Task key not found after loading list");
+                                return app::Task::none();
+                            };
+
+                            tasks.push(cosmic::task::message(Message::Details(
+                                details::Message::SetTask(key, task, list_id),
+                            )));
+
+                            return app::Task::batch(tasks);
+                        }
+                    }
+                }
             }
             Message::Tasks(action) => {
                 return self.update_tasks(action);

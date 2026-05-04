@@ -31,6 +31,12 @@ pub enum Message {
     Load,
     Loaded(Vec<FavoriteEntry>),
     Unfavorite(Uuid),
+    /// Navigate to the task's list and open its details pane.
+    Open(Uuid),
+}
+
+pub enum Output {
+    OpenTask { task: Task, list_id: Uuid },
 }
 
 impl std::fmt::Debug for FavoriteEntry {
@@ -60,7 +66,7 @@ impl Favorites {
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
             Message::Load => {
                 let lists: Vec<List> = self.store.lists().load_all().unwrap_or_else(|e| {
@@ -111,7 +117,16 @@ impl Favorites {
                     }
                 }
             }
+            Message::Open(task_id) => {
+                if let Some(entry) = self.entries.iter().find(|e| e.task.id == task_id) {
+                    return Some(Output::OpenTask {
+                        task: entry.task.clone(),
+                        list_id: entry.list_id,
+                    });
+                }
+            }
         }
+        None
     }
 
     pub fn view(&self) -> Element<'_, Message> {
@@ -182,12 +197,18 @@ impl Favorites {
             .push(list_label)
             .width(Length::Fill);
 
-        let row = widget::row::with_capacity(2)
+        let open_button =
+            widget::button::icon(widget::icon::from_name("go-next-symbolic").size(16))
+                .padding(spacing.space_xxs)
+                .on_press(Message::Open(task_id));
+
+        let row = widget::row::with_capacity(3)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_xxxs, spacing.space_xs])
             .push(star_button)
-            .push(text_col);
+            .push(text_col)
+            .push(open_button);
 
         widget::container(row)
             .class(cosmic::style::Container::ContextDrawer)
