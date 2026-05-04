@@ -33,6 +33,16 @@ enum EditState {
     Exiting,
 }
 
+/// Holds the state of a task pending deletion so it can be undone.
+struct PendingDeletion {
+    /// The list that owns the task.
+    list_id: Uuid,
+    /// A full copy of the task, used to restore it on undo.
+    task: model::Task,
+    /// Seconds remaining before the deletion is committed to the store.
+    seconds_remaining: u8,
+}
+
 pub struct Content {
     selected_list: Option<List>,
     tasks: SlotMap<DefaultKey, model::Task>,
@@ -45,6 +55,11 @@ pub struct Content {
     add_task_input: String,
     search_query: String,
     sort_type: SortType,
+
+    /// A task that has been removed from the UI but not yet deleted from the
+    /// store.  The deletion is committed automatically after the countdown
+    /// reaches zero, or cancelled when the user presses "Undo".
+    pending_deletion: Option<PendingDeletion>,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -62,7 +77,6 @@ pub enum Message {
     TaskExpand(DefaultKey),
     TaskAddSubTask(DefaultKey),
     TaskComplete(DefaultKey, bool),
-    TaskDelete(DefaultKey),
     TaskToggleTitleEditMode(DefaultKey, bool),
     TaskTitleInput(String),
     TaskOpenDetails(DefaultKey),
@@ -76,7 +90,12 @@ pub enum Message {
     SetConfig(config::AppConfig),
     RefreshTask(model::Task),
     Empty,
+    /// Request the deletion of a task; starts the undo countdown.
     OpenTaskDeletionDialog(DefaultKey),
+    /// Advance the deletion countdown by one second tick.
+    TaskDeletionTick,
+    /// Cancel the pending deletion and restore the task in the UI.
+    TaskDeletionUndo,
 
     ToggleSearchBar,
     SearchQueryChanged(String),
@@ -87,7 +106,9 @@ pub enum Output {
     ToggleHideCompleted(model::List),
     Focus(widget::Id),
     OpenTaskDetails(DefaultKey, Uuid),
-    OpenTaskDeletionDialog(DefaultKey, Uuid, Uuid),
+    /// The pending deletion was committed; the app should close the details
+    /// drawer if it is currently showing task details.
+    TaskDeleted,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -117,18 +138,23 @@ impl Content {
             return self.create_no_list_selected_view();
         };
 
-        let content = widget::column::with_capacity(2)
-            .push(self.list_view(list))
-            .push(self.new_task_view())
-            .spacing(spacing.space_xxs)
+        let mut column = widget::column(vec![self.list_view(list)]);
+
+        if let Some(ref pending) = self.pending_deletion {
+            column = column.push(self.deletion_banner(pending, &spacing));
+        }
+
+        column = column.push(self.new_task_view());
+
+        column
             .max_width(800.)
             .padding([spacing.space_xxs, spacing.space_none])
+            .spacing(spacing.space_xxs)
             .apply(widget::container)
             .height(Length::Fill)
             .width(Length::Fill)
-            .center(Length::Fill);
-
-        content.into()
+            .center(Length::Fill)
+            .into()
     }
 
     pub fn update(&mut self, message: Message) -> Option<Output> {
@@ -152,6 +178,12 @@ impl Content {
                 self.populate_task_slotmap(tasks);
             }
             Message::SetList(list) => {
+                // Commit any pending deletion before switching to a different list.
+                if let Some(pending) = self.pending_deletion.take() {
+                    if let Err(err) = self.store.tasks(pending.list_id).delete(pending.task.id) {
+                        tracing::warn!("Failed to commit task deletion on list change: {err}");
+                    }
+                }
                 match (&self.selected_list, &list) {
                     (Some(current), Some(list)) => {
                         if current.id != list.id {
@@ -303,13 +335,44 @@ impl Content {
                     return None;
                 };
 
-                if let Some(task) = self.tasks.get_mut(id) {
-                    return Some(Output::OpenTaskDeletionDialog(id, list.id, task.id));
+                // If another task is already pending deletion, commit it now
+                // before starting a new countdown.
+                if let Some(existing) = self.pending_deletion.take() {
+                    if let Err(err) = self.store.tasks(existing.list_id).delete(existing.task.id) {
+                        tracing::error!("Error committing previous task deletion: {err}");
+                    }
+                }
+
+                if let Some(task) = self.tasks.remove(id) {
+                    self.editing.remove(id);
+                    self.inputs.remove(id);
+                    self.pending_deletion = Some(PendingDeletion {
+                        list_id: list.id,
+                        task,
+                        seconds_remaining: 5,
+                    });
                 }
             }
-            Message::TaskDelete(id) => {
-                if let None = self.tasks.remove(id) {
-                    tracing::error!("Failed to remove task: {:?}", id);
+            Message::TaskDeletionTick => {
+                if let Some(pending) = &mut self.pending_deletion {
+                    if pending.seconds_remaining > 0 {
+                        pending.seconds_remaining -= 1;
+                    }
+                    if pending.seconds_remaining == 0 {
+                        let pending = self.pending_deletion.take().unwrap();
+                        if let Err(err) = self.store.tasks(pending.list_id).delete(pending.task.id)
+                        {
+                            tracing::error!("Error committing task deletion: {err}");
+                        }
+                        output = Some(Output::TaskDeleted);
+                    }
+                }
+            }
+            Message::TaskDeletionUndo => {
+                if let Some(pending) = self.pending_deletion.take() {
+                    let new_key = self.tasks.insert(pending.task);
+                    self.inputs.insert(new_key, widget::Id::unique());
+                    self.editing.insert(new_key, EditState::Idle);
                 }
             }
             Message::TaskComplete(id, complete) => {
@@ -407,6 +470,7 @@ impl Content {
             search_bar_visible: false,
             search_query: String::new(),
             sort_type: SortType::DateAsc,
+            pending_deletion: None,
         }
     }
 
@@ -431,13 +495,7 @@ impl Content {
         let items = widget::column::with_children(filtered_tasks).spacing(spacing.space_s);
 
         widget::scrollable(
-            widget::container(
-                column
-                    .push(items)
-                    .padding([spacing.space_none, spacing.space_l])
-                    .spacing(spacing.space_s),
-            )
-            .height(Length::Shrink),
+            widget::container(column.push(items).spacing(spacing.space_s)).height(Length::Shrink),
         )
         .height(Length::Fill)
         .into()
@@ -617,7 +675,7 @@ impl Content {
         widget::row::with_capacity(5)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
-            .padding([spacing.space_xxs, spacing.space_s])
+            .padding([spacing.space_xxxs, spacing.space_xs])
             .push(checkbox)
             .push(title_input)
             .push_maybe(expand_button)
@@ -802,7 +860,6 @@ impl Content {
                 .on_press(Message::TaskAdd);
 
         widget::row(vec![input.into(), submit_button.into()])
-            .padding(spacing.space_xxs)
             .spacing(spacing.space_xxs)
             .align_y(Alignment::Center)
             .into()
@@ -814,6 +871,38 @@ impl Content {
             self.inputs.insert(task_id, widget::Id::unique());
             self.editing.insert(task_id, EditState::Idle);
         }
+    }
+
+    /// Returns `true` when a task is pending deletion (timer running).
+    pub fn has_pending_deletion(&self) -> bool {
+        self.pending_deletion.is_some()
+    }
+
+    /// Creates the sticky undo banner shown at the bottom of the content area
+    /// while a deletion is in progress.
+    fn deletion_banner<'a>(
+        &'a self,
+        pending: &'a PendingDeletion,
+        spacing: &Spacing,
+    ) -> Element<'a, Message> {
+        widget::container(
+            widget::row::with_capacity(3)
+                .push(
+                    widget::text(fl!("task-deleted", title = pending.task.title.as_str()))
+                        .width(Length::Fill),
+                )
+                .push(widget::text(fl!(
+                    "deletion-countdown",
+                    seconds = pending.seconds_remaining
+                )))
+                .push(widget::button::standard(fl!("undo")).on_press(Message::TaskDeletionUndo))
+                .align_y(Alignment::Center)
+                .spacing(spacing.space_s),
+        )
+        .class(cosmic::style::Container::Primary)
+        .padding(spacing.space_xxxs)
+        .width(Length::Fill)
+        .into()
     }
 
     /// Creates the view shown when no list is selected

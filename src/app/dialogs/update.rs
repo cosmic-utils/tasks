@@ -90,12 +90,6 @@ impl AppModel {
                                 entity,
                             )));
                         }
-                        DialogPage::DeleteTask(key, list_id, task_id) => {
-                            let tasks: Vec<cosmic::Task<Message>> = vec![cosmic::task::message(
-                                Message::Tasks(TasksAction::DeleteTask(key, list_id, task_id)),
-                            )];
-                            return cosmic::task::batch(tasks);
-                        }
                         DialogPage::SetListIcon(entity, name, _) => {
                             let data = if let Some(entity) = entity {
                                 self.nav.data::<List>(entity)
