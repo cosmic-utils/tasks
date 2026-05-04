@@ -5,7 +5,7 @@ use crate::{
         ui::{ApplicationAction, MenuAction},
     },
     config::AppConfig,
-    pages::{content, details, trash},
+    pages::{content, details, favorites, trash},
 };
 
 use super::ContextPage;
@@ -24,4 +24,5 @@ pub enum Message {
     Open(String),
     UpdateConfig(AppConfig),
     Trash(trash::Message),
+    Favorites(favorites::Message),
 }

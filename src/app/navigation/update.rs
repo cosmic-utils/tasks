@@ -29,7 +29,7 @@ impl AppModel {
                 for list in lists {
                     self.create_nav_item(&list);
                 }
-                self.reposition_trash();
+                self.reposition_special_items();
                 let Some(entity) = self.nav.iter().next() else {
                     return app::Task::none();
                 };
@@ -38,7 +38,7 @@ impl AppModel {
             }
             TasksAction::AddList(list) => {
                 self.create_nav_item(&list);
-                self.reposition_trash();
+                self.reposition_special_items();
                 // Select the newly added list, which is now second-to-last
                 // (last is always trash). Find it by its data.
                 let entity = self

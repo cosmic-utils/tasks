@@ -20,7 +20,7 @@ use crate::{
     config::AppConfig,
     fl,
     model::List,
-    pages::{content, details, trash},
+    pages::{content, details, favorites, trash},
 };
 
 impl Application for AppModel {
@@ -80,6 +80,9 @@ impl Application for AppModel {
         &self,
         id: widget::nav_bar::Id,
     ) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
+        if self.nav.data::<crate::model::FavoritesMarker>(id).is_some() {
+            return None;
+        }
         if self.nav.data::<crate::model::TrashMarker>(id).is_some() {
             return navigation::trash_context_menu();
         }
@@ -103,6 +106,16 @@ impl Application for AppModel {
     fn on_nav_select(&mut self, entity: Entity) -> app::Task<Self::Message> {
         let mut tasks = vec![];
         self.nav.activate(entity);
+
+        // Check if favorites was selected
+        if self
+            .nav
+            .data::<crate::model::FavoritesMarker>(entity)
+            .is_some()
+        {
+            let _ = self.update(Message::Content(content::Message::SetList(None)));
+            return self.update(Message::Favorites(favorites::Message::Load));
+        }
 
         // Check if trash was selected
         if self.nav.data::<crate::model::TrashMarker>(entity).is_some() {
@@ -256,6 +269,9 @@ impl Application for AppModel {
             Message::Trash(msg) => {
                 self.trash.update(msg);
             }
+            Message::Favorites(msg) => {
+                self.favorites.update(msg);
+            }
             Message::Tasks(action) => {
                 return self.update_tasks(action);
             }
@@ -294,6 +310,12 @@ impl Application for AppModel {
             .is_some()
         {
             self.trash.view().map(Message::Trash)
+        } else if self
+            .nav
+            .active_data::<crate::model::FavoritesMarker>()
+            .is_some()
+        {
+            self.favorites.view().map(Message::Favorites)
         } else {
             self.content.view().map(Message::Content)
         }

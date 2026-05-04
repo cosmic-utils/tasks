@@ -10,7 +10,7 @@ use cosmic::{
 use crate::{
     app::{dialogs::DialogPage, ui::MenuAction},
     config,
-    pages::{content::Content, details::Details, trash::Trash},
+    pages::{content::Content, details::Details, favorites::Favorites, trash::Trash},
     services::store::Store,
 };
 
@@ -49,4 +49,8 @@ pub struct AppModel {
     pub(crate) trash: Trash,
     /// The nav bar entity for the trash item (kept so we can always reposition it last).
     pub(crate) trash_entity: nav_bar::Id,
+    /// The favorites page.
+    pub(crate) favorites: Favorites,
+    /// The nav bar entity for the favorites item.
+    pub(crate) favorites_entity: nav_bar::Id,
 }
