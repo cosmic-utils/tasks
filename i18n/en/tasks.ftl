@@ -90,6 +90,7 @@ settings = Settings
 
 ### Appearance
 appearance = Appearance
+show-favorites = Show favorites
 theme = Theme
 match-desktop = Match desktop
 dark = Dark
