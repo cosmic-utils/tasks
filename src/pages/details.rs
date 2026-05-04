@@ -211,7 +211,10 @@ impl Details {
                     widget::settings::item::builder(fl!("completed-at"))
                         .control(widget::text(completion_date).size(13))
                 }))
-                .add(widget::button::destructive(fl!("delete")).on_press(Message::Delete))
+                .into(),
+            widget::button::destructive(fl!("delete"))
+                .trailing_icon(widget::icon::from_name("edit-delete-symbolic").size(14))
+                .on_press(Message::Delete)
                 .into(),
         ])
         .padding([
