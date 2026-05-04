@@ -43,7 +43,9 @@ pub enum Message {
 pub enum Output {
     OpenCalendarDialog,
     RefreshTask(model::Task),
-    OpenTaskDeletionDialog(DefaultKey, Uuid, Uuid),
+    /// Request deletion of the currently displayed task; routed to content's
+    /// undo-timer flow by the app model.
+    DeleteTask(DefaultKey),
 }
 
 impl Details {
@@ -108,15 +110,7 @@ impl Details {
                 }
             }
             Message::Delete => {
-                let Some(list_id) = self.selected_list else {
-                    return None;
-                };
-
-                return Some(Output::OpenTaskDeletionDialog(
-                    self.task_key,
-                    list_id,
-                    self.task.id,
-                ));
+                return Some(Output::DeleteTask(self.task_key));
             }
             Message::OpenCalendarDialog => {
                 return Some(Output::OpenCalendarDialog);

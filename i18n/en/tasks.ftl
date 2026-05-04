@@ -37,6 +37,11 @@ rename-list = Rename list
 delete-list = The selected list is about to be deleted
 delete-list-confirm = Are you sure you want to delete this list?
 
+# Deletion undo banner
+undo = Undo
+task-deleted = "{ $title }" deleted
+deletion-countdown = { $seconds }s
+
 # Delete Task Dialog
 delete-task = The selected task is about to be deleted
 delete-task-confirm = Are you sure you want to delete this task?

@@ -115,7 +115,7 @@ impl Application for AppModel {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        let subscriptions = vec![
+        let mut subscriptions = vec![
             self.core()
                 .watch_config::<AppConfig>(Self::APP_ID)
                 .map(|update| {
@@ -135,6 +135,14 @@ impl Application for AppModel {
                 _ => None,
             }),
         ];
+
+        // Tick the deletion countdown once per second while a task is pending.
+        if self.content.has_pending_deletion() {
+            subscriptions.push(
+                cosmic::iced::time::every(std::time::Duration::from_secs(1))
+                    .map(|_| Message::Content(content::Message::TaskDeletionTick)),
+            );
+        }
 
         Subscription::batch(subscriptions)
     }
@@ -181,10 +189,15 @@ impl Application for AppModel {
                             ];
                             return app::Task::batch(tasks);
                         }
-                        content::Output::OpenTaskDeletionDialog(id, list_id, task_id) => {
-                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                                DialogPage::DeleteTask(id, list_id, task_id),
-                            )));
+                        content::Output::TaskDeleted => {
+                            // Close the task-details drawer if it is open.
+                            if self.core.window.show_context
+                                && self.context_page == ContextPage::TaskDetails
+                            {
+                                return cosmic::task::message(Message::ToggleContextPage(
+                                    ContextPage::TaskDetails,
+                                ));
+                            }
                         }
                         content::Output::ToggleHideCompleted(list) => {
                             if let Some(data) = self.nav.active_data_mut::<crate::model::List>() {
@@ -197,10 +210,21 @@ impl Application for AppModel {
             Message::Details(message) => {
                 if let Some(output) = self.details.update(message) {
                     match output {
-                        details::Output::OpenTaskDeletionDialog(id, list_id, task_id) => {
-                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                                DialogPage::DeleteTask(id, list_id, task_id),
-                            )));
+                        details::Output::DeleteTask(key) => {
+                            // Route to content's undo-timer flow and close the
+                            // details drawer immediately.
+                            let mut tasks: Vec<cosmic::Task<Message>> =
+                                vec![cosmic::task::message(Message::Content(
+                                    content::Message::OpenTaskDeletionDialog(key),
+                                ))];
+                            if self.core.window.show_context
+                                && self.context_page == ContextPage::TaskDetails
+                            {
+                                tasks.push(cosmic::task::message(Message::ToggleContextPage(
+                                    ContextPage::TaskDetails,
+                                )));
+                            }
+                            return cosmic::task::batch(tasks);
                         }
                         details::Output::OpenCalendarDialog => {
                             return cosmic::task::message(Message::Dialog(DialogAction::Open(

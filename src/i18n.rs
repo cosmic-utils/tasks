@@ -44,7 +44,7 @@ macro_rules! fl {
         i18n_embed_fl::fl!($crate::i18n::LANGUAGE_LOADER, $message_id)
     }};
 
-    ($message_id:literal, $($args:expr),*) => {{
-        i18n_embed_fl::fl!($crate::i18n::LANGUAGE_LOADER, $message_id, $($args), *)
+    ($message_id:literal, $($args:tt)*) => {{
+        i18n_embed_fl::fl!($crate::i18n::LANGUAGE_LOADER, $message_id, $($args)*)
     }};
 }

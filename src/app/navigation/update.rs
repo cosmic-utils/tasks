@@ -5,7 +5,6 @@ use crate::{
         core::{AppModel, Message},
         dialogs::{DialogAction, DialogPage},
         navigation::TasksAction,
-        ContextPage,
     },
     pages::content,
 };
@@ -59,23 +58,6 @@ impl AppModel {
                     )));
                 }
                 self.nav.remove(self.nav.active());
-            }
-            TasksAction::DeleteTask(id, list_id, task_id) => {
-                if let Err(err) = self.store.tasks(list_id).delete(task_id) {
-                    tracing::error!("Error deleting task: {err}");
-                }
-
-                let mut tasks: Vec<cosmic::Task<Message>> = vec![cosmic::task::message(
-                    Message::Content(content::Message::TaskDelete(id)),
-                )];
-
-                if self.core.window.show_context {
-                    tasks.push(cosmic::task::message(Message::ToggleContextPage(
-                        ContextPage::TaskDetails,
-                    )));
-                }
-
-                return cosmic::task::batch(tasks);
             }
         }
 

@@ -7,8 +7,6 @@ use cosmic::{
     },
     widget::{self, calendar::CalendarModel, segmented_button},
 };
-use slotmap::DefaultKey;
-use uuid::Uuid;
 
 use crate::{app::Message, fl};
 
@@ -27,7 +25,6 @@ pub enum DialogPage {
     SetListIcon(Option<segmented_button::Entity>, String, String),
     RenameList(Option<segmented_button::Entity>, String),
     DeleteList(Option<segmented_button::Entity>),
-    DeleteTask(DefaultKey, Uuid, Uuid),
     Calendar(CalendarModel),
     Export(String),
 }
@@ -188,17 +185,6 @@ impl DialogPage {
 
                 dialog
             }
-            DialogPage::DeleteTask(_, _, _) => widget::dialog()
-                .title(fl!("delete-task"))
-                .body(fl!("delete-task-confirm"))
-                .primary_action(
-                    widget::button::destructive(fl!("delete"))
-                        .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
-                )
-                .secondary_action(
-                    widget::button::standard(fl!("cancel"))
-                        .on_press(Message::Dialog(DialogAction::Close)),
-                ),
             DialogPage::Calendar(date) => {
                 let dialog = widget::dialog()
                     .title(fl!("select-date"))
