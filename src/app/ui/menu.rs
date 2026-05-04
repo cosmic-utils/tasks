@@ -10,6 +10,7 @@ use cosmic::{
 
 use crate::{
     app::{core::Message, ui::MenuAction, AppModel},
+    config::SortBy,
     fl,
     model::List,
 };
@@ -149,10 +150,30 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
                 &state.key_binds,
                 list_selected
                     .then_some(vec![
-                        Item::Button(fl!("sort-name-asc"), None, MenuAction::SortByNameAsc),
-                        Item::Button(fl!("sort-name-desc"), None, MenuAction::SortByNameDesc),
-                        Item::Button(fl!("sort-date-asc"), None, MenuAction::SortByDateAsc),
-                        Item::Button(fl!("sort-date-desc"), None, MenuAction::SortByDateDesc),
+                        Item::CheckBox(
+                            fl!("sort-name-asc"),
+                            None,
+                            state.config.sort_by == SortBy::NameAsc,
+                            MenuAction::SortByNameAsc,
+                        ),
+                        Item::CheckBox(
+                            fl!("sort-name-desc"),
+                            None,
+                            state.config.sort_by == SortBy::NameDesc,
+                            MenuAction::SortByNameDesc,
+                        ),
+                        Item::CheckBox(
+                            fl!("sort-date-asc"),
+                            None,
+                            state.config.sort_by == SortBy::DateAsc,
+                            MenuAction::SortByDateAsc,
+                        ),
+                        Item::CheckBox(
+                            fl!("sort-date-desc"),
+                            None,
+                            state.config.sort_by == SortBy::DateDesc,
+                            MenuAction::SortByDateDesc,
+                        ),
                     ])
                     .unwrap_or(vec![
                         Item::ButtonDisabled(fl!("sort-name-asc"), None, MenuAction::SortByNameAsc),
