@@ -43,6 +43,20 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.2.3" date="2026-05-04">
+        <description>
+            <p>Trash &amp; Favorites</p>
+            <ul>
+                <li>Added Trash, a special list for managing deleted tasks</li>
+                <li>Added support for restoring and permanently deleting tasks from Trash</li>
+                <li>Added Favorites, a special list that collects your favorite tasks</li>
+                <li>Added a favorite toggle button to tasks</li>
+                <li>Added "Show Favorites" and "Hide Completed" toggles in Settings</li>
+                <li>Sort menu items now display a checkmark when selected</li>
+                <li>Fixed a bug with configuration persistence</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.2" date="2026-05-04">
         <description>
             <p>Quality of life improvements</p>
