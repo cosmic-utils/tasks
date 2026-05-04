@@ -57,7 +57,7 @@ impl AppModel {
         widget::about::About::default()
             .name(fl!("tasks"))
             .icon(widget::icon::from_name("dev.edfloreshz.Tasks"))
-            .version("0.2.1")
+            .version("0.2.2")
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
             .links([

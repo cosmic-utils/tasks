@@ -43,6 +43,19 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.2.2" date="2026-05-04">
+        <description>
+            <p>Quality of life improvements</p>
+            <ul>
+                <li>When deleting a task, a banner is shown with an option to undo.</li>
+                <li>It is now possible to delete a task from the edit pane.</li>
+                <li>The edit pane now displays tasks created and completed dates.</li>
+                <li>The new task input is now focused on app start and when selecting or creating a list.</li>
+                <li>Dialog inputs are selected when creating or renaming a list.</li>
+                <li>Search input is selected when opened, it also handles discard events.</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.1" date="2026-05-03">
         <description>
             <p>Bug fixes and improvements</p>
