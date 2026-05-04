@@ -709,7 +709,6 @@ impl Content {
         widget::editable_input("", &task.title, is_editing, move |editing| {
             Message::TaskToggleTitleEditMode(id, editing)
         })
-        .size(13)
         .trailing_icon(widget::column(vec![]).into())
         .id(self.inputs[id].clone())
         .on_submit(move |_| Message::TaskTitleSubmit(id))

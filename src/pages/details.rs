@@ -205,11 +205,11 @@ impl Details {
             widget::settings::section()
                 .add(
                     widget::settings::item::builder(fl!("created-at"))
-                        .control(widget::text(self.task.creation_date_local()).size(13)),
+                        .control(widget::text::caption(self.task.creation_date_local())),
                 )
                 .add_maybe(self.task.completion_date_local().map(|completion_date| {
                     widget::settings::item::builder(fl!("completed-at"))
-                        .control(widget::text(completion_date).size(13))
+                        .control(widget::text::caption(completion_date))
                 }))
                 .into(),
             widget::button::destructive(fl!("delete"))

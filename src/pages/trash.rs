@@ -243,14 +243,13 @@ impl Trash {
 
         let title = widget::text::body(trashed.task.title.as_str()).width(Length::Fill);
 
-        let subtitle = widget::text(fl!("deleted-from", list = list_name.as_str()))
-            .size(12)
+        let subtitle = widget::text::caption(fl!("deleted-from", list = list_name.as_str()))
             .width(Length::Fill);
 
         let task_id = trashed.task.id;
         let deleted_at = trashed.deleted_at_local();
 
-        let date = widget::text(fl!("deleted-at", date = deleted_at.as_str())).size(11);
+        let date = widget::text::caption(fl!("deleted-at", date = deleted_at.as_str()));
 
         let restore_button =
             widget::button::standard(fl!("restore")).on_press(Message::RestoreTask(task_id));
