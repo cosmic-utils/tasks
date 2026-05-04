@@ -62,6 +62,7 @@ pub enum Message {
     TaskExpand(DefaultKey),
     TaskAddSubTask(DefaultKey),
     TaskComplete(DefaultKey, bool),
+    TaskToggleFavorite(DefaultKey),
     TaskToggleTitleEditMode(DefaultKey, bool),
     TaskTitleInput(String),
     TaskOpenDetails(DefaultKey),
@@ -359,6 +360,23 @@ impl Content {
                     }
                 }
             }
+            Message::TaskToggleFavorite(id) => {
+                let Some(list) = &self.selected_list else {
+                    tracing::warn!("No list selected");
+                    return None;
+                };
+
+                if let Some(task) = self.tasks.get_mut(id) {
+                    task.favorite = !task.favorite;
+                    if let Err(error) = self
+                        .store
+                        .tasks(list.id)
+                        .update(task.id, |t| t.favorite = task.favorite)
+                    {
+                        tracing::error!("Failed to update task favorite: {:?}", error);
+                    }
+                }
+            }
             Message::TaskAddSubTask(id) => {
                 let Some(list) = &self.selected_list else {
                     tracing::warn!("No list selected");
@@ -431,6 +449,14 @@ impl Content {
             search_query: String::new(),
             sort_type: SortType::DateAsc,
         }
+    }
+
+    /// Find the slotmap key for a task by its UUID, if it is currently loaded.
+    pub fn find_task_key(&self, task_id: uuid::Uuid) -> Option<DefaultKey> {
+        self.tasks
+            .iter()
+            .find(|(_, t)| t.id == task_id)
+            .map(|(k, _)| k)
     }
 
     /// Creates the main list view with tasks
@@ -631,9 +657,10 @@ impl Content {
         let title_input = self.create_task_title_input(id, task);
         let expand_button = self.create_expand_button(id, task, sub_tasks, spacing);
         let subtask_count = self.create_subtask_counter(sub_tasks);
+        let favorite_button = self.create_favorite_button(id, task, spacing);
         let menu = self.create_task_menu(id);
 
-        widget::row::with_capacity(5)
+        widget::row::with_capacity(6)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
             .padding([spacing.space_xxxs, spacing.space_xs])
@@ -641,6 +668,7 @@ impl Content {
             .push(title_input)
             .push_maybe(expand_button)
             .push_maybe(subtask_count)
+            .push(favorite_button)
             .push(menu)
             .into()
     }
@@ -653,6 +681,24 @@ impl Content {
     ) -> Element<'a, Message> {
         widget::checkbox(task.status == Status::Completed)
             .on_toggle(move |value| Message::TaskComplete(id, value))
+            .into()
+    }
+
+    /// Creates a star button to toggle the favorite state of a task.
+    fn create_favorite_button<'a>(
+        &'a self,
+        id: DefaultKey,
+        task: &'a model::Task,
+        spacing: &Spacing,
+    ) -> Element<'a, Message> {
+        let icon_name = if task.favorite {
+            "starred-symbolic"
+        } else {
+            "non-starred-symbolic"
+        };
+        widget::button::icon(widget::icon::from_name(icon_name).size(16))
+            .padding(spacing.space_xxs)
+            .on_press(Message::TaskToggleFavorite(id))
             .into()
     }
 
