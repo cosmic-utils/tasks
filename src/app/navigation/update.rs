@@ -14,6 +14,9 @@ use super::NavMenuAction;
 impl AppModel {
     pub fn update_tasks(&mut self, action: TasksAction) -> app::Task<Message> {
         match action {
+            TasksAction::NavSelect(entity) => {
+                return self.on_nav_select(entity);
+            }
             TasksAction::FetchLists => match self.store.lists().load_all() {
                 Ok(lists) => {
                     return self.update(Message::Tasks(TasksAction::PopulateLists(lists)));
@@ -30,7 +33,7 @@ impl AppModel {
                     return app::Task::none();
                 };
                 self.nav.activate(entity);
-                return self.on_nav_select(entity);
+                return cosmic::task::message(Message::Tasks(TasksAction::NavSelect(entity)));
             }
             TasksAction::AddList(list) => {
                 self.create_nav_item(&list);

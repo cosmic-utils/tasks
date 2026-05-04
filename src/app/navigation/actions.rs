@@ -7,6 +7,7 @@ pub enum TasksAction {
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
     FetchLists,
+    NavSelect(segmented_button::Entity),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
