@@ -136,3 +136,4 @@ sort-name-asc = Name A-Z
 sort-name-desc = Name Z-A
 sort-date-asc = Date added (Old to New)
 sort-date-desc = Date added (New to Old)
+sort-manual = Manual

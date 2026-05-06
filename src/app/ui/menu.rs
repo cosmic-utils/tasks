@@ -174,6 +174,12 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
                             state.config.sort_by == SortBy::DateDesc,
                             MenuAction::SortByDateDesc,
                         ),
+                        Item::CheckBox(
+                            fl!("sort-manual"),
+                            None,
+                            state.config.sort_by == SortBy::Manual,
+                            MenuAction::SortByManual,
+                        ),
                     ])
                     .unwrap_or(vec![
                         Item::ButtonDisabled(fl!("sort-name-asc"), None, MenuAction::SortByNameAsc),
@@ -188,6 +194,7 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
                             None,
                             MenuAction::SortByDateDesc,
                         ),
+                        Item::ButtonDisabled(fl!("sort-manual"), None, MenuAction::SortByManual),
                     ]),
             ),
         ),

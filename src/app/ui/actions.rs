@@ -20,6 +20,7 @@ pub enum MenuAction {
     SortByNameDesc,
     SortByDateAsc,
     SortByDateDesc,
+    SortByManual,
 }
 
 #[derive(Debug, Clone)]

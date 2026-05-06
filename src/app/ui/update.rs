@@ -161,6 +161,17 @@ impl AppModel {
                     content::SortBy::DateDesc,
                 )));
             }
+            MenuAction::SortByManual => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::Manual)
+                {
+                    tracing::error!("{err}")
+                }
+                return cosmic::task::message(Message::Content(content::Message::SetSort(
+                    content::SortBy::Manual,
+                )));
+            }
         }
 
         app::Task::none()
