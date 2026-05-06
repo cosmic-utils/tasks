@@ -752,7 +752,8 @@ impl Content {
             column = column.push(self.create_subtasks_view(&sub_tasks, &spacing));
         }
 
-        let container = widget::container(column).class(cosmic::style::Container::ContextDrawer);
+        let container = widget::container(column)
+            .class(cosmic::style::Container::ContextDrawer { transparent: false });
 
         if self.config.sort_by != SortBy::Manual || task.parent_id.is_some() {
             return container.into();

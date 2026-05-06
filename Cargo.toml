@@ -30,6 +30,7 @@ git = "https://github.com/edfloreshz/rust-extensions.git"
 # See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
+branch = "theme-v2"
 default-features = false
 features = [
     # About widget for the app
@@ -48,6 +49,7 @@ features = [
 
 [target.'cfg(target_os = "linux")'.dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
+branch = "theme-v2"
 features = [
     # Accessibility support
     "a11y",
