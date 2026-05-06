@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use cosmic::{
     app::Core,
@@ -6,6 +6,8 @@ use cosmic::{
     iced::keyboard::Modifiers,
     widget::{about::About, menu::key_bind::KeyBind, nav_bar},
 };
+
+use uuid::Uuid;
 
 use crate::{
     app::{dialogs::DialogPage, ui::MenuAction},
@@ -53,4 +55,7 @@ pub struct AppModel {
     pub(crate) favorites: Favorites,
     /// The nav bar entity for the favorites item.
     pub(crate) favorites_entity: nav_bar::Id,
+    /// Tracks (task_id, reminder_unix_second) pairs that have already had a
+    /// desktop notification sent, so we never fire the same reminder twice.
+    pub(crate) sent_reminders: HashSet<(Uuid, i64)>,
 }

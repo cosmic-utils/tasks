@@ -38,10 +38,14 @@ pub enum Message {
     Delete,
     OpenCalendarDialog,
     SetDueDate(Date),
+    OpenReminderDialog,
+    SetReminder(jiff::Timestamp),
+    ClearReminder,
 }
 
 pub enum Output {
     OpenCalendarDialog,
+    OpenReminderDialog,
     RefreshTask(model::Task),
     /// Request deletion of the currently displayed task; routed to content's
     /// undo-timer flow by the app model.
@@ -115,6 +119,15 @@ impl Details {
             Message::OpenCalendarDialog => {
                 return Some(Output::OpenCalendarDialog);
             }
+            Message::OpenReminderDialog => {
+                return Some(Output::OpenReminderDialog);
+            }
+            Message::SetReminder(ts) => {
+                self.task.reminder_date = Some(ts);
+            }
+            Message::ClearReminder => {
+                self.task.reminder_date = None;
+            }
             Message::SetDueDate(date) => {
                 self.task.due_date = Some(date);
             }
@@ -181,6 +194,26 @@ impl Details {
                         .on_press(Message::OpenCalendarDialog),
                     ),
                 )
+                .add({
+                    let reminder_label = if let Some(ts) = &self.task.reminder_date {
+                        model::Task::format_timestamp(ts)
+                    } else {
+                        fl!("set-reminder")
+                    };
+                    let mut reminder_row =
+                        widget::row::with_children(vec![widget::button::text(reminder_label)
+                            .on_press(Message::OpenReminderDialog)
+                            .into()]);
+                    if self.task.reminder_date.is_some() {
+                        reminder_row = reminder_row.push(
+                            widget::button::icon(
+                                widget::icon::from_name("edit-clear-symbolic").size(14),
+                            )
+                            .on_press(Message::ClearReminder),
+                        );
+                    }
+                    widget::settings::item::builder(fl!("reminder")).control(reminder_row)
+                })
                 .add(
                     widget::column::with_children(vec![
                         widget::text::body(fl!("notes")).into(),

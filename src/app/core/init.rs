@@ -42,6 +42,7 @@ impl AppModel {
             trash_entity: widget::segmented_button::Entity::default(),
             favorites: Favorites::new(flags.store.clone()),
             favorites_entity: widget::segmented_button::Entity::default(),
+            sent_reminders: std::collections::HashSet::new(),
         };
 
         let mut tasks = vec![cosmic::task::message(Message::Tasks(
