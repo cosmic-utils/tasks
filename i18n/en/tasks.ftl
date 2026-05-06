@@ -68,6 +68,11 @@ search-icons = Search icons...
 
 # Date Dialog
 select-date = Select a date
+select-date-time = Select date and time
+hour = Hour
+minute = Minute
+set-reminder = Set reminder
+clear-reminder = Clear reminder
 
 # Export Dialog
 export = Export

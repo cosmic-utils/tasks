@@ -21,6 +21,7 @@ use crate::{
     fl,
     model::List,
     pages::{content, details, favorites, trash},
+    services::reminder,
 };
 
 impl Application for AppModel {
@@ -171,6 +172,13 @@ impl Application for AppModel {
             );
         }
 
+        // Reminder subscription: ticks every 30 s so the update handler can
+        // scan tasks and fire desktop notifications for due reminders.
+        subscriptions.push(
+            cosmic::iced::time::every(std::time::Duration::from_secs(30))
+                .map(|_| Message::Reminder(reminder::ReminderMessage::Tick)),
+        );
+
         Subscription::batch(subscriptions)
     }
 
@@ -258,6 +266,32 @@ impl Application for AppModel {
                                 DialogPage::Calendar(CalendarModel::now()),
                             )));
                         }
+                        details::Output::OpenReminderDialog => {
+                            let (cal, hour, minute) =
+                                if let Some(ts) = self.details.task.reminder_date {
+                                    let zoned = ts.to_zoned(jiff::tz::TimeZone::system());
+                                    let date = zoned.date();
+                                    let h = zoned.hour() as u32;
+                                    let m = zoned.minute() as u32;
+                                    (CalendarModel::new(date, date), h, m)
+                                } else {
+                                    let now = jiff::Timestamp::now()
+                                        .to_zoned(jiff::tz::TimeZone::system());
+                                    let date = now.date();
+                                    (
+                                        CalendarModel::new(date, date),
+                                        now.hour() as u32,
+                                        now.minute() as u32,
+                                    )
+                                };
+                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                                DialogPage::ReminderDateTime {
+                                    calendar: cal,
+                                    hour,
+                                    minute,
+                                },
+                            )));
+                        }
                         details::Output::RefreshTask(task) => {
                             return cosmic::task::message(Message::Content(
                                 content::Message::RefreshTask(task.clone()),
@@ -268,6 +302,26 @@ impl Application for AppModel {
             }
             Message::Trash(msg) => {
                 self.trash.update(msg);
+            }
+            Message::Reminder(msg) => {
+                use crate::services::reminder::ReminderMessage;
+                match msg {
+                    ReminderMessage::Tick => {
+                        let now = jiff::Timestamp::now();
+                        let window_start = now
+                            .checked_sub(jiff::SignedDuration::from_secs(30))
+                            .unwrap_or(now);
+                        let notified = reminder::check_and_notify(
+                            &self.store,
+                            now,
+                            window_start,
+                            &self.sent_reminders,
+                        );
+                        for key in notified {
+                            self.sent_reminders.insert(key);
+                        }
+                    }
+                }
             }
             Message::Favorites(msg) => {
                 if let Some(output) = self.favorites.update(msg) {

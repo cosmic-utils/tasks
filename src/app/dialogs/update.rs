@@ -131,6 +131,32 @@ impl AppModel {
                             self.details
                                 .update(details::Message::SetDueDate(date.selected));
                         }
+                        DialogPage::ReminderDateTime {
+                            calendar,
+                            hour,
+                            minute,
+                        } => {
+                            use jiff::civil::{DateTime, Time};
+                            let date = calendar.selected;
+                            match Time::new(hour as i8, minute as i8, 0, 0) {
+                                Ok(time) => {
+                                    let dt = DateTime::from_parts(date, time);
+                                    match dt.to_zoned(jiff::tz::TimeZone::system()) {
+                                        Ok(zoned) => {
+                                            self.details.update(details::Message::SetReminder(
+                                                zoned.timestamp(),
+                                            ));
+                                        }
+                                        Err(err) => tracing::error!(
+                                            "reminder: failed to build timestamp: {err}"
+                                        ),
+                                    }
+                                }
+                                Err(err) => {
+                                    tracing::error!("reminder: invalid time: {err}")
+                                }
+                            }
+                        }
                         DialogPage::Export(content) => {
                             let Ok(mut clipboard) = ClipboardContext::new() else {
                                 tracing::error!("Clipboard is not available");

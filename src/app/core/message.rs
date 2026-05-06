@@ -6,6 +6,7 @@ use crate::{
     },
     config::AppConfig,
     pages::{content, details, favorites, trash},
+    services::reminder::ReminderMessage,
 };
 
 use super::ContextPage;
@@ -25,4 +26,5 @@ pub enum Message {
     UpdateConfig(AppConfig),
     Trash(trash::Message),
     Favorites(favorites::Message),
+    Reminder(ReminderMessage),
 }
