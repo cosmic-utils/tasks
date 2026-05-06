@@ -4670,7 +4670,7 @@ dependencies = [
 
 [[package]]
 name = "tasks"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "cli-clipboard",
  "directories",

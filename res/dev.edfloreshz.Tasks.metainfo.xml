@@ -43,6 +43,15 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.2.4" date="2026-05-06">
+        <description>
+            <p>Reminders and manual reordering </p>
+            <ul>
+                <li>You can now set a reminder and receive a notification</li>
+                <li>Added support for manual task reodering via drag and drop</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.3" date="2026-05-04">
         <description>
             <p>Trash &amp; Favorites</p>
