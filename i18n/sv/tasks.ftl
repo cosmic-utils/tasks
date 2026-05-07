@@ -68,6 +68,11 @@ search-icons = Sök ikoner...
 
 # Datum dialogruta
 select-date = Välj ett datum
+select-date-time = Välj datum och tid
+hour = Timme
+minute = Minut
+set-reminder = Ställ in påminnelse
+clear-reminder = Rensa påminnelse
 
 # Exportera dialogruta
 export = Exportera
@@ -131,4 +136,5 @@ sort-name-asc = Namn A-Ö
 sort-name-desc = Namn Ö-A
 sort-date-asc = Datum tillagd (Äldst till Nyast)
 sort-date-desc = Datum tillagd (Nyast till Äldst)
+sort-manual = Manuell
 
