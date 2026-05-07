@@ -68,6 +68,11 @@ search-icons = Search icons...
 
 # Date Dialog
 select-date = Select a date
+select-date-time = Select date and time
+hour = Hour
+minute = Minute
+set-reminder = Set reminder
+clear-reminder = Clear reminder
 
 # Export Dialog
 export = Export
@@ -131,3 +136,4 @@ sort-name-asc = Name A-Z
 sort-name-desc = Name Z-A
 sort-date-asc = Date added (Old to New)
 sort-date-desc = Date added (New to Old)
+sort-manual = Manual

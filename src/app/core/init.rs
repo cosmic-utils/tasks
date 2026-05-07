@@ -42,6 +42,7 @@ impl AppModel {
             trash_entity: widget::segmented_button::Entity::default(),
             favorites: Favorites::new(flags.store.clone()),
             favorites_entity: widget::segmented_button::Entity::default(),
+            sent_reminders: std::collections::HashSet::new(),
         };
 
         let mut tasks = vec![cosmic::task::message(Message::Tasks(
@@ -76,7 +77,7 @@ impl AppModel {
         widget::about::About::default()
             .name(fl!("tasks"))
             .icon(widget::icon::from_name("dev.edfloreshz.Tasks"))
-            .version("0.2.3")
+            .version("0.2.4")
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
             .links([

@@ -1,6 +1,6 @@
 [package]
 name = "tasks"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 
 [dependencies]
@@ -22,6 +22,7 @@ i18n-embed = { version = "0.16.0", features = [
     "desktop-requester",
 ] }
 jiff = { version = "0.2.24", features = ["serde"] }
+notify-rust = "4.17.0"
 
 [dependencies.rust-extensions]
 git = "https://github.com/edfloreshz/rust-extensions.git"

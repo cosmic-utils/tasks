@@ -210,6 +210,7 @@ impl Migrator {
             due_date: old_task.due_date,
             reminder_date: old_task.reminder_date,
             creation_date: old_task.created_date_time,
+            sort_order: 0,
         };
 
         // Save the task
@@ -258,6 +259,7 @@ impl Migrator {
             due_date: old_task.due_date,
             reminder_date: old_task.reminder_date,
             creation_date: old_task.created_date_time,
+            sort_order: 0,
         };
 
         self.store.tasks(list_id).save(&new_task)?;

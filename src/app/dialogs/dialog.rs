@@ -27,6 +27,11 @@ pub enum DialogPage {
     DeleteList(Option<segmented_button::Entity>, String),
     Calendar(CalendarModel),
     Export(String),
+    ReminderDateTime {
+        calendar: CalendarModel,
+        hour: u32,
+        minute: u32,
+    },
 }
 
 pub fn get_all_icon_handles(size: u16) -> Vec<(String, widget::icon::Handle)> {
@@ -234,6 +239,125 @@ impl DialogPage {
                     );
 
                 dialog
+            }
+            DialogPage::ReminderDateTime {
+                calendar,
+                hour,
+                minute,
+            } => {
+                let hour = *hour;
+                let minute = *minute;
+
+                let hour_col = widget::column::with_children(vec![
+                    widget::text::body(fl!("hour")).into(),
+                    widget::row::with_children(vec![
+                        widget::button::text("<")
+                            .on_press(Message::Dialog(DialogAction::Update(
+                                DialogPage::ReminderDateTime {
+                                    calendar: calendar.clone(),
+                                    hour: hour.saturating_sub(1),
+                                    minute,
+                                },
+                            )))
+                            .into(),
+                        widget::text::body(format!("{:02}", hour)).into(),
+                        widget::button::text(">")
+                            .on_press(Message::Dialog(DialogAction::Update(
+                                DialogPage::ReminderDateTime {
+                                    calendar: calendar.clone(),
+                                    hour: (hour + 1).min(23),
+                                    minute,
+                                },
+                            )))
+                            .into(),
+                    ])
+                    .align_y(cosmic::iced::Alignment::Center)
+                    .spacing(spacing.space_xs)
+                    .into(),
+                ])
+                .align_x(cosmic::iced::alignment::Horizontal::Center)
+                .spacing(spacing.space_xxs);
+
+                let minute_col = widget::column::with_children(vec![
+                    widget::text::body(fl!("minute")).into(),
+                    widget::row::with_children(vec![
+                        widget::button::text("<")
+                            .on_press(Message::Dialog(DialogAction::Update(
+                                DialogPage::ReminderDateTime {
+                                    calendar: calendar.clone(),
+                                    hour,
+                                    minute: minute.saturating_sub(1),
+                                },
+                            )))
+                            .into(),
+                        widget::text::body(format!("{:02}", minute)).into(),
+                        widget::button::text(">")
+                            .on_press(Message::Dialog(DialogAction::Update(
+                                DialogPage::ReminderDateTime {
+                                    calendar: calendar.clone(),
+                                    hour,
+                                    minute: (minute + 1).min(59),
+                                },
+                            )))
+                            .into(),
+                    ])
+                    .align_y(cosmic::iced::Alignment::Center)
+                    .spacing(spacing.space_xs)
+                    .into(),
+                ])
+                .align_x(cosmic::iced::alignment::Horizontal::Center)
+                .spacing(spacing.space_xxs);
+
+                let time_row = widget::container(
+                    widget::row::with_children(vec![hour_col.into(), minute_col.into()])
+                        .align_y(cosmic::iced::Alignment::Center)
+                        .spacing(spacing.space_l),
+                )
+                .width(Length::Fill)
+                .align_x(Horizontal::Center);
+
+                widget::dialog()
+                    .title(fl!("select-date-time"))
+                    .primary_action(
+                        widget::button::suggested(fl!("ok"))
+                            .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                    )
+                    .secondary_action(
+                        widget::button::standard(fl!("cancel"))
+                            .on_press(Message::Dialog(DialogAction::Close)),
+                    )
+                    .control(
+                        widget::column::with_children(vec![
+                            widget::container(widget::calendar(
+                                calendar,
+                                {
+                                    let hour = hour;
+                                    let minute = minute;
+                                    move |selected_date| {
+                                        Message::Dialog(DialogAction::Update(
+                                            DialogPage::ReminderDateTime {
+                                                calendar: CalendarModel::new(
+                                                    selected_date,
+                                                    selected_date,
+                                                ),
+                                                hour,
+                                                minute,
+                                            },
+                                        ))
+                                    }
+                                },
+                                || Message::Dialog(DialogAction::None),
+                                || Message::Dialog(DialogAction::None),
+                                jiff::civil::Weekday::Monday,
+                            ))
+                            .width(Length::Fill)
+                            .align_x(Horizontal::Center)
+                            .align_y(Vertical::Center)
+                            .into(),
+                            time_row.into(),
+                        ])
+                        .spacing(spacing.space_s),
+                    )
             }
         }
     }

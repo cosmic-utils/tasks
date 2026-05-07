@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         alignment::{Horizontal, Vertical},
+        clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         Alignment, Length,
     },
     theme,
@@ -18,6 +20,49 @@ use crate::{
     model::{self, List, Status},
     services::store::Store,
 };
+
+/// MIME type used to identify task drag payloads.
+const TASK_DRAG_MIME: &str = "application/x-cosmic-tasks-item";
+
+#[derive(Debug, Clone)]
+struct TaskDrag {
+    uuid: Uuid,
+}
+
+impl AsMimeTypes for TaskDrag {
+    fn available(&self) -> Cow<'static, [String]> {
+        Cow::Owned(vec![TASK_DRAG_MIME.to_string()])
+    }
+
+    fn as_bytes(&self, mime_type: &str) -> Option<Cow<'static, [u8]>> {
+        if mime_type == TASK_DRAG_MIME {
+            Some(Cow::Owned(self.uuid.as_bytes().to_vec()))
+        } else {
+            None
+        }
+    }
+}
+
+impl TryFrom<(Vec<u8>, String)> for TaskDrag {
+    type Error = ();
+
+    fn try_from((data, mime): (Vec<u8>, String)) -> Result<Self, Self::Error> {
+        if mime == TASK_DRAG_MIME {
+            let arr: [u8; 16] = data.try_into().map_err(|_| ())?;
+            Ok(Self {
+                uuid: Uuid::from_bytes(arr),
+            })
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl AllowedMimeTypes for TaskDrag {
+    fn allowed() -> Cow<'static, [String]> {
+        Cow::Owned(vec![TASK_DRAG_MIME.to_string()])
+    }
+}
 
 /// Represents the edit state of an input field.
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq)]
@@ -44,6 +89,7 @@ pub struct Content {
     search_bar_visible: bool,
     add_task_input: String,
     search_query: String,
+    drag_hover: Option<DefaultKey>,
 }
 
 /// Re-export for convenience so callers can use `content::SortBy`.
@@ -76,6 +122,17 @@ pub enum Message {
     ToggleSearchBar,
     SearchQueryChanged(String),
     SetSort(SortBy),
+    /// A drag-and-drop operation started on a task.
+    DragStarted(DefaultKey),
+    /// A dragged task entered another task's drop zone.
+    DragEntered(DefaultKey),
+    /// A dragged task left a drop zone without dropping.
+    DragLeft,
+    /// A task was dropped onto another task; `from` is the dragged task's UUID.
+    TaskDropped {
+        from: Option<Uuid>,
+        onto: DefaultKey,
+    },
 }
 
 pub enum Output {
@@ -424,6 +481,21 @@ impl Content {
             Message::SetSort(sort_by) => {
                 self.config.sort_by = sort_by;
             }
+            Message::DragStarted(_id) => {
+                self.drag_hover = None;
+            }
+            Message::DragEntered(id) => {
+                self.drag_hover = Some(id);
+            }
+            Message::DragLeft => {
+                self.drag_hover = None;
+            }
+            Message::TaskDropped { from, onto } => {
+                self.drag_hover = None;
+                if let Some(from_uuid) = from {
+                    self.reorder_tasks(from_uuid, onto);
+                }
+            }
         }
         output
     }
@@ -441,6 +513,7 @@ impl Content {
             store: storage,
             search_bar_visible: false,
             search_query: String::new(),
+            drag_hover: None,
         }
     }
 
@@ -450,6 +523,66 @@ impl Content {
             .iter()
             .find(|(_, t)| t.id == task_id)
             .map(|(k, _)| k)
+    }
+
+    fn reorder_tasks(&mut self, from_uuid: Uuid, onto_key: DefaultKey) {
+        let Some(list) = &self.selected_list else {
+            tracing::warn!("reorder_tasks: no list selected");
+            return;
+        };
+        let list_id = list.id;
+
+        let Some(from_key) = self.find_task_key(from_uuid) else {
+            tracing::warn!("reorder_tasks: source task {from_uuid} not found");
+            return;
+        };
+
+        if from_key == onto_key {
+            return;
+        }
+
+        let mut ordered: Vec<DefaultKey> = {
+            let mut tasks: Vec<_> = self
+                .tasks
+                .iter()
+                .filter(|(_, t)| t.parent_id.is_none())
+                .collect();
+            tasks.sort_by(|a, b| {
+                a.1.sort_order
+                    .cmp(&b.1.sort_order)
+                    .then(a.1.creation_date.cmp(&b.1.creation_date))
+            });
+            tasks.into_iter().map(|(k, _)| k).collect()
+        };
+
+        let Some(from_pos) = ordered.iter().position(|k| *k == from_key) else {
+            tracing::warn!("reorder_tasks: from_key not found in ordered list");
+            return;
+        };
+        let Some(onto_pos) = ordered.iter().position(|k| *k == onto_key) else {
+            tracing::warn!("reorder_tasks: onto_key not found in ordered list");
+            return;
+        };
+
+        ordered.remove(from_pos);
+        ordered.insert(onto_pos, from_key);
+
+        for (idx, key) in ordered.iter().enumerate() {
+            let new_order = idx as u32;
+            if let Some(task) = self.tasks.get_mut(*key) {
+                if task.sort_order != new_order {
+                    task.sort_order = new_order;
+                    let task_id = task.id;
+                    if let Err(e) = self
+                        .store
+                        .tasks(list_id)
+                        .update(task_id, |t| t.sort_order = new_order)
+                    {
+                        tracing::error!("Failed to persist sort_order for {task_id}: {e}");
+                    }
+                }
+            }
+        }
     }
 
     /// Creates the main list view with tasks
@@ -561,6 +694,13 @@ impl Content {
             }
             SortBy::DateAsc => tasks.sort_by(|a, b| a.1.creation_date.cmp(&b.1.creation_date)),
             SortBy::DateDesc => tasks.sort_by(|a, b| b.1.creation_date.cmp(&a.1.creation_date)),
+            SortBy::Manual => {
+                tasks.sort_by(|a, b| {
+                    a.1.sort_order
+                        .cmp(&b.1.sort_order)
+                        .then(a.1.creation_date.cmp(&b.1.creation_date))
+                });
+            }
         }
 
         tasks
@@ -612,9 +752,45 @@ impl Content {
             column = column.push(self.create_subtasks_view(&sub_tasks, &spacing));
         }
 
-        widget::container(column)
-            .class(cosmic::style::Container::ContextDrawer)
-            .into()
+        let container = widget::container(column).class(cosmic::style::Container::ContextDrawer);
+
+        if self.config.sort_by != SortBy::Manual || task.parent_id.is_some() {
+            return container.into();
+        }
+
+        let uuid = task.id;
+        let is_hover = self.drag_hover == Some(id);
+
+        let inner: Element<'_, Message> = if is_hover {
+            widget::column::with_capacity(2)
+                .push(
+                    cosmic::iced::widget::rule::horizontal(4).class(theme::Rule::custom(|theme| {
+                        cosmic::iced::widget::rule::Style {
+                            color: theme.cosmic().accent_color().into(),
+                            radius: 0.0.into(),
+                            fill_mode: cosmic::iced::widget::rule::FillMode::Full,
+                            snap: false,
+                        }
+                    })),
+                )
+                .push(container)
+                .into()
+        } else {
+            container.into()
+        };
+
+        widget::dnd_destination::dnd_destination_for_data::<TaskDrag, Message>(
+            widget::dnd_source::<Message, TaskDrag>(inner)
+                .drag_content(move || TaskDrag { uuid })
+                .on_start(Some(Message::DragStarted(id))),
+            move |data, _action| Message::TaskDropped {
+                from: data.map(|d| d.uuid),
+                onto: id,
+            },
+        )
+        .on_enter(move |_x, _y, _mimes| Message::DragEntered(id))
+        .on_leave(move || Message::DragLeft)
+        .into()
     }
 
     /// Gets all direct subtasks of a task
@@ -653,10 +829,22 @@ impl Content {
         let favorite_button = self.create_favorite_button(id, task, spacing);
         let menu = self.create_task_menu(id);
 
-        widget::row::with_capacity(6)
+        let drag_handle: Option<Element<'_, Message>> = (self.config.sort_by == SortBy::Manual)
+            .then(|| {
+                if task.parent_id.is_none() {
+                    widget::icon::from_name("grip-lines-symbolic")
+                        .size(16)
+                        .into()
+                } else {
+                    widget::Space::new().width(Length::Fixed(16.0)).into()
+                }
+            });
+
+        widget::row::with_capacity(7)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
             .padding([spacing.space_xxxs, spacing.space_xs])
+            .push_maybe(drag_handle)
             .push(checkbox)
             .push(title_input)
             .push_maybe(expand_button)

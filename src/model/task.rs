@@ -37,6 +37,8 @@ pub struct Task {
     pub reminder_date: Option<Timestamp>,
     /// The date and time when the task was created.
     pub creation_date: Timestamp,
+    #[serde(default)]
+    pub sort_order: u32,
 }
 
 impl Default for Task {
@@ -58,6 +60,7 @@ impl Default for Task {
             due_date: None,
             reminder_date: None,
             creation_date: Timestamp::now(),
+            sort_order: 0,
         }
     }
 }
@@ -105,6 +108,7 @@ impl Task {
             due_date: None,
             reminder_date: None,
             creation_date: Timestamp::now(),
+            sort_order: 0,
         }
     }
 }
