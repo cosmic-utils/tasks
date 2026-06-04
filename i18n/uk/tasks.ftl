@@ -1,5 +1,18 @@
 tasks = Завдання
+favorites = Закріплені
 trash = Смітник
+empty-trash = Очистити смітник
+no-favorites = Поки що не закріплено
+no-favorites-suggestion = Позначайте завдання закріпленими, щоб додати їх сюди
+no-trash = Порожній
+no-trash-suggestion = Видалені завдання переміщатимуться сюди
+restore = Відновити
+restore-all = Відновити все
+delete-permanently = Остаточно видалити
+deleted-from = Видалено з "{ $list }"
+deleted-at = Видалено { $date }
+unknown-list = Неназваний список
+trash-emptied = Очищено
 about = Про Завдання
 
 # Content
@@ -9,21 +22,24 @@ search-tasks = Пошук завдань
 # Details
 title = Назва
 details = Деталі
-favorite = Вибране
+favorite = Закріплене
 priority = Пріоритет
 due-date = Термін
 reminder = Нагадування
+created-at = Створено
+completed-at = Завершено
 notes = Нотатки
 add-notes = Додати нотатку
 
 # Empty
 no-tasks = Немає завдань
 no-tasks-suggestion = Спробуйте додати завдання за допомогою текстового поля нижче
-no-list-selected = Список не вибрано
-no-list-suggestion = Створіть або виберіть новий список, щоб почати
+no-list-selected = Жоден список не вибрано
+no-list-suggestion = Створіть або оберіть список, щоб почати
 
 sub-tasks = Підзавдання
 add-sub-task = Додати підзавдання
+move-to-trash = Перемістити до смітника
 
 # New List Dialog
 create-list = Створити новий список
@@ -31,9 +47,18 @@ create-list = Створити новий список
 # Rename List Dialog
 rename-list = Перейменувати список
 
-# Rename List Dialog
-delete-list = Вибраний список буде видалено
-delete-list-confirm = Ви впевнені, що хочете видалити цей список?
+# Delete List Dialog
+delete-list = Список буде видалено
+delete-list-confirm = Ви дійсно хочете видалити цей список?
+
+# Deletion undo banner
+undo = Скасувати
+task-deleted = "{ $title }" видалено
+deletion-countdown = { $seconds }с
+
+# Delete Task Dialog
+delete-task = Завдання буде видалено
+delete-task-confirm = Ви дійсно хочете видалити завдання?
 
 # Icon Dialog
 icon = Встановити іконку
@@ -43,6 +68,11 @@ search-icons = Пошук іконок...
 
 # Date Dialog
 select-date = Вибрати дату
+select-date-time = Вибрати дату й час
+hour = Година
+minute = Хвилина
+set-reminder = Встановити нагадування
+clear-reminder = Очистити нагадування
 
 # Export Dialog
 export = Експортувати
@@ -58,13 +88,14 @@ list-name = Назва списку
 # Context Pages
 
 ## About
-git-description = Версія {$hash} від {$date}
+git-description = Git {$hash} від {$date}
 
 ## Settings
 settings = Налаштування
 
 ### Appearance
 appearance = Вигляд
+show-favorites = Закріплені
 theme = Тема
 match-desktop = Системна
 dark = Темна
@@ -92,7 +123,7 @@ hide-completed = Приховати виконані
 ## About
 repository = Сховище
 support = Підтримка
-website = Вебсайт
+website = Сайт
 
 ## Error
 cause = Причина
@@ -105,3 +136,4 @@ sort-name-asc = Назва A-Я
 sort-name-desc = Назва Я-A
 sort-date-asc = Спочатку найстаріші
 sort-date-desc = Спочатку найновіші
+sort-manual = Вручну
