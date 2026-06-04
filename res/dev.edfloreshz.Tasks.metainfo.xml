@@ -3,6 +3,7 @@
   <id>dev.edfloreshz.Tasks</id>
   <developer id="dev.edfloreshz">
     <name>Eduardo Flores</name>
+    <name xml:lang="uk">Едуардо Флорес</name>
   </developer>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
@@ -18,6 +19,7 @@
   <name>Tasks</name>
   <name xml:lang="cs">Úkoly</name>
   <name xml:lang="hu">Feladatok</name>
+  <name xml:lang="uk">Завдання</name>
   <summary>Get things done</summary>
   <summary xml:lang="cs">Dokončete, co jste začali</summary>
   <summary xml:lang="hu">Intézd el a teendőidet</summary>
