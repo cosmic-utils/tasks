@@ -52,7 +52,7 @@ impl AppModel {
             }
             ApplicationAction::Key(modifiers, key) => {
                 for (key_bind, action) in self.key_binds.clone().into_iter() {
-                    if key_bind.matches(modifiers, &key) {
+                    if key_bind.matches(modifiers, &key, None) {
                         return cosmic::task::message(action.message());
                     }
                 }
