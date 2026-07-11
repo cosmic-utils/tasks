@@ -211,7 +211,7 @@ impl Favorites {
             .push(open_button);
 
         widget::container(row)
-            .class(cosmic::style::Container::ContextDrawer)
+            .class(cosmic::style::Container::ContextDrawer { transparent: false })
             .width(Length::Fill)
             .into()
     }

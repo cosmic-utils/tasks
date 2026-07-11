@@ -4,6 +4,7 @@ pub mod navigation;
 pub mod ui;
 
 pub use core::{AppModel, ContextPage, Flags, Message};
+use std::collections::HashMap;
 
 use cosmic::{
     app::{self, Core},
@@ -15,6 +16,7 @@ use cosmic::{
 use crate::{
     app::{
         dialogs::{DialogAction, DialogPage},
+        navigation::NavMenuAction,
         ui::ApplicationAction,
     },
     config::AppConfig,
@@ -77,17 +79,74 @@ impl Application for AppModel {
         vec![ui::menu::menu_bar(&self)]
     }
 
-    fn nav_context_menu(
-        &self,
-        id: widget::nav_bar::Id,
-    ) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
-        if self.nav.data::<crate::model::FavoritesMarker>(id).is_some() {
-            return None;
-        }
-        if self.nav.data::<crate::model::TrashMarker>(id).is_some() {
-            return navigation::trash_context_menu();
-        }
-        navigation::nav_context_menu(id)
+    fn nav_context_menu(&self) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
+        let items = self.nav.iter().map(|entity| {
+            let favorites_index_opt = self.nav.data::<crate::model::FavoritesMarker>(entity);
+            let trash_index_opt = self.nav.data::<crate::model::TrashMarker>(entity);
+            let mut items: Vec<widget::menu::Item<NavMenuAction, String>> = Vec::with_capacity(7);
+
+            if trash_index_opt.is_some() {
+                items.push(cosmic::widget::menu::Item::Button(
+                    fl!("restore-all"),
+                    Some(
+                        widget::icon::from_name("edit-undo-symbolic")
+                            .size(14)
+                            .handle(),
+                    ),
+                    NavMenuAction::TrashRestoreAll,
+                ));
+                items.push(cosmic::widget::menu::Item::Button(
+                    fl!("empty-trash"),
+                    Some(
+                        widget::icon::from_name("user-trash-full-symbolic")
+                            .size(14)
+                            .handle(),
+                    ),
+                    NavMenuAction::TrashEmptyAll,
+                ));
+            } else if favorites_index_opt.is_some() {
+                return items;
+            } else {
+                items.push(cosmic::widget::menu::Item::Button(
+                    fl!("rename"),
+                    Some(widget::icon::from_name("edit-symbolic").size(14).handle()),
+                    NavMenuAction::Rename(entity),
+                ));
+                items.push(cosmic::widget::menu::Item::Button(
+                    fl!("icon"),
+                    Some(
+                        widget::icon::from_name("face-smile-big-symbolic")
+                            .size(14)
+                            .handle(),
+                    ),
+                    NavMenuAction::SetIcon(entity),
+                ));
+                items.push(cosmic::widget::menu::Item::Button(
+                    fl!("export"),
+                    Some(
+                        widget::icon::from_name("emblem-shared-symbolic")
+                            .size(18)
+                            .handle(),
+                    ),
+                    NavMenuAction::Export(entity),
+                ));
+                items.push(cosmic::widget::menu::Item::Button(
+                    fl!("delete"),
+                    Some(
+                        widget::icon::from_name("user-trash-full-symbolic")
+                            .size(14)
+                            .handle(),
+                    ),
+                    NavMenuAction::Delete(entity),
+                ));
+            }
+            items
+        });
+
+        Some(cosmic::widget::menu::nav_context(
+            &HashMap::new(),
+            items.collect(),
+        ))
     }
 
     fn nav_model(&self) -> Option<&widget::segmented_button::SingleSelectModel> {
