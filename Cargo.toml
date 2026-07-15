@@ -30,7 +30,6 @@ git = "https://github.com/edfloreshz/rust-extensions.git"
 # See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
-default-features = false
 features = [
     # About widget for the app
     "about",

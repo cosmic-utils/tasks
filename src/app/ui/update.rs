@@ -50,6 +50,32 @@ impl AppModel {
                     }
                 }
             }
+            ApplicationAction::ToggleShowTrash(show) => {
+                if let Err(err) = self.config.set_show_trash(&self.handler, show) {
+                    tracing::error!("{err}");
+                }
+                if show {
+                    self.show_trash_nav_item();
+                } else {
+                    self.hide_trash_nav_item();
+                    if self
+                        .nav
+                        .active_data::<crate::model::TrashMarker>()
+                        .is_some()
+                    {
+                        let entity = self
+                            .nav
+                            .iter()
+                            .find(|e| self.nav.data::<crate::model::List>(*e).is_some())
+                            .unwrap_or_else(|| self.nav.iter().last().unwrap_or_default());
+                        return self.update(crate::app::core::Message::Content(
+                            crate::pages::content::Message::SetList(
+                                self.nav.data::<crate::model::List>(entity).cloned(),
+                            ),
+                        ));
+                    }
+                }
+            }
             ApplicationAction::Key(modifiers, key) => {
                 for (key_bind, action) in self.key_binds.clone().into_iter() {
                     if key_bind.matches(modifiers, &key, None) {

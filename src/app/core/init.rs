@@ -55,17 +55,10 @@ impl AppModel {
 
         app.core.nav_bar_toggle_condensed();
 
-        // Insert the trash nav item.
-        let trash_icon = widget::icon::from_name("user-trash-full-symbolic").size(16);
-        app.trash_entity = app
-            .nav
-            .insert()
-            .text(fl!("trash"))
-            .icon(trash_icon)
-            .data(crate::model::TrashMarker)
-            .id();
+        if app.config.show_trash {
+            app.show_trash_nav_item();
+        }
 
-        // Conditionally insert the favorites nav item based on config.
         if app.config.show_favorites {
             app.show_favorites_nav_item();
         }

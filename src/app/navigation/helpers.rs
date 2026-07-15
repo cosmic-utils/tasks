@@ -39,18 +39,34 @@ impl AppModel {
         self.reposition_special_items();
     }
 
-    /// Pin the special nav items to the top of the nav bar and place a single
-    /// divider below them, above the first list item. When favorites is hidden
-    /// trash sits at position 0; when shown, favorites is 0 and trash is 1.
+    pub fn show_trash_nav_item(&mut self) {
+        let icon = widget::icon::from_name("user-trash-full-symbolic").size(16);
+        self.trash_entity = self
+            .nav
+            .insert()
+            .text(fl!("trash"))
+            .icon(icon)
+            .data(crate::model::TrashMarker)
+            .id();
+        self.reposition_special_items();
+    }
+
+    pub fn hide_trash_nav_item(&mut self) {
+        self.nav.remove(self.trash_entity);
+        self.reposition_special_items();
+    }
+
     pub fn reposition_special_items(&mut self) {
-        let first_list_pos: u16 = if self.config.show_favorites {
-            self.nav.position_set(self.favorites_entity, 0);
-            self.nav.position_set(self.trash_entity, 1);
-            2
-        } else {
-            self.nav.position_set(self.trash_entity, 0);
-            1
-        };
+        let mut pos: u16 = 0;
+        if self.config.show_favorites {
+            self.nav.position_set(self.favorites_entity, pos);
+            pos += 1;
+        }
+        if self.config.show_trash {
+            self.nav.position_set(self.trash_entity, pos);
+            pos += 1;
+        }
+        let first_list_pos = pos;
         let entities: Vec<_> = self.nav.iter().collect();
         for (i, entity) in entities.iter().enumerate() {
             self.nav

@@ -96,6 +96,7 @@ settings = Settings
 ### Appearance
 appearance = Appearance
 show-favorites = Show favorites
+show-trash = Show trash
 theme = Theme
 match-desktop = Match desktop
 dark = Dark
