@@ -2,11 +2,9 @@ use cosmic::widget;
 
 use crate::{app::AppModel, fl};
 
-/// Zero-sized marker struct to tag the favorites nav item.
 pub struct FavoritesMarker;
 
 impl AppModel {
-    /// Insert the favorites nav item and store its entity.
     pub fn show_favorites_nav_item(&mut self) {
         let icon = widget::icon::from_name("starred-symbolic").size(16);
         self.favorites_entity = self
@@ -19,7 +17,6 @@ impl AppModel {
         self.reposition_special_items();
     }
 
-    /// Remove the favorites nav item.
     pub fn hide_favorites_nav_item(&mut self) {
         self.nav.remove(self.favorites_entity);
         self.reposition_special_items();

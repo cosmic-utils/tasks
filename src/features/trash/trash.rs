@@ -14,7 +14,6 @@ use crate::{
     shared::store::Store,
 };
 
-/// One or more trashed tasks pending permanent deletion (with undo window).
 struct PendingDeletion {
     tasks: Vec<TrashedTask>,
     seconds_remaining: u8,
@@ -32,14 +31,10 @@ pub enum Message {
     Load,
     Loaded(Vec<TrashedTask>, Vec<List>),
     RestoreTask(Uuid),
-    /// Begin the permanent-deletion countdown for a task.
     DeleteTask(Uuid),
-    /// Advance the permanent-deletion countdown by one second.
     TaskDeletionTick,
-    /// Cancel the pending permanent deletion (undo).
     TaskDeletionUndo,
     EmptyTrash,
-    /// Restore every task in the trash back to its original list.
     RestoreAll,
 }
 
@@ -53,7 +48,6 @@ impl Trash {
         }
     }
 
-    /// Returns `true` when a permanent deletion countdown is active.
     pub fn has_pending_deletion(&self) -> bool {
         self.pending_deletion.is_some()
     }
@@ -90,7 +84,6 @@ impl Trash {
                 }
             }
             Message::DeleteTask(task_id) => {
-                // Commit any previous pending permanent deletion first.
                 if let Some(existing) = self.pending_deletion.take() {
                     for t in existing.tasks {
                         if let Err(e) = self.store.trash().delete(t.task.id) {
@@ -124,7 +117,6 @@ impl Trash {
             }
             Message::TaskDeletionUndo => {
                 if let Some(mut pending) = self.pending_deletion.take() {
-                    // Restore tasks in their original order (oldest first).
                     pending.tasks.reverse();
                     for t in pending.tasks {
                         self.tasks.insert(0, t);
@@ -132,7 +124,6 @@ impl Trash {
                 }
             }
             Message::EmptyTrash => {
-                // Commit any previous pending permanent deletion first.
                 if let Some(existing) = self.pending_deletion.take() {
                     for t in existing.tasks {
                         if let Err(e) = self.store.trash().delete(t.task.id) {
@@ -150,7 +141,6 @@ impl Trash {
                 }
             }
             Message::RestoreAll => {
-                // Commit any in-flight permanent deletion first.
                 self.pending_deletion.take();
                 let tasks = std::mem::take(&mut self.tasks);
                 for trashed in tasks {
@@ -214,7 +204,6 @@ impl Trash {
             .size(24)
             .width(Length::Fill);
 
-        // Disable the button while a countdown is already running.
         let empty_button = widget::button::destructive(fl!("empty-trash")).on_press_maybe(
             self.pending_deletion
                 .is_none()

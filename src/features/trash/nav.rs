@@ -2,7 +2,6 @@ use cosmic::widget;
 
 use crate::{app::AppModel, fl};
 
-/// Zero-sized marker struct to tag the trash nav item.
 pub struct TrashMarker;
 
 impl AppModel {

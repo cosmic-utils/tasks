@@ -14,7 +14,6 @@ use crate::{
     shared::store::Store,
 };
 
-/// A favorite task together with the name and id of the list it belongs to.
 pub struct FavoriteEntry {
     pub task: Task,
     pub list_id: Uuid,
@@ -31,7 +30,6 @@ pub enum Message {
     Load,
     Loaded(Vec<FavoriteEntry>),
     Unfavorite(Uuid),
-    /// Navigate to the task's list and open its details pane.
     Open(Uuid),
 }
 
@@ -91,7 +89,6 @@ impl Favorites {
                     }
                 }
 
-                // Sort by list name then task title for a stable, predictable order.
                 entries.sort_by(|a, b| {
                     a.list_name
                         .cmp(&b.list_name)

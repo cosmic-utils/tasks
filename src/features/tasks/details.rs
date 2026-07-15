@@ -47,8 +47,6 @@ pub enum Output {
     OpenCalendarDialog,
     OpenReminderDialog,
     RefreshTask(model::Task),
-    /// Request deletion of the currently displayed task; routed to content's
-    /// undo-timer flow by the app model.
     DeleteTask(DefaultKey),
 }
 

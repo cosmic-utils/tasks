@@ -6,17 +6,11 @@ use uuid::Uuid;
 
 use crate::shared::store::Store;
 
-/// Messages emitted by the reminder subscription.
 #[derive(Debug, Clone)]
 pub enum ReminderMessage {
-    /// A timer tick: check all tasks for due reminders.
     Tick,
 }
 
-/// Scan every task across all lists and fire a desktop notification for each
-/// one whose `reminder_date` falls within `[window_start, now]`.  Returns the
-/// IDs of tasks for which a notification was successfully sent so the caller
-/// can record them in `sent_reminders` and avoid duplicates.
 pub fn check_and_notify(
     store: &Store,
     now: Timestamp,
@@ -49,8 +43,6 @@ pub fn check_and_notify(
 
             let key = (task.id, reminder.as_second());
 
-            // Skip tasks whose reminder has already been sent or is outside
-            // the current window.
             if sent.contains(&key) || reminder < window_start || reminder > now {
                 continue;
             }

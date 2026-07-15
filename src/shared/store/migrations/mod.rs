@@ -44,29 +44,6 @@ use crate::shared::store::Store;
 use crate::{Error, Result};
 use std::path::Path;
 
-/// Run the migration from old storage format to new storage format
-///
-/// This function:
-/// 1. Opens the new store at `new_base_dir`
-/// 2. Reads the old storage from `old_base_dir`
-/// 3. Converts all lists and tasks to the new format
-/// 4. Flattens nested sub-tasks into separate task files with parent_id references
-///
-/// # Arguments
-///
-/// * `old_base_dir` - Path to the old storage directory (contains `lists/` and `tasks/` subdirectories)
-/// * `new_base_dir` - Path to the new storage directory (will contain `lists.ron` and `{list_id}/` directories)
-///
-/// # Returns
-///
-/// A `MigrationReport` containing statistics about the migration
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The new store cannot be opened
-/// - Files cannot be read or parsed
-/// - Files cannot be written to the new location
 pub fn run_migration(
     old_base_dir: impl AsRef<Path>,
     new_base_dir: impl AsRef<Path>,
@@ -76,16 +53,11 @@ pub fn run_migration(
     migrator.migrate()
 }
 
-/// Check if migration is needed by looking for old storage structure
-///
-/// Returns `true` if the old storage format is detected (lists/ and tasks/ directories exist)
 pub fn needs_migration(old_base_dir: impl AsRef<Path>) -> bool {
-    // Check if migration has already been completed
     let marker_file = old_base_dir.as_ref().join("migrated");
     !marker_file.exists()
 }
 
-/// Perform the migration if needed, returning an error if migration fails
 pub fn migrate(old_base_dir: std::path::PathBuf, new_base_dir: &std::path::Path) -> Result<()> {
     if needs_migration(&old_base_dir) {
         match run_migration(&old_base_dir, &new_base_dir) {

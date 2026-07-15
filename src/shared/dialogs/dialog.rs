@@ -37,7 +37,6 @@ pub enum DialogPage {
 pub fn get_all_icon_handles(size: u16) -> Vec<(String, widget::icon::Handle)> {
     let mut icons = Vec::new();
 
-    // Scan system icon directories
     let icon_dirs = vec![
         PathBuf::from("/usr/share/icons/hicolor"),
         PathBuf::from("/usr/share/icons/Adwaita"),

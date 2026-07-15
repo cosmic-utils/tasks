@@ -8,14 +8,12 @@ use uuid::Uuid;
 
 use super::models::{List as PreviousList, Task as PreviousTask};
 
-/// Migrator handles the conversion from old storage format to new storage format
 pub struct Migrator {
     old_base_dir: PathBuf,
     store: Store,
 }
 
 impl Migrator {
-    /// Create a new migrator with the old base directory and new store
     pub fn new(old_base_dir: impl AsRef<Path>, store: Store) -> Self {
         Self {
             old_base_dir: old_base_dir.as_ref().to_path_buf(),
@@ -23,11 +21,9 @@ impl Migrator {
         }
     }
 
-    /// Run the complete migration
     pub fn migrate(&self) -> Result<MigrationReport> {
         let mut report = MigrationReport::default();
 
-        // Find and migrate all lists
         let old_lists_dir = self.old_base_dir.join("lists");
         if !old_lists_dir.exists() {
             tracing::info!("No old lists directory found at {:?}", old_lists_dir);
@@ -37,7 +33,6 @@ impl Migrator {
         tracing::info!("Starting migration from {:?}", self.old_base_dir);
         tracing::info!("Reading lists from {:?}", old_lists_dir);
 
-        // Read all old lists
         for entry in fs::read_dir(&old_lists_dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -68,7 +63,6 @@ impl Migrator {
             }
         }
 
-        // Create marker file to indicate successful migration
         let marker_file = self.old_base_dir.join("migrated");
         fs::write(&marker_file, "")?;
         tracing::info!("Created migration marker file at {:?}", marker_file);
@@ -76,17 +70,14 @@ impl Migrator {
         Ok(report)
     }
 
-    /// Migrate a single list and all its tasks
     fn migrate_list(&self, list_path: &Path) -> Result<(usize, usize)> {
         tracing::info!("Migrating list from {:?}", list_path);
 
-        // Read old list
         let content = fs::read_to_string(list_path)?;
         let old_list: PreviousList = ron::from_str(&content)?;
 
         tracing::info!("List: {} (old ID: {})", old_list.name, old_list.id);
 
-        // Convert to new list format
         let new_list = List {
             id: parse_or_generate_uuid(&old_list.id),
             name: old_list.name.clone(),
@@ -96,11 +87,9 @@ impl Migrator {
             created_at: jiff::Timestamp::now(),
         };
 
-        // Save the new list
         self.store.lists().save(&new_list)?;
         tracing::info!("List saved with new ID: {}", new_list.id);
 
-        // Find tasks for this list
         let old_tasks_dir = self.old_base_dir.join("tasks").join(&old_list.id);
         let task_count = if old_tasks_dir.exists() {
             tracing::info!("Reading tasks from {:?}", old_tasks_dir);
@@ -115,8 +104,6 @@ impl Migrator {
         Ok((1, task_count))
     }
 
-    /// Recursively migrate tasks from a directory
-    /// Returns the number of tasks migrated
     fn migrate_tasks(
         &self,
         tasks_dir: &Path,
@@ -133,7 +120,6 @@ impl Migrator {
             let entry = entry?;
             let path = entry.path();
 
-            // Only process .ron files
             if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("ron") {
                 continue;
             }
@@ -149,42 +135,34 @@ impl Migrator {
         Ok(count)
     }
 
-    /// Migrate a single task file and its sub-tasks
-    /// Returns the total number of tasks migrated (including sub-tasks)
     fn migrate_task(
         &self,
         task_path: &Path,
         list_id: Uuid,
         parent_id: Option<Uuid>,
     ) -> Result<usize> {
-        // Read old task
         let content = fs::read_to_string(task_path)?;
         let old_task: PreviousTask = ron::from_str(&content)?;
 
-        // Convert to new task format
         let new_task_id = parse_or_generate_uuid(&old_task.id);
 
         tracing::info!("Migrating task: {} ({})", old_task.title, new_task_id);
 
-        // Collect sub-task IDs first (we'll migrate them recursively)
         let mut sub_task_ids = Vec::new();
         let mut sub_task_count = 0;
 
-        // Process sub-tasks if they exist
         if !old_task.sub_tasks.is_empty() {
             tracing::info!("Processing {} sub-tasks", old_task.sub_tasks.len());
             for old_sub_task in &old_task.sub_tasks {
                 let sub_task_id = parse_or_generate_uuid(&old_sub_task.id);
                 sub_task_ids.push(sub_task_id);
 
-                // Recursively convert sub-task
                 let converted =
                     self.convert_task_recursive(old_sub_task, list_id, Some(new_task_id))?;
                 sub_task_count += converted;
             }
         }
 
-        // Also check for sub-tasks directory (old nested format)
         if let Some(stem) = task_path.file_stem() {
             let sub_tasks_dir = task_path.parent().unwrap().join(stem);
             if sub_tasks_dir.is_dir() {
@@ -215,14 +193,11 @@ impl Migrator {
             sort_order: 0,
         };
 
-        // Save the task
         self.store.tasks(list_id).save(&new_task)?;
 
-        // Return 1 for this task + count of all sub-tasks
         Ok(1 + sub_task_count)
     }
 
-    /// Convert a task and all its nested sub-tasks recursively
     fn convert_task_recursive(
         &self,
         old_task: &PreviousTask,
@@ -233,7 +208,6 @@ impl Migrator {
         let mut sub_task_ids = Vec::new();
         let mut total_count = 0;
 
-        // First, recursively convert all sub-tasks
         for old_sub_task in &old_task.sub_tasks {
             let sub_task_id = parse_or_generate_uuid(&old_sub_task.id);
             sub_task_ids.push(sub_task_id);
@@ -243,7 +217,6 @@ impl Migrator {
             total_count += converted;
         }
 
-        // Create and save the new task
         let new_task = Task {
             id: new_task_id,
             title: old_task.title.clone(),
@@ -266,12 +239,10 @@ impl Migrator {
 
         self.store.tasks(list_id).save(&new_task)?;
 
-        // Return 1 for this task + count of all descendants
         Ok(1 + total_count)
     }
 }
 
-/// Parse a string UUID or generate a new one if parsing fails
 fn parse_or_generate_uuid(id: &str) -> Uuid {
     Uuid::parse_str(id).unwrap_or_else(|_| {
         tracing::error!("      Warning: Invalid UUID '{}', generating new one", id);

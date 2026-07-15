@@ -48,8 +48,6 @@ impl AppModel {
             TasksAction::AddList(list) => {
                 self.create_nav_item(&list);
                 self.reposition_special_items();
-                // Select the newly added list, which is now second-to-last
-                // (last is always trash). Find it by its data.
                 let entity = self
                     .nav
                     .iter()
