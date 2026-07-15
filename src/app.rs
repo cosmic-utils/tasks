@@ -1,9 +1,4 @@
-pub mod core;
-pub mod dialogs;
-pub mod navigation;
-pub mod ui;
-
-pub use core::{AppModel, ContextPage, Flags, Message};
+pub use crate::shared::navigation::core::{AppModel, ContextPage, Flags, Message};
 use std::collections::HashMap;
 
 use cosmic::{
@@ -14,16 +9,19 @@ use cosmic::{
 };
 
 use crate::{
-    app::{
-        dialogs::{DialogAction, DialogPage},
-        navigation::NavMenuAction,
-        ui::ApplicationAction,
-    },
     config::AppConfig,
+    features::{
+        favorites::{self, FavoritesMarker},
+        lists::{content, List},
+        reminders::reminder,
+        tasks::{self, details},
+        trash::{self, TrashMarker},
+    },
     fl,
-    model::List,
-    pages::{content, details, favorites, trash},
-    services::reminder,
+    shared::{
+        dialogs::{DialogAction, DialogPage},
+        navigation::{nav::NavMenuAction, ui},
+    },
 };
 
 impl Application for AppModel {
@@ -57,7 +55,7 @@ impl Application for AppModel {
             )
             .title(self.context_page.title()),
             ContextPage::Settings => app::context_drawer::context_drawer(
-                ui::views::settings(self),
+                crate::features::settings::views::settings(self),
                 Message::ToggleContextDrawer,
             )
             .title(self.context_page.title()),
@@ -81,8 +79,8 @@ impl Application for AppModel {
 
     fn nav_context_menu(&self) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
         let items = self.nav.iter().map(|entity| {
-            let favorites_index_opt = self.nav.data::<crate::model::FavoritesMarker>(entity);
-            let trash_index_opt = self.nav.data::<crate::model::TrashMarker>(entity);
+            let favorites_index_opt = self.nav.data::<FavoritesMarker>(entity);
+            let trash_index_opt = self.nav.data::<TrashMarker>(entity);
             let mut items: Vec<widget::menu::Item<NavMenuAction, String>> = Vec::with_capacity(7);
 
             if trash_index_opt.is_some() {
@@ -168,22 +166,18 @@ impl Application for AppModel {
         self.nav.activate(entity);
 
         // Check if favorites was selected
-        if self
-            .nav
-            .data::<crate::model::FavoritesMarker>(entity)
-            .is_some()
-        {
+        if self.nav.data::<FavoritesMarker>(entity).is_some() {
             let _ = self.update(Message::Content(content::Message::SetList(None)));
-            return self.update(Message::Favorites(favorites::Message::Load));
+            return self.update(Message::Favorites(favorites::favorites::Message::Load));
         }
 
         // Check if trash was selected
-        if self.nav.data::<crate::model::TrashMarker>(entity).is_some() {
+        if self.nav.data::<TrashMarker>(entity).is_some() {
             // Clear the content selection so that switching back to any list
             // (including the same one) always triggers a fresh task reload.
             return app::Task::batch(vec![
                 self.update(Message::Content(content::Message::SetList(None))),
-                self.update(Message::Trash(trash::Message::Load)),
+                self.update(Message::Trash(trash::trash::Message::Load)),
             ]);
         }
 
@@ -213,11 +207,11 @@ impl Application for AppModel {
                     Message::UpdateConfig(update.config)
                 }),
             cosmic::iced::event::listen_with(|event, _status, _window_id| match event {
-                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => {
-                    Some(Message::Application(ApplicationAction::Key(modifiers, key)))
-                }
+                Event::Keyboard(KeyEvent::KeyPressed { key, modifiers, .. }) => Some(
+                    Message::Application(ui::ApplicationAction::Key(modifiers, key)),
+                ),
                 Event::Keyboard(KeyEvent::ModifiersChanged(modifiers)) => Some(
-                    Message::Application(ApplicationAction::Modifiers(modifiers)),
+                    Message::Application(ui::ApplicationAction::Modifiers(modifiers)),
                 ),
                 _ => None,
             }),
@@ -227,7 +221,7 @@ impl Application for AppModel {
         if self.trash.has_pending_deletion() {
             subscriptions.push(
                 cosmic::iced::time::every(std::time::Duration::from_secs(1))
-                    .map(|_| Message::Trash(trash::Message::TaskDeletionTick)),
+                    .map(|_| Message::Trash(trash::trash::Message::TaskDeletionTick)),
             );
         }
 
@@ -259,10 +253,7 @@ impl Application for AppModel {
                     match output {
                         content::Output::Focus(id) => return cosmic::widget::text_input::focus(id),
                         content::Output::OpenTaskDetails(key, id) => {
-                            let Some(list_id) = self
-                                .nav
-                                .active_data::<crate::model::List>()
-                                .map(|list| list.id)
+                            let Some(list_id) = self.nav.active_data::<List>().map(|list| list.id)
                             else {
                                 tracing::error!("No active list found for task details");
                                 return app::Task::none();
@@ -270,7 +261,7 @@ impl Application for AppModel {
 
                             let task = self.store.tasks(list_id).get(id).unwrap_or_else(|err| {
                                 tracing::error!("Failed to load task details: {err}");
-                                crate::model::Task::default()
+                                tasks::task::Task::default()
                             });
 
                             let tasks = vec![
@@ -294,7 +285,7 @@ impl Application for AppModel {
                             }
                         }
                         content::Output::ToggleHideCompleted(list) => {
-                            if let Some(data) = self.nav.active_data_mut::<crate::model::List>() {
+                            if let Some(data) = self.nav.active_data_mut::<List>() {
                                 data.hide_completed = list.hide_completed;
                             }
                         }
@@ -363,7 +354,7 @@ impl Application for AppModel {
                 self.trash.update(msg);
             }
             Message::Reminder(msg) => {
-                use crate::services::reminder::ReminderMessage;
+                use crate::features::reminders::reminder::ReminderMessage;
                 match msg {
                     ReminderMessage::Tick => {
                         let now = jiff::Timestamp::now();
@@ -385,12 +376,10 @@ impl Application for AppModel {
             Message::Favorites(msg) => {
                 if let Some(output) = self.favorites.update(msg) {
                     match output {
-                        favorites::Output::OpenTask { task, list_id } => {
+                        favorites::favorites::Output::OpenTask { task, list_id } => {
                             // Find the nav entity for this list and activate it.
                             let entity = self.nav.iter().find(|e| {
-                                self.nav
-                                    .data::<crate::model::List>(*e)
-                                    .is_some_and(|l| l.id == list_id)
+                                self.nav.data::<List>(*e).is_some_and(|l| l.id == list_id)
                             });
                             let Some(entity) = entity else {
                                 tracing::error!("Nav entity not found for list {list_id}");
@@ -402,7 +391,7 @@ impl Application for AppModel {
                                 Message::ToggleContextPage(ContextPage::TaskDetails),
                             )];
 
-                            if let Some(list) = self.nav.data::<crate::model::List>(entity) {
+                            if let Some(list) = self.nav.data::<List>(entity) {
                                 tasks.push(self.update(Message::Content(
                                     content::Message::SetList(Some(list.clone())),
                                 )));
@@ -454,17 +443,9 @@ impl Application for AppModel {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        if self
-            .nav
-            .active_data::<crate::model::TrashMarker>()
-            .is_some()
-        {
+        if self.nav.active_data::<TrashMarker>().is_some() {
             self.trash.view().map(Message::Trash)
-        } else if self
-            .nav
-            .active_data::<crate::model::FavoritesMarker>()
-            .is_some()
-        {
+        } else if self.nav.active_data::<FavoritesMarker>().is_some() {
             self.favorites.view().map(Message::Favorites)
         } else {
             self.content.view().map(Message::Content)
