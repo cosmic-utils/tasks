@@ -66,17 +66,66 @@ impl AppModel {
                 };
 
                 if let Some(list) = self.nav.data::<List>(entity) {
-                    if let Err(err) = self.store.lists().delete(list.id) {
-                        tracing::error!("Error deleting list: {err}");
+                    let list_id = list.id;
+                    let title = list.name.clone();
+                    if let Err(err) = self.store.trash().trash_list(list_id) {
+                        tracing::error!("Error moving list to trash: {err}");
                     }
 
                     self.nav.remove(entity);
 
-                    return cosmic::task::message(Message::Content(content::Message::SetList(
-                        None,
-                    )));
+                    let mut tasks = vec![
+                        cosmic::task::message(Message::Content(content::Message::SetList(None))),
+                        cosmic::task::message(Message::Trash(
+                            crate::features::trash::trash::Message::Load,
+                        )),
+                        self.toasts
+                            .push(
+                                cosmic::widget::Toast::new(crate::fl!(
+                                    "list-moved-to-trash",
+                                    title = title.as_str()
+                                ))
+                                .action(crate::fl!("undo"), move |_id| {
+                                    Message::Tasks(TasksAction::RestoreList(list_id))
+                                }),
+                            )
+                            .map(cosmic::Action::App),
+                    ];
+                    return app::Task::batch(std::mem::take(&mut tasks));
                 }
                 self.nav.remove(self.nav.active());
+            }
+            TasksAction::RestoreList(list_id) => match self.store.trash().restore_list(list_id) {
+                Ok(list) => {
+                    self.create_nav_item(&list);
+                    self.reposition_special_items();
+                    return cosmic::task::message(Message::Trash(
+                        crate::features::trash::trash::Message::Load,
+                    ));
+                }
+                Err(err) => {
+                    tracing::error!("Error restoring list from trash: {err}");
+                }
+            },
+            TasksAction::RestoreTaskFromList(list_id, task_id) => {
+                match self.store.trash().restore_task_from_list(list_id, task_id) {
+                    Ok(list) => {
+                        let exists = self
+                            .nav
+                            .iter()
+                            .any(|e| self.nav.data::<List>(e).is_some_and(|l| l.id == list.id));
+                        if !exists {
+                            self.create_nav_item(&list);
+                            self.reposition_special_items();
+                        }
+                        return cosmic::task::message(Message::Trash(
+                            crate::features::trash::trash::Message::Load,
+                        ));
+                    }
+                    Err(err) => {
+                        tracing::error!("Error restoring task from trashed list: {err}");
+                    }
+                }
             }
         }
 

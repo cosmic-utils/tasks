@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use cosmic::{
     cosmic_theme::Spacing,
     iced::{
@@ -11,7 +13,10 @@ use cosmic::{
 use uuid::Uuid;
 
 use crate::{
-    features::{lists::list::List, tasks::task::TrashedTask},
+    features::{
+        lists::list::{List, TrashedList},
+        tasks::task::{Task, TrashedTask},
+    },
     fl,
     shared::store::Store,
 };
@@ -24,16 +29,32 @@ struct PendingDeletion {
 pub struct Trash {
     pub tasks: Vec<TrashedTask>,
     pub lists: Vec<List>,
+    pub trashed_lists: Vec<TrashedList>,
+    pub trashed_list_tasks: HashMap<Uuid, Vec<Task>>,
     store: Store,
     pending_deletion: Option<PendingDeletion>,
+    collapsed_sections: HashSet<Uuid>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     Load,
-    Loaded(Vec<TrashedTask>, Vec<List>),
+    Loaded(
+        Vec<TrashedTask>,
+        Vec<List>,
+        Vec<TrashedList>,
+        HashMap<Uuid, Vec<Task>>,
+    ),
+    ToggleSection(Uuid),
     RestoreTask(Uuid),
+    RequestDeleteTask(Uuid),
     DeleteTask(Uuid),
+    RequestRestoreList(Uuid),
+    RequestDeleteList(Uuid),
+    DeleteListConfirmed(Uuid),
+    RequestRestoreTaskFromList(Uuid, Uuid),
+    RequestDeleteTaskFromList(Uuid, Uuid),
+    DeleteTaskFromListConfirmed(Uuid, Uuid),
     TaskDeletionTick,
     TaskDeletionUndo,
     EmptyTrash,
@@ -43,6 +64,11 @@ pub enum Message {
 
 pub enum Output {
     EmptyTrashRequested,
+    DeleteTaskRequested(Uuid, String),
+    RestoreListRequested(Uuid),
+    DeleteListRequested(Uuid, String),
+    RestoreTaskFromListRequested(Uuid, Uuid),
+    DeleteTaskFromListRequested(Uuid, Uuid, String),
 }
 
 impl Trash {
@@ -50,8 +76,11 @@ impl Trash {
         Self {
             tasks: Vec::new(),
             lists: Vec::new(),
+            trashed_lists: Vec::new(),
+            trashed_list_tasks: HashMap::new(),
             store,
             pending_deletion: None,
+            collapsed_sections: HashSet::new(),
         }
     }
 
@@ -70,11 +99,39 @@ impl Trash {
                     tracing::error!("Failed to load lists for trash: {e}");
                     vec![]
                 });
-                return self.update(Message::Loaded(tasks, lists));
+                let trashed_lists = self.store.trash().load_all_lists().unwrap_or_else(|e| {
+                    tracing::error!("Failed to load trashed lists: {e}");
+                    vec![]
+                });
+                let mut trashed_list_tasks = HashMap::new();
+                for trashed_list in &trashed_lists {
+                    let list_tasks = self
+                        .store
+                        .trash()
+                        .load_trashed_list_tasks(trashed_list.list.id)
+                        .unwrap_or_else(|e| {
+                            tracing::error!("Failed to load tasks for trashed list: {e}");
+                            vec![]
+                        });
+                    trashed_list_tasks.insert(trashed_list.list.id, list_tasks);
+                }
+                return self.update(Message::Loaded(
+                    tasks,
+                    lists,
+                    trashed_lists,
+                    trashed_list_tasks,
+                ));
             }
-            Message::Loaded(tasks, lists) => {
+            Message::Loaded(tasks, lists, trashed_lists, trashed_list_tasks) => {
                 self.tasks = tasks;
                 self.lists = lists;
+                self.trashed_lists = trashed_lists;
+                self.trashed_list_tasks = trashed_list_tasks;
+            }
+            Message::ToggleSection(list_id) => {
+                if !self.collapsed_sections.remove(&list_id) {
+                    self.collapsed_sections.insert(list_id);
+                }
             }
             Message::RestoreTask(task_id) => {
                 if let Some(pos) = self.tasks.iter().position(|t| t.task.id == task_id) {
@@ -88,6 +145,14 @@ impl Trash {
                     } else if let Err(e) = self.store.trash().delete(task_id) {
                         tracing::error!("Failed to remove task from trash after restore: {e}");
                     }
+                }
+            }
+            Message::RequestDeleteTask(task_id) => {
+                if let Some(trashed) = self.tasks.iter().find(|t| t.task.id == task_id) {
+                    return Some(Output::DeleteTaskRequested(
+                        task_id,
+                        trashed.task.title.clone(),
+                    ));
                 }
             }
             Message::DeleteTask(task_id) => {
@@ -105,6 +170,52 @@ impl Trash {
                         tasks: vec![trashed],
                         seconds_remaining: 5,
                     });
+                }
+            }
+            Message::RequestRestoreList(list_id) => {
+                return Some(Output::RestoreListRequested(list_id));
+            }
+            Message::RequestDeleteList(list_id) => {
+                if let Some(trashed) = self.trashed_lists.iter().find(|t| t.list.id == list_id) {
+                    return Some(Output::DeleteListRequested(
+                        list_id,
+                        trashed.list.name.clone(),
+                    ));
+                }
+            }
+            Message::DeleteListConfirmed(list_id) => {
+                if let Err(e) = self.store.trash().delete_list(list_id) {
+                    tracing::error!("Error permanently deleting list from trash: {e}");
+                }
+                self.trashed_lists.retain(|t| t.list.id != list_id);
+                self.trashed_list_tasks.remove(&list_id);
+            }
+            Message::RequestRestoreTaskFromList(list_id, task_id) => {
+                return Some(Output::RestoreTaskFromListRequested(list_id, task_id));
+            }
+            Message::RequestDeleteTaskFromList(list_id, task_id) => {
+                if let Some(task) = self
+                    .trashed_list_tasks
+                    .get(&list_id)
+                    .and_then(|tasks| tasks.iter().find(|t| t.id == task_id))
+                {
+                    return Some(Output::DeleteTaskFromListRequested(
+                        list_id,
+                        task_id,
+                        task.title.clone(),
+                    ));
+                }
+            }
+            Message::DeleteTaskFromListConfirmed(list_id, task_id) => {
+                if let Err(e) = self.store.trash().delete_task_from_list(list_id, task_id) {
+                    tracing::error!("Error permanently deleting task from trashed list: {e}");
+                }
+                if let Some(tasks) = self.trashed_list_tasks.get_mut(&list_id) {
+                    tasks.retain(|t| t.id != task_id);
+                    if tasks.is_empty() {
+                        self.trashed_list_tasks.remove(&list_id);
+                        self.trashed_lists.retain(|t| t.list.id != list_id);
+                    }
                 }
             }
             Message::TaskDeletionTick => {
@@ -143,6 +254,12 @@ impl Trash {
                         tracing::error!("Error emptying trash: {e}");
                     }
                 }
+                for trashed in std::mem::take(&mut self.trashed_lists) {
+                    if let Err(e) = self.store.trash().delete_list(trashed.list.id) {
+                        tracing::error!("Error emptying trashed list: {e}");
+                    }
+                }
+                self.trashed_list_tasks.clear();
             }
             Message::RestoreAll => {
                 self.pending_deletion.take();
@@ -168,16 +285,14 @@ impl Trash {
     pub fn view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        if self.tasks.is_empty() && self.pending_deletion.is_none() {
+        if self.is_empty() {
             return self.empty_view();
         }
 
         let header = self.header_view();
 
-        let task_rows: Vec<Element<'_, Message>> =
-            self.tasks.iter().map(|t| self.task_row(t)).collect();
-
-        let list = widget::column::with_children(task_rows).spacing(spacing.space_xxs);
+        let sections = self.list_sections();
+        let list = widget::column::with_children(sections).spacing(spacing.space_xxs);
 
         let mut content = widget::column::with_capacity(3)
             .push(header)
@@ -226,50 +341,193 @@ impl Trash {
             .into()
     }
 
-    fn task_row<'a>(&'a self, trashed: &'a TrashedTask) -> Element<'a, Message> {
+    fn list_sections(&self) -> Vec<Element<'_, Message>> {
+        let mut list_ids: Vec<Uuid> = Vec::new();
+        for t in &self.tasks {
+            if !list_ids.contains(&t.original_list_id) {
+                list_ids.push(t.original_list_id);
+            }
+        }
+        for t in &self.trashed_lists {
+            if !list_ids.contains(&t.list.id) {
+                list_ids.push(t.list.id);
+            }
+        }
+
+        let mut sections: Vec<(String, Element<'_, Message>)> = list_ids
+            .into_iter()
+            .map(|list_id| {
+                let trashed_list = self.trashed_lists.iter().find(|t| t.list.id == list_id);
+                let name = trashed_list
+                    .map(|t| t.list.name.clone())
+                    .or_else(|| {
+                        self.lists
+                            .iter()
+                            .find(|l| l.id == list_id)
+                            .map(|l| l.name.clone())
+                    })
+                    .unwrap_or_else(|| fl!("unknown-list"));
+
+                let individually: Vec<&TrashedTask> = self
+                    .tasks
+                    .iter()
+                    .filter(|t| t.original_list_id == list_id)
+                    .collect();
+                let from_list: Vec<&Task> = self
+                    .trashed_list_tasks
+                    .get(&list_id)
+                    .map(|tasks| tasks.iter().collect())
+                    .unwrap_or_default();
+
+                let section =
+                    self.list_section(list_id, name.clone(), trashed_list, individually, from_list);
+                (name, section)
+            })
+            .collect();
+
+        sections.sort_by(|a, b| a.0.cmp(&b.0));
+        sections.into_iter().map(|(_, section)| section).collect()
+    }
+
+    fn list_section<'a>(
+        &'a self,
+        list_id: Uuid,
+        name: String,
+        trashed_list: Option<&'a TrashedList>,
+        individually: Vec<&'a TrashedTask>,
+        from_list: Vec<&'a Task>,
+    ) -> Element<'a, Message> {
+        let spacing = theme::active().cosmic().spacing;
+        let collapsed = self.collapsed_sections.contains(&list_id);
+        let count = individually.len() + from_list.len();
+
+        let mut list = widget::list_column()
+            .list_item_padding(0)
+            .add(self.list_section_header(list_id, name, trashed_list, count, collapsed, &spacing));
+
+        if !collapsed {
+            for trashed in individually {
+                list = list.add(self.task_row(
+                    trashed.task.title.as_str(),
+                    Some(trashed.deleted_at_local()),
+                    Message::RestoreTask(trashed.task.id),
+                    Message::RequestDeleteTask(trashed.task.id),
+                ));
+            }
+            for task in from_list {
+                list = list.add(self.task_row(
+                    task.title.as_str(),
+                    None,
+                    Message::RequestRestoreTaskFromList(list_id, task.id),
+                    Message::RequestDeleteTaskFromList(list_id, task.id),
+                ));
+            }
+        }
+
+        widget::container(list)
+            .class(cosmic::style::Container::List)
+            .into()
+    }
+
+    fn list_section_header<'a>(
+        &'a self,
+        list_id: Uuid,
+        name: String,
+        trashed_list: Option<&'a TrashedList>,
+        count: usize,
+        collapsed: bool,
+        spacing: &Spacing,
+    ) -> Element<'a, Message> {
+        let chevron = if collapsed {
+            "go-down-symbolic"
+        } else {
+            "go-up-symbolic"
+        };
+
+        let badge = widget::container(widget::text(count.to_string()))
+            .class(theme::Container::Tooltip)
+            .padding([spacing.space_xxxs, spacing.space_xs]);
+
+        let mut title_children: Vec<Element<'a, Message>> =
+            vec![widget::text::heading(name).into()];
+        if let Some(trashed_list) = trashed_list {
+            let deleted_at = trashed_list.deleted_at_local();
+            title_children
+                .push(widget::text::caption(fl!("deleted-at", date = deleted_at.as_str())).into());
+        }
+        let title_col = widget::column::with_children(title_children).width(Length::Fill);
+
+        let mut row = widget::row::with_capacity(5)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_s)
+            .padding([spacing.space_xxs, spacing.space_s])
+            .push(title_col)
+            .push(badge);
+
+        let list_is_trashed = trashed_list.is_some() && !self.lists.iter().any(|l| l.id == list_id);
+
+        if list_is_trashed {
+            row = row
+                .push(
+                    widget::button::icon(widget::icon::from_name("edit-undo"))
+                        .tooltip(fl!("restore-list"))
+                        .class(theme::Button::Standard)
+                        .on_press(Message::RequestRestoreList(list_id)),
+                )
+                .push(
+                    widget::button::icon(widget::icon::from_name("edit-delete"))
+                        .tooltip(fl!("delete-permanently"))
+                        .class(theme::Button::Destructive)
+                        .on_press(Message::RequestDeleteList(list_id)),
+                );
+        }
+
+        row = row.push(
+            widget::button::icon(widget::icon::from_name(chevron).size(16))
+                .on_press(Message::ToggleSection(list_id)),
+        );
+
+        row.into()
+    }
+
+    fn task_row<'a>(
+        &'a self,
+        title: &'a str,
+        deleted_at: Option<String>,
+        restore_message: Message,
+        delete_message: Message,
+    ) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        let list_name = self
-            .lists
-            .iter()
-            .find(|l| l.id == trashed.original_list_id)
-            .map(|l| l.name.clone())
-            .unwrap_or_else(|| fl!("unknown-list"));
-
-        let title = widget::text::body(trashed.task.title.as_str()).width(Length::Fill);
-
-        let subtitle = widget::text::caption(fl!("deleted-from", list = list_name.as_str()))
+        let mut text_col = widget::column::with_capacity(2)
+            .push(widget::text::body(title))
             .width(Length::Fill);
+        if let Some(deleted_at) = deleted_at {
+            text_col = text_col.push(widget::text::caption(fl!(
+                "deleted-at",
+                date = deleted_at.as_str()
+            )));
+        }
 
-        let task_id = trashed.task.id;
-        let deleted_at = trashed.deleted_at_local();
+        let restore_button = widget::button::icon(widget::icon::from_name("edit-undo"))
+            .tooltip(fl!("restore"))
+            .class(theme::Button::Standard)
+            .on_press(restore_message);
 
-        let date = widget::text::caption(fl!("deleted-at", date = deleted_at.as_str()));
-
-        let restore_button =
-            widget::button::standard(fl!("restore")).on_press(Message::RestoreTask(task_id));
-
-        let delete_button = widget::button::destructive(fl!("delete-permanently"))
-            .on_press(Message::DeleteTask(task_id));
-
-        let text_col = widget::column::with_capacity(3)
-            .push(title)
-            .push(subtitle)
-            .push(date)
-            .width(Length::Fill);
+        let delete_button = widget::button::icon(widget::icon::from_name("edit-delete"))
+            .tooltip(fl!("delete-permanently"))
+            .class(theme::Button::Destructive)
+            .on_press(delete_message);
 
         let row = widget::row::with_capacity(3)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
-            .padding([spacing.space_xxxs, spacing.space_xs])
+            .padding([spacing.space_xxs, spacing.space_xs])
             .push(text_col)
             .push(restore_button)
             .push(delete_button);
 
-        widget::container(row)
-            .class(cosmic::style::Container::ContextDrawer { transparent: false })
-            .width(Length::Fill)
-            .into()
+        widget::list_column().list_item_padding(0).add(row).into()
     }
 
     fn deletion_banner<'a>(
@@ -328,6 +586,6 @@ impl Trash {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.tasks.is_empty() && self.pending_deletion.is_none()
+        self.tasks.is_empty() && self.trashed_lists.is_empty() && self.pending_deletion.is_none()
     }
 }

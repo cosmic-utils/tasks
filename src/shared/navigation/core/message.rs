@@ -31,4 +31,5 @@ pub enum Message {
     Trash(trash::Message),
     Favorites(favorites::Message),
     Reminder(ReminderMessage),
+    CloseToast(cosmic::widget::ToastId),
 }

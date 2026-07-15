@@ -125,6 +125,25 @@ impl AppModel {
                                 ));
                             }
                         }
+                        DialogPage::DeleteTaskPermanently(task_id, _) => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::DeleteTask(task_id),
+                            ));
+                        }
+                        DialogPage::DeleteTaskFromListPermanently(list_id, task_id, _) => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::DeleteTaskFromListConfirmed(
+                                    list_id, task_id,
+                                ),
+                            ));
+                        }
+                        DialogPage::DeleteListPermanently(list_id, _) => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::DeleteListConfirmed(
+                                    list_id,
+                                ),
+                            ));
+                        }
                         DialogPage::EmptyTrash => {
                             return cosmic::task::message(Message::Trash(
                                 crate::features::trash::trash::Message::EmptyTrashConfirmed,

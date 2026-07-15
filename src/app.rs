@@ -270,10 +270,29 @@ impl Application for AppModel {
                             ];
                             return app::Task::batch(tasks);
                         }
-                        content::Output::TaskDeleted => {
-                            let mut tasks = vec![cosmic::task::message(Message::Trash(
-                                trash::trash::Message::Load,
-                            ))];
+                        content::Output::TaskDeleted {
+                            task_id,
+                            list_id,
+                            title,
+                        } => {
+                            let mut tasks = vec![
+                                cosmic::task::message(Message::Trash(
+                                    trash::trash::Message::Load,
+                                )),
+                                self.toasts
+                                    .push(
+                                        widget::Toast::new(fl!(
+                                            "task-moved-to-trash",
+                                            title = title.as_str()
+                                        ))
+                                        .action(fl!("undo"), move |_id| {
+                                            Message::Content(content::Message::RestoreTask(
+                                                task_id, list_id,
+                                            ))
+                                        }),
+                                    )
+                                    .map(cosmic::Action::App),
+                            ];
                             if self.core.window.show_context
                                 && self.context_page == ContextPage::TaskDetails
                             {
@@ -350,11 +369,48 @@ impl Application for AppModel {
             Message::Trash(msg) => {
                 let output = self.trash.update(msg);
                 self.refresh_trash_nav_icon();
-                if let Some(trash::trash::Output::EmptyTrashRequested) = output {
-                    return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                        DialogPage::EmptyTrash,
-                    )));
+                match output {
+                    Some(trash::trash::Output::EmptyTrashRequested) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::EmptyTrash,
+                        )));
+                    }
+                    Some(trash::trash::Output::DeleteTaskRequested(task_id, title)) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::DeleteTaskPermanently(task_id, title),
+                        )));
+                    }
+                    Some(trash::trash::Output::RestoreListRequested(list_id)) => {
+                        return cosmic::task::message(Message::Tasks(
+                            crate::shared::navigation::nav::TasksAction::RestoreList(list_id),
+                        ));
+                    }
+                    Some(trash::trash::Output::DeleteListRequested(list_id, title)) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::DeleteListPermanently(list_id, title),
+                        )));
+                    }
+                    Some(trash::trash::Output::RestoreTaskFromListRequested(list_id, task_id)) => {
+                        return cosmic::task::message(Message::Tasks(
+                            crate::shared::navigation::nav::TasksAction::RestoreTaskFromList(
+                                list_id, task_id,
+                            ),
+                        ));
+                    }
+                    Some(trash::trash::Output::DeleteTaskFromListRequested(
+                        list_id,
+                        task_id,
+                        title,
+                    )) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::DeleteTaskFromListPermanently(list_id, task_id, title),
+                        )));
+                    }
+                    None => {}
                 }
+            }
+            Message::CloseToast(id) => {
+                self.toasts.remove(id);
             }
             Message::Reminder(msg) => {
                 use crate::features::reminders::reminder::ReminderMessage;
@@ -445,12 +501,14 @@ impl Application for AppModel {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        if self.nav.active_data::<TrashMarker>().is_some() {
+        let content = if self.nav.active_data::<TrashMarker>().is_some() {
             self.trash.view().map(Message::Trash)
         } else if self.nav.active_data::<FavoritesMarker>().is_some() {
             self.favorites.view().map(Message::Favorites)
         } else {
             self.content.view().map(Message::Content)
-        }
+        };
+
+        widget::toaster(&self.toasts, content)
     }
 }

@@ -25,6 +25,9 @@ pub enum DialogPage {
     SetListIcon(Option<segmented_button::Entity>, String, String),
     RenameList(Option<segmented_button::Entity>, String),
     DeleteList(Option<segmented_button::Entity>, String),
+    DeleteTaskPermanently(uuid::Uuid, String),
+    DeleteTaskFromListPermanently(uuid::Uuid, uuid::Uuid, String),
+    DeleteListPermanently(uuid::Uuid, String),
     EmptyTrash,
     Calendar(CalendarModel),
     Export(String),
@@ -129,6 +132,39 @@ impl DialogPage {
                 .primary_action(
                     widget::button::suggested(fl!("ok"))
                         .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                ),
+            DialogPage::DeleteTaskPermanently(_, title) => widget::dialog()
+                .title(fl!("delete-task-permanently"))
+                .body(fl!("delete-task-permanently-confirm", title = title.as_str()))
+                .primary_action(
+                    widget::button::destructive(fl!("delete-permanently"))
+                        .on_press(Message::Dialog(DialogAction::Complete)),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                ),
+            DialogPage::DeleteTaskFromListPermanently(_, _, title) => widget::dialog()
+                .title(fl!("delete-task-permanently"))
+                .body(fl!("delete-task-permanently-confirm", title = title.as_str()))
+                .primary_action(
+                    widget::button::destructive(fl!("delete-permanently"))
+                        .on_press(Message::Dialog(DialogAction::Complete)),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                ),
+            DialogPage::DeleteListPermanently(_, name) => widget::dialog()
+                .title(fl!("delete-list-permanently"))
+                .body(fl!("delete-list-permanently-confirm", name = name.as_str()))
+                .primary_action(
+                    widget::button::destructive(fl!("delete-permanently"))
+                        .on_press(Message::Dialog(DialogAction::Complete)),
                 )
                 .secondary_action(
                     widget::button::standard(fl!("cancel"))
