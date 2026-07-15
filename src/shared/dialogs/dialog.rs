@@ -25,6 +25,7 @@ pub enum DialogPage {
     SetListIcon(Option<segmented_button::Entity>, String, String),
     RenameList(Option<segmented_button::Entity>, String),
     DeleteList(Option<segmented_button::Entity>, String),
+    EmptyTrash,
     Calendar(CalendarModel),
     Export(String),
     ReminderDateTime {
@@ -128,6 +129,17 @@ impl DialogPage {
                 .primary_action(
                     widget::button::suggested(fl!("ok"))
                         .on_press_maybe(Some(Message::Dialog(DialogAction::Complete))),
+                )
+                .secondary_action(
+                    widget::button::standard(fl!("cancel"))
+                        .on_press(Message::Dialog(DialogAction::Close)),
+                ),
+            DialogPage::EmptyTrash => widget::dialog()
+                .title(fl!("empty-trash"))
+                .body(fl!("empty-trash-confirm"))
+                .primary_action(
+                    widget::button::destructive(fl!("empty-trash"))
+                        .on_press(Message::Dialog(DialogAction::Complete)),
                 )
                 .secondary_action(
                     widget::button::standard(fl!("cancel"))

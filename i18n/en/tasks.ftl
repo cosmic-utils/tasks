@@ -2,6 +2,7 @@ tasks = Tasks
 favorites = Favorites
 trash = Trash
 empty-trash = Empty trash
+empty-trash-confirm = All tasks in the trash will be permanently deleted. This action cannot be undone.
 no-favorites = No favorites
 no-favorites-suggestion = Mark tasks as favorites to see them here
 no-trash = Trash is empty

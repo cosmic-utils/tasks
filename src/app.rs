@@ -271,13 +271,17 @@ impl Application for AppModel {
                             return app::Task::batch(tasks);
                         }
                         content::Output::TaskDeleted => {
+                            let mut tasks = vec![cosmic::task::message(Message::Trash(
+                                trash::trash::Message::Load,
+                            ))];
                             if self.core.window.show_context
                                 && self.context_page == ContextPage::TaskDetails
                             {
-                                return cosmic::task::message(Message::ToggleContextPage(
+                                tasks.push(cosmic::task::message(Message::ToggleContextPage(
                                     ContextPage::TaskDetails,
-                                ));
+                                )));
                             }
+                            return app::Task::batch(tasks);
                         }
                         content::Output::ToggleHideCompleted(list) => {
                             if let Some(data) = self.nav.active_data_mut::<List>() {
@@ -344,7 +348,13 @@ impl Application for AppModel {
                 }
             }
             Message::Trash(msg) => {
-                self.trash.update(msg);
+                let output = self.trash.update(msg);
+                self.refresh_trash_nav_icon();
+                if let Some(trash::trash::Output::EmptyTrashRequested) = output {
+                    return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                        DialogPage::EmptyTrash,
+                    )));
+                }
             }
             Message::Reminder(msg) => {
                 use crate::features::reminders::reminder::ReminderMessage;

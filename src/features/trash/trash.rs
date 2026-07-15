@@ -4,7 +4,9 @@ use cosmic::{
         alignment::{Horizontal, Vertical},
         Alignment, Length,
     },
-    theme, widget, Apply, Element,
+    theme,
+    widget::{self, icon::Named},
+    Apply, Element,
 };
 use uuid::Uuid;
 
@@ -35,7 +37,12 @@ pub enum Message {
     TaskDeletionTick,
     TaskDeletionUndo,
     EmptyTrash,
+    EmptyTrashConfirmed,
     RestoreAll,
+}
+
+pub enum Output {
+    EmptyTrashRequested,
 }
 
 impl Trash {
@@ -52,7 +59,7 @@ impl Trash {
         self.pending_deletion.is_some()
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
             Message::Load => {
                 let tasks = self.store.trash().load_all().unwrap_or_else(|e| {
@@ -124,20 +131,17 @@ impl Trash {
                 }
             }
             Message::EmptyTrash => {
-                if let Some(existing) = self.pending_deletion.take() {
-                    for t in existing.tasks {
-                        if let Err(e) = self.store.trash().delete(t.task.id) {
-                            tracing::error!("Error committing previous permanent deletion: {e}");
-                        }
-                    }
+                return Some(Output::EmptyTrashRequested);
+            }
+            Message::EmptyTrashConfirmed => {
+                let mut tasks = std::mem::take(&mut self.tasks);
+                if let Some(pending) = self.pending_deletion.take() {
+                    tasks.extend(pending.tasks);
                 }
-
-                if !self.tasks.is_empty() {
-                    let all_tasks = std::mem::take(&mut self.tasks);
-                    self.pending_deletion = Some(PendingDeletion {
-                        tasks: all_tasks,
-                        seconds_remaining: 5,
-                    });
+                for t in tasks {
+                    if let Err(e) = self.store.trash().delete(t.task.id) {
+                        tracing::error!("Error emptying trash: {e}");
+                    }
                 }
             }
             Message::RestoreAll => {
@@ -157,6 +161,8 @@ impl Trash {
                 }
             }
         }
+
+        None
     }
 
     pub fn view(&self) -> Element<'_, Message> {
@@ -311,5 +317,17 @@ impl Trash {
         .height(Length::Fill)
         .width(Length::Fill)
         .into()
+    }
+
+    pub fn icon(&self) -> Named {
+        if self.is_empty() {
+            widget::icon::from_name("user-trash-symbolic").size(16)
+        } else {
+            widget::icon::from_name("user-trash-full-symbolic").size(16)
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.tasks.is_empty() && self.pending_deletion.is_none()
     }
 }
