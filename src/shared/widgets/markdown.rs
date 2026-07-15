@@ -1,7 +1,4 @@
-use crate::features::{
-    lists::list::List,
-    tasks::task::{Status, Task},
-};
+use crate::features::{lists::list::List, tasks::task::Task};
 
 pub trait Markdown {
     fn markdown(&self) -> String;
@@ -17,11 +14,7 @@ impl Markdown for Task {
     fn markdown(&self) -> String {
         format!(
             "- [{}] {}\n",
-            if self.status == Status::Completed {
-                "x"
-            } else {
-                " "
-            },
+            if self.is_completed() { "x" } else { " " },
             self.title
         )
     }

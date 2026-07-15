@@ -1,4 +1,5 @@
 use crate::features::lists::list::List;
+use crate::features::tasks::state::{default_states, TaskState};
 use crate::features::tasks::task::{Task, TrashedTask};
 use crate::StoreError;
 use crate::{Error, Result};
@@ -8,6 +9,7 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 const LISTS_REGISTRY: &str = "lists.ron";
+const STATES_REGISTRY: &str = "states.ron";
 const TRASH_DIR: &str = "_trash";
 
 fn pretty() -> PrettyConfig {
@@ -41,8 +43,16 @@ impl Store {
         }
     }
 
+    pub fn states(&self) -> StateStore<'_> {
+        StateStore { store: self }
+    }
+
     fn registry_path(&self) -> PathBuf {
         self.base_dir.join(LISTS_REGISTRY)
+    }
+
+    fn states_registry_path(&self) -> PathBuf {
+        self.base_dir.join(STATES_REGISTRY)
     }
 
     fn trash_dir(&self) -> PathBuf {
@@ -180,6 +190,73 @@ impl ListStore<'_> {
     fn flush_registry(&self, lists: &[List]) -> Result<()> {
         let content = ron::ser::to_string_pretty(lists, pretty())?;
         fs::write(self.store.registry_path(), content)?;
+        Ok(())
+    }
+}
+
+pub struct StateStore<'s> {
+    store: &'s Store,
+}
+
+impl StateStore<'_> {
+    /// Load all task states, seeding the built-in defaults on first run.
+    pub fn load_all(&self) -> Result<Vec<TaskState>> {
+        let path = self.store.states_registry_path();
+        if !path.exists() {
+            let states = default_states();
+            self.flush_registry(&states)?;
+            return Ok(states);
+        }
+        let content = fs::read_to_string(&path)?;
+        Ok(ron::from_str(&content)?)
+    }
+
+    /// Insert or overwrite a state.
+    #[allow(dead_code)]
+    pub fn save(&self, state: &TaskState) -> Result<()> {
+        let mut states = self.load_all()?;
+        match states.iter_mut().find(|s| s.id == state.id) {
+            Some(existing) => *existing = state.clone(),
+            None => states.push(state.clone()),
+        }
+        self.flush_registry(&states)
+    }
+
+    /// Update a state in place via a closure.
+    #[allow(dead_code)]
+    pub fn update<F>(&self, state_id: Uuid, f: F) -> Result<TaskState>
+    where
+        F: FnOnce(&mut TaskState),
+    {
+        let mut states = self.load_all()?;
+        let state = states
+            .iter_mut()
+            .find(|s| s.id == state_id)
+            .ok_or(Error::Store(StoreError::StateNotFound(state_id)))?;
+
+        f(state);
+        let updated = state.clone();
+        self.flush_registry(&states)?;
+        Ok(updated)
+    }
+
+    /// Delete a state.
+    #[allow(dead_code)]
+    pub fn delete(&self, state_id: Uuid) -> Result<()> {
+        let mut states = self.load_all()?;
+        let before = states.len();
+        states.retain(|s| s.id != state_id);
+
+        if states.len() == before {
+            return Err(Error::Store(StoreError::StateNotFound(state_id)));
+        }
+
+        self.flush_registry(&states)
+    }
+
+    fn flush_registry(&self, states: &[TaskState]) -> Result<()> {
+        let content = ron::ser::to_string_pretty(states, pretty())?;
+        fs::write(self.store.states_registry_path(), content)?;
         Ok(())
     }
 }

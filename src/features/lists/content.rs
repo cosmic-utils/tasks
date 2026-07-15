@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use cosmic::{
     cosmic_theme::Spacing,
@@ -19,7 +19,10 @@ use crate::{
     config,
     features::{
         lists::list::List,
-        tasks::task::{Status, Task, TrashedTask},
+        tasks::{
+            state::TaskState,
+            task::{Task, TrashedTask},
+        },
     },
     fl,
     shared::store::Store,
@@ -89,6 +92,9 @@ pub struct Content {
     inputs: SecondaryMap<DefaultKey, widget::Id>,
     config: config::AppConfig,
     store: Store,
+    states: Vec<TaskState>,
+    /// IDs of task states whose section is currently collapsed in the UI.
+    collapsed_sections: HashSet<Uuid>,
 
     search_bar_visible: bool,
     add_task_input: String,
@@ -137,6 +143,8 @@ pub enum Message {
         from: Option<Uuid>,
         onto: DefaultKey,
     },
+    /// Toggle the collapsed/expanded state of a task state section.
+    ToggleSection(Uuid),
 }
 
 pub enum Output {
@@ -399,11 +407,10 @@ impl Content {
 
                 let task = self.tasks.get_mut(id);
                 if let Some(task) = task {
-                    task.status = if complete {
-                        task.completion_date = Some(jiff::Timestamp::now());
-                        Status::Completed
+                    task.completion_date = if complete {
+                        Some(jiff::Timestamp::now())
                     } else {
-                        Status::NotStarted
+                        None
                     };
 
                     if let Err(error) = self
@@ -500,6 +507,11 @@ impl Content {
                     self.reorder_tasks(from_uuid, onto);
                 }
             }
+            Message::ToggleSection(state_id) => {
+                if !self.collapsed_sections.remove(&state_id) {
+                    self.collapsed_sections.insert(state_id);
+                }
+            }
         }
         output
     }
@@ -507,6 +519,11 @@ impl Content {
 
 impl Content {
     pub fn new(storage: Store, config: config::AppConfig) -> Self {
+        let states = storage.states().load_all().unwrap_or_else(|err| {
+            tracing::error!("Failed to load task states: {err}");
+            Vec::new()
+        });
+
         Self {
             selected_list: None,
             tasks: SlotMap::new(),
@@ -515,6 +532,8 @@ impl Content {
             add_task_input: String::new(),
             config: config,
             store: storage,
+            states,
+            collapsed_sections: HashSet::new(),
             search_bar_visible: false,
             search_query: String::new(),
             drag_hover: None,
@@ -601,17 +620,22 @@ impl Content {
         }
 
         let sorted_tasks = self.sort_tasks();
-        let filtered_tasks = self.filter_and_render_tasks(list, sorted_tasks);
+        let visible_tasks: Vec<_> = sorted_tasks
+            .into_iter()
+            .filter(|(_, task)| self.should_show_task(list, task))
+            .collect();
 
-        if filtered_tasks.is_empty() && self.search_query.is_empty() {
+        if visible_tasks.is_empty() && self.search_query.is_empty() {
             return self.empty(list);
         }
 
-        let items = widget::column::with_children(filtered_tasks).spacing(spacing.space_s);
+        let sections = self.section_views(visible_tasks);
+        let items = widget::column::with_children(sections).spacing(spacing.space_s);
 
         widget::scrollable(
             widget::container(column.push(items).spacing(spacing.space_s)).height(Length::Shrink),
         )
+        .spacing(spacing.space_xxs)
         .height(Length::Fill)
         .into()
     }
@@ -620,6 +644,7 @@ impl Content {
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
+        let title = widget::text::title4(&list.name).width(Length::Fill);
         let hide_completed_button = self.create_hide_completed_button(list, &spacing);
         let search_button = self.create_search_button(&spacing);
         let list_icon = self.create_list_icon(list, &spacing);
@@ -629,7 +654,7 @@ impl Content {
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
             .push(list_icon)
-            .push(widget::text::body(&list.name).size(24).width(Length::Fill))
+            .push(title)
             .push(hide_completed_button)
             .push(search_button)
             .into()
@@ -710,17 +735,87 @@ impl Content {
         tasks
     }
 
-    /// Filters tasks and renders them as UI elements
-    fn filter_and_render_tasks<'a>(
+    /// Groups already-filtered, top-level tasks into accordion sections by
+    /// their [`Task::effective_state_id`], in state `position` order, and
+    /// renders each non-empty section.
+    fn section_views<'a>(
         &'a self,
-        list: &'a List,
-        sorted_tasks: Vec<(DefaultKey, &'a Task)>,
+        tasks: Vec<(DefaultKey, &'a Task)>,
     ) -> Vec<Element<'a, Message>> {
-        sorted_tasks
+        let mut states: Vec<&TaskState> = self.states.iter().collect();
+        states.sort_by_key(|state| state.position);
+
+        states
             .into_iter()
-            .filter(|(_, task)| self.should_show_task(list, task))
-            .map(|(id, task)| self.task_view(id, task))
+            .filter_map(|state| {
+                let section_tasks: Vec<_> = tasks
+                    .iter()
+                    .copied()
+                    .filter(|(_, task)| task.effective_state_id() == state.id)
+                    .collect();
+
+                (!section_tasks.is_empty()).then(|| self.section_view(state, section_tasks))
+            })
             .collect()
+    }
+
+    /// Creates a collapsible accordion section for a single task state:
+    /// a header (name, count badge, chevron) and, unless collapsed, the
+    /// vertically stacked tasks in that state.
+    fn section_view<'a>(
+        &'a self,
+        state: &'a TaskState,
+        tasks: Vec<(DefaultKey, &'a Task)>,
+    ) -> Element<'a, Message> {
+        let spacing = theme::active().cosmic().spacing;
+        let collapsed = self.collapsed_sections.contains(&state.id);
+
+        let mut list = widget::list_column()
+            .list_item_padding(0)
+            .add(self.section_header(state, tasks.len(), collapsed, &spacing));
+
+        if !collapsed {
+            for (id, task) in tasks {
+                list = list.add(self.task_view(id, task));
+            }
+        }
+
+        widget::container(list)
+            .class(cosmic::style::Container::List)
+            .into()
+    }
+
+    /// Creates a section header row: name, task count badge, and a
+    /// chevron indicating collapsed/expanded state. The whole row toggles
+    /// the section when clicked.
+    fn section_header<'a>(
+        &'a self,
+        state: &'a TaskState,
+        count: usize,
+        collapsed: bool,
+        spacing: &Spacing,
+    ) -> Element<'a, Message> {
+        let chevron = if collapsed {
+            "go-down-symbolic"
+        } else {
+            "go-up-symbolic"
+        };
+
+        let badge = widget::container(widget::text(count.to_string()))
+            .class(theme::Container::Tooltip)
+            .padding([spacing.space_xxxs, spacing.space_xs]);
+
+        let row = widget::row::with_capacity(3)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_s)
+            .padding([spacing.space_xxs, spacing.space_s])
+            .push(widget::text::heading(state.name.clone()).width(Length::Fill))
+            .push(badge)
+            .push(widget::icon::from_name(chevron).size(16));
+
+        widget::mouse_area(row)
+            .on_press(Message::ToggleSection(state.id))
+            .into()
     }
 
     /// Determines if a task should be shown based on filters
@@ -738,7 +833,7 @@ impl Content {
 
         // Check hide completed filter
         let should_hide_completed = list.hide_completed || self.config.hide_completed;
-        let show_despite_completion = !should_hide_completed || task.status != Status::Completed;
+        let show_despite_completion = !should_hide_completed || !task.is_completed();
 
         is_top_level && matches_search && show_despite_completion
     }
@@ -756,13 +851,6 @@ impl Content {
             column = column.push(self.create_subtasks_view(&sub_tasks, &spacing));
         }
 
-        let container = widget::container(column)
-            .class(cosmic::style::Container::ContextDrawer { transparent: false });
-
-        if self.config.sort_by != SortBy::Manual || task.parent_id.is_some() {
-            return container.into();
-        }
-
         let uuid = task.id;
         let is_hover = self.drag_hover == Some(id);
 
@@ -778,10 +866,10 @@ impl Content {
                         }
                     })),
                 )
-                .push(container)
+                .push(column)
                 .into()
         } else {
-            container.into()
+            column.into()
         };
 
         widget::dnd_destination::dnd_destination_for_data::<TaskDrag, Message>(
@@ -808,8 +896,7 @@ impl Content {
             .iter()
             .filter(|(_, sub_task)| {
                 let is_child = sub_task.parent_id == Some(task.id);
-                let show_despite_completion =
-                    !should_hide_completed || sub_task.status != Status::Completed;
+                let show_despite_completion = !should_hide_completed || !sub_task.is_completed();
                 is_child && show_despite_completion
             })
             .collect()
@@ -844,7 +931,7 @@ impl Content {
         widget::row::with_capacity(7)
             .align_y(Alignment::Center)
             .spacing(spacing.space_xxxs)
-            .padding([spacing.space_xxxs, spacing.space_xs])
+            .padding([spacing.space_xxxs, spacing.space_s])
             .push_maybe(drag_handle)
             .push(checkbox)
             .push(title_input)
@@ -857,7 +944,7 @@ impl Content {
 
     /// Creates a checkbox for marking a task as complete
     fn create_task_checkbox<'a>(&'a self, id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
-        widget::checkbox(task.status == Status::Completed)
+        widget::checkbox(task.is_completed())
             .on_toggle(move |value| Message::TaskComplete(id, value))
             .into()
     }
@@ -937,7 +1024,7 @@ impl Content {
         }
 
         let (completed, total) = sub_tasks.iter().fold((0, 0), |acc, (_, subtask)| {
-            if subtask.status == Status::Completed {
+            if subtask.is_completed() {
                 (acc.0 + 1, acc.1 + 1)
             } else {
                 (acc.0, acc.1 + 1)

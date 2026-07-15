@@ -57,6 +57,11 @@ pub fn main() -> Result<()> {
     // Store is used for persistent storage of tasks and app state.
     let store = Store::open(project.data_dir())?;
 
+    // Ensure the task state registry exists, seeding the built-in states on first run.
+    if let Err(err) = store.states().load_all() {
+        tracing::error!("Error loading task states: {err}");
+    }
+
     tracing::info!("Project data directory: {:?}", project.data_dir());
 
     // Config handler for managing the app's configuration.

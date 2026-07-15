@@ -2,6 +2,8 @@ use jiff::{civil::Date, Timestamp};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::features::tasks::state::{COMPLETED_STATE_ID, PENDING_STATE_ID};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// Represents a task in the application.
 pub struct Task {
@@ -17,8 +19,12 @@ pub struct Task {
     pub today: bool,
     /// Whether the task is expanded in the UI.
     pub expanded: bool,
-    /// The status of the task (e.g., not started, completed).
-    pub status: Status,
+    /// The ID of the task's user-assigned state (see
+    /// [`crate::features::tasks::state::TaskState`]), if any. A task is not
+    /// required to have a state. This is independent of completion, which is
+    /// tracked via `completion_date`.
+    #[serde(default)]
+    pub state_id: Option<Uuid>,
     /// The priority level of the task (e.g., low, normal, high).
     pub priority: Priority,
     /// The recurrence pattern for the task (e.g., which days of the week it recurs on).
@@ -50,7 +56,7 @@ impl Default for Task {
             favorite: false,
             today: false,
             expanded: false,
-            status: Status::NotStarted,
+            state_id: None,
             priority: Priority::Normal,
             recurrence: Recurrence::default(),
             tags: Vec::new(),
@@ -89,6 +95,26 @@ impl Task {
         self.completion_date.as_ref().map(Self::format_timestamp)
     }
 
+    /// A task is completed if (and only if) it has a `completion_date`.
+    /// Completion is tracked independently of `state_id`: state is an
+    /// optional, user-assigned label, while completion is a plain boolean
+    /// signal used by the checkbox, strikethrough, and "hide completed".
+    pub fn is_completed(&self) -> bool {
+        self.completion_date.is_some()
+    }
+
+    /// The state ID to group this task under for display purposes: its
+    /// user-assigned `state_id` if set, otherwise the built-in "Pending" or
+    /// "Completed" state matching its current completion, so tasks without
+    /// an explicit state still fall into a sensible section.
+    pub fn effective_state_id(&self) -> Uuid {
+        self.state_id.unwrap_or(if self.is_completed() {
+            COMPLETED_STATE_ID
+        } else {
+            PENDING_STATE_ID
+        })
+    }
+
     /// Creates a new task with the given title and default values for other fields.
     pub fn new(title: impl ToString) -> Self {
         Self {
@@ -98,7 +124,7 @@ impl Task {
             favorite: false,
             today: false,
             expanded: false,
-            status: Status::NotStarted,
+            state_id: None,
             priority: Priority::Normal,
             recurrence: Recurrence::default(),
             tags: Vec::new(),
@@ -111,15 +137,6 @@ impl Task {
             sort_order: 0,
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Status {
-    #[default]
-    /// The task has not been started yet.
-    NotStarted,
-    /// The task is completed.
-    Completed,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
