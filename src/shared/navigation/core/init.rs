@@ -51,9 +51,7 @@ impl AppModel {
 
         let mut tasks = vec![
             cosmic::task::message(Message::Tasks(TasksAction::FetchLists)),
-            cosmic::task::message(Message::Trash(
-                crate::features::trash::trash::Message::Load,
-            )),
+            cosmic::task::message(Message::Trash(crate::features::trash::trash::Message::Load)),
         ];
 
         if let Some(id) = app.core.main_window_id() {
@@ -77,7 +75,7 @@ impl AppModel {
         widget::about::About::default()
             .name(fl!("tasks"))
             .icon(widget::icon::from_name("dev.edfloreshz.Tasks"))
-            .version("0.2.4")
+            .version("0.3.0")
             .author("Eduardo Flores")
             .license("GPL-3.0-only")
             .links([

@@ -403,20 +403,19 @@ impl Trash {
         // list itself becomes active again (see `restore_task_from_list`),
         // even though some of its tasks may remain in trash. In that case
         // whole-list actions no longer apply — only the per-task ones do.
-        let list_is_trashed =
-            trashed_list.is_some() && !self.lists.iter().any(|l| l.id == list_id);
+        let list_is_trashed = trashed_list.is_some() && !self.lists.iter().any(|l| l.id == list_id);
 
         let mut extra_buttons: Vec<Element<'a, Message>> = Vec::new();
         if list_is_trashed {
             extra_buttons.push(
-                widget::button::icon(widget::icon::from_name("edit-undo"))
+                widget::button::icon(widget::icon::from_name("edit-undo-symbolic"))
                     .tooltip(fl!("restore-list"))
                     .class(theme::Button::Standard)
                     .on_press(Message::RequestRestoreList(list_id))
                     .into(),
             );
             extra_buttons.push(
-                widget::button::icon(widget::icon::from_name("edit-delete"))
+                widget::button::icon(widget::icon::from_name("edit-delete-symbolic"))
                     .tooltip(fl!("delete-permanently"))
                     .class(theme::Button::Destructive)
                     .on_press(Message::RequestDeleteList(list_id))
@@ -481,12 +480,12 @@ impl Trash {
             )));
         }
 
-        let restore_button = widget::button::icon(widget::icon::from_name("edit-undo"))
+        let restore_button = widget::button::icon(widget::icon::from_name("edit-undo-symbolic"))
             .tooltip(fl!("restore"))
             .class(theme::Button::Standard)
             .on_press(restore_message);
 
-        let delete_button = widget::button::icon(widget::icon::from_name("edit-delete"))
+        let delete_button = widget::button::icon(widget::icon::from_name("edit-delete-symbolic"))
             .tooltip(fl!("delete-permanently"))
             .class(theme::Button::Destructive)
             .on_press(delete_message);

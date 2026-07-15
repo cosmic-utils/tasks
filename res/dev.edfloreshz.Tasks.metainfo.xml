@@ -51,6 +51,32 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.3.0" date="2026-07-15">
+        <description>
+            <p>Undo deletions and grouped views</p>
+            <p>Trash improvements</p>
+            <ul>
+                <li>Deleting a task now shows an "Undo" toast instead of removing it immediately</li>
+                <li>Deleting a list now moves it, and all of its tasks, to Trash instead of deleting it permanently</li>
+                <li>Restore an entire deleted list from Trash with a single click</li>
+                <li>Restore just one task out of a deleted list — the list is reactivated with only that task, the rest stay in Trash</li>
+                <li>Permanently deleting a single task, a task from a deleted list, or an entire list now asks for confirmation first</li>
+                <li>Emptying Trash already warned this was irreversible; that warning is unchanged</li>
+                <li>A deleted list's section header shows "Restore list" and "Delete permanently" actions, which disappear once any of its tasks have been individually restored</li>
+            </ul>
+            <p>Grouped views</p>
+            <ul>
+                <li>The Trash view is now grouped into collapsible sections by originating list, just like the task list</li>
+                <li>The Favorites view is now grouped into collapsible sections by list as well</li>
+                <li>Collapsible sections across the app (task list, Trash, Favorites) now only expand or collapse via the chevron button, not by clicking anywhere on the header</li>
+            </ul>
+            <p>Interface polish</p>
+            <ul>
+                <li>Trash and Favorites headings now use the same title style as the task list, instead of a heavier, larger font</li>
+                <li>Fixed the search bar in the task list closing unexpectedly while interacting with a task, which could shift the layout and cause the overflow menu to fail to open</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.2.4" date="2026-05-06">
         <description>
             <p>Reminders and manual reordering </p>
