@@ -1,4 +1,7 @@
+use std::collections::HashSet;
+
 use cosmic::{
+    cosmic_theme::Spacing,
     iced::{
         alignment::{Horizontal, Vertical},
         Alignment, Length,
@@ -23,6 +26,7 @@ pub struct FavoriteEntry {
 pub struct Favorites {
     entries: Vec<FavoriteEntry>,
     store: Store,
+    collapsed_sections: HashSet<Uuid>,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +35,7 @@ pub enum Message {
     Loaded(Vec<FavoriteEntry>),
     Unfavorite(Uuid),
     Open(Uuid),
+    ToggleSection(Uuid),
 }
 
 pub enum Output {
@@ -61,6 +66,7 @@ impl Favorites {
         Self {
             entries: Vec::new(),
             store,
+            collapsed_sections: HashSet::new(),
         }
     }
 
@@ -122,6 +128,11 @@ impl Favorites {
                     });
                 }
             }
+            Message::ToggleSection(list_id) => {
+                if !self.collapsed_sections.remove(&list_id) {
+                    self.collapsed_sections.insert(list_id);
+                }
+            }
         }
         None
     }
@@ -135,10 +146,8 @@ impl Favorites {
 
         let header = self.header_view();
 
-        let rows: Vec<Element<'_, Message>> =
-            self.entries.iter().map(|e| self.entry_row(e)).collect();
-
-        let list = widget::column::with_children(rows).spacing(spacing.space_xxs);
+        let sections = self.list_sections();
+        let list = widget::column::with_children(sections).spacing(spacing.space_xxs);
 
         let content = widget::column::with_capacity(2)
             .push(header)
@@ -175,6 +184,94 @@ impl Favorites {
             .into()
     }
 
+    /// Groups favorited tasks by their originating list, sorted
+    /// alphabetically by name.
+    fn list_sections(&self) -> Vec<Element<'_, Message>> {
+        let mut list_ids: Vec<Uuid> = Vec::new();
+        for e in &self.entries {
+            if !list_ids.contains(&e.list_id) {
+                list_ids.push(e.list_id);
+            }
+        }
+
+        let mut sections: Vec<(String, Element<'_, Message>)> = list_ids
+            .into_iter()
+            .map(|list_id| {
+                let entries: Vec<&FavoriteEntry> = self
+                    .entries
+                    .iter()
+                    .filter(|e| e.list_id == list_id)
+                    .collect();
+                let name = entries
+                    .first()
+                    .map(|e| e.list_name.clone())
+                    .unwrap_or_else(|| fl!("unknown-list"));
+
+                let section = self.list_section(list_id, name.clone(), entries);
+                (name, section)
+            })
+            .collect();
+
+        sections.sort_by(|a, b| a.0.cmp(&b.0));
+        sections.into_iter().map(|(_, section)| section).collect()
+    }
+
+    fn list_section<'a>(
+        &'a self,
+        list_id: Uuid,
+        name: String,
+        entries: Vec<&'a FavoriteEntry>,
+    ) -> Element<'a, Message> {
+        let spacing = theme::active().cosmic().spacing;
+        let collapsed = self.collapsed_sections.contains(&list_id);
+        let count = entries.len();
+
+        let mut list = widget::list_column()
+            .list_item_padding(0)
+            .add(self.list_section_header(list_id, name, count, collapsed, &spacing));
+
+        if !collapsed {
+            for entry in entries {
+                list = list.add(self.entry_row(entry));
+            }
+        }
+
+        widget::container(list)
+            .class(cosmic::style::Container::List)
+            .into()
+    }
+
+    fn list_section_header<'a>(
+        &'a self,
+        list_id: Uuid,
+        name: String,
+        count: usize,
+        collapsed: bool,
+        spacing: &Spacing,
+    ) -> Element<'a, Message> {
+        let chevron = if collapsed {
+            "go-down-symbolic"
+        } else {
+            "go-up-symbolic"
+        };
+
+        let badge = widget::container(widget::text(count.to_string()))
+            .class(theme::Container::Tooltip)
+            .padding([spacing.space_xxxs, spacing.space_xs]);
+
+        widget::row::with_capacity(4)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_s)
+            .padding([spacing.space_xxs, spacing.space_s])
+            .push(widget::text::heading(name).width(Length::Fill))
+            .push(badge)
+            .push(
+                widget::button::icon(widget::icon::from_name(chevron).size(16))
+                    .on_press(Message::ToggleSection(list_id)),
+            )
+            .into()
+    }
+
     fn entry_row<'a>(&'a self, entry: &'a FavoriteEntry) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -185,14 +282,6 @@ impl Favorites {
                 .on_press(Message::Unfavorite(task_id));
 
         let title = widget::text::body(entry.task.title.as_str()).width(Length::Fill);
-        let list_label = widget::text(entry.list_name.as_str())
-            .size(12)
-            .class(cosmic::style::Text::Default);
-
-        let text_col = widget::column::with_capacity(2)
-            .push(title)
-            .push(list_label)
-            .width(Length::Fill);
 
         let open_button =
             widget::button::icon(widget::icon::from_name("go-next-symbolic").size(16))
@@ -202,15 +291,12 @@ impl Favorites {
         let row = widget::row::with_capacity(3)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
-            .padding([spacing.space_xxxs, spacing.space_xs])
+            .padding([spacing.space_xxs, spacing.space_xs])
             .push(star_button)
-            .push(text_col)
+            .push(title)
             .push(open_button);
 
-        widget::container(row)
-            .class(cosmic::style::Container::ContextDrawer { transparent: false })
-            .width(Length::Fill)
-            .into()
+        widget::list_column().list_item_padding(0).add(row).into()
     }
 
     fn empty_view(&self) -> Element<'_, Message> {
