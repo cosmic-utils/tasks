@@ -31,6 +31,9 @@ pub enum StoreError {
 
     #[error("Task not found: {0}")]
     TaskNotFound(uuid::Uuid),
+
+    #[error("State not found: {0}")]
+    StateNotFound(uuid::Uuid),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

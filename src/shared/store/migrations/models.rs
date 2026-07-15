@@ -2,7 +2,7 @@ use jiff::{civil::Date, Timestamp};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::features::tasks::task::{Priority, Recurrence, Status};
+use crate::features::tasks::task::{Priority, Recurrence};
 
 /// Old Task structure with nested sub-tasks
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -13,7 +13,6 @@ pub struct Task {
     pub title: String,
     pub favorite: bool,
     pub today: bool,
-    pub status: Status,
     pub priority: Priority,
     pub tags: Vec<String>,
     pub notes: String,
