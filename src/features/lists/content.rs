@@ -806,11 +806,12 @@ impl Content {
             .padding([spacing.space_xxs, spacing.space_s])
             .push(widget::text::heading(state.name.clone()).width(Length::Fill))
             .push(badge)
-            .push(widget::icon::from_name(chevron).size(16));
+            .push(
+                widget::button::icon(widget::icon::from_name(chevron).size(16))
+                    .on_press(Message::ToggleSection(state.id)),
+            );
 
-        widget::mouse_area(row)
-            .on_press(Message::ToggleSection(state.id))
-            .into()
+        row.into()
     }
 
     fn should_show_task(&self, list: &List, task: &Task) -> bool {
