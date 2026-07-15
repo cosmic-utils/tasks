@@ -139,7 +139,10 @@ impl DialogPage {
                 ),
             DialogPage::DeleteTaskPermanently(_, title) => widget::dialog()
                 .title(fl!("delete-task-permanently"))
-                .body(fl!("delete-task-permanently-confirm", title = title.as_str()))
+                .body(fl!(
+                    "delete-task-permanently-confirm",
+                    title = title.as_str()
+                ))
                 .primary_action(
                     widget::button::destructive(fl!("delete-permanently"))
                         .on_press(Message::Dialog(DialogAction::Complete)),
@@ -150,7 +153,10 @@ impl DialogPage {
                 ),
             DialogPage::DeleteTaskFromListPermanently(_, _, title) => widget::dialog()
                 .title(fl!("delete-task-permanently"))
-                .body(fl!("delete-task-permanently-confirm", title = title.as_str()))
+                .body(fl!(
+                    "delete-task-permanently-confirm",
+                    title = title.as_str()
+                ))
                 .primary_action(
                     widget::button::destructive(fl!("delete-permanently"))
                         .on_press(Message::Dialog(DialogAction::Complete)),

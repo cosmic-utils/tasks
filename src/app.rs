@@ -228,6 +228,10 @@ impl Application for AppModel {
                 .map(|_| Message::Reminder(reminder::ReminderMessage::Tick)),
         );
 
+        subscriptions.push(crate::shared::store::watcher::subscription(
+            self.store.base_dir().to_path_buf(),
+        ));
+
         Subscription::batch(subscriptions)
     }
 
@@ -276,20 +280,21 @@ impl Application for AppModel {
                             title,
                         } => {
                             let mut tasks = vec![
-                                cosmic::task::message(Message::Trash(
-                                    trash::trash::Message::Load,
-                                )),
+                                cosmic::task::message(Message::Trash(trash::trash::Message::Load)),
                                 self.toasts
                                     .push(
                                         widget::Toast::new(fl!(
                                             "task-moved-to-trash",
                                             title = title.as_str()
                                         ))
-                                        .action(fl!("undo"), move |_id| {
-                                            Message::Content(content::Message::RestoreTask(
-                                                task_id, list_id,
-                                            ))
-                                        }),
+                                        .action(
+                                            fl!("undo"),
+                                            move |_id| {
+                                                Message::Content(content::Message::RestoreTask(
+                                                    task_id, list_id,
+                                                ))
+                                            },
+                                        ),
                                     )
                                     .map(cosmic::Action::App),
                             ];

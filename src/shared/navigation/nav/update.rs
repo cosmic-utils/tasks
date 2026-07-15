@@ -1,4 +1,6 @@
-use cosmic::{app, Application};
+use std::collections::HashSet;
+
+use cosmic::{app, widget, Application};
 
 use crate::{
     app::{AppModel, Message},
@@ -127,9 +129,81 @@ impl AppModel {
                     }
                 }
             }
+            TasksAction::SyncFromDisk => {
+                return self.sync_from_disk();
+            }
         }
 
         app::Task::none()
+    }
+
+    fn sync_from_disk(&mut self) -> app::Task<Message> {
+        let disk_lists = match self.store.lists().load_all() {
+            Ok(lists) => lists,
+            Err(err) => {
+                tracing::error!("Error syncing lists: {err}");
+                return app::Task::none();
+            }
+        };
+
+        let disk_ids: HashSet<uuid::Uuid> = disk_lists.iter().map(|l| l.id).collect();
+
+        let stale: Vec<_> = self
+            .nav
+            .iter()
+            .filter(|e| {
+                self.nav
+                    .data::<List>(*e)
+                    .is_some_and(|l| !disk_ids.contains(&l.id))
+            })
+            .collect();
+        let removed_active = stale.contains(&self.nav.active());
+        for entity in stale {
+            self.nav.remove(entity);
+        }
+
+        for list in &disk_lists {
+            let existing = self
+                .nav
+                .iter()
+                .find(|e| self.nav.data::<List>(*e).is_some_and(|l| l.id == list.id));
+            match existing {
+                Some(entity) => {
+                    self.nav.text_set(entity, list.name.clone());
+                    let icon = widget::icon::from_name(
+                        list.icon.as_deref().unwrap_or("view-list-symbolic"),
+                    )
+                    .size(16);
+                    self.nav.icon_set(entity, icon.into());
+                    self.nav.data_set(entity, list.clone());
+                }
+                None => {
+                    self.create_nav_item(list);
+                }
+            }
+        }
+        self.reposition_special_items();
+
+        let mut tasks = vec![cosmic::task::message(Message::Trash(
+            crate::features::trash::trash::Message::Load,
+        ))];
+
+        if removed_active {
+            tasks.push(cosmic::task::message(Message::Content(
+                content::Message::SetList(None),
+            )));
+        } else if let Some(active_list) = self.nav.active_data::<List>().cloned() {
+            match self.store.tasks(active_list.id).load_all() {
+                Ok(disk_tasks) => {
+                    tasks.push(cosmic::task::message(Message::Content(
+                        content::Message::SyncTasks(disk_tasks),
+                    )));
+                }
+                Err(err) => tracing::error!("Error syncing tasks: {err}"),
+            }
+        }
+
+        app::Task::batch(tasks)
     }
 
     pub fn update_nav_menu(&mut self, action: NavMenuAction) -> app::Task<Message> {

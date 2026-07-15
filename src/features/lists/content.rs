@@ -114,6 +114,7 @@ pub enum Message {
 
     SetList(Option<List>),
     SetTasks(Vec<Task>),
+    SyncTasks(Vec<Task>),
     SetConfig(config::AppConfig),
     RefreshTask(Task),
     Empty,
@@ -207,6 +208,9 @@ impl Content {
                 self.editing.clear();
                 self.add_task_input.clear();
                 self.populate_task_slotmap(tasks);
+            }
+            Message::SyncTasks(tasks) => {
+                self.reconcile_tasks(tasks);
             }
             Message::SetList(list) => {
                 match (&self.selected_list, &list) {
@@ -398,7 +402,10 @@ impl Content {
                     Vec::new()
                 });
                 if let Some(trashed) = trashed.into_iter().find(|t| t.task.id == task_id) {
-                    if let Err(err) = self.store.tasks(trashed.original_list_id).save(&trashed.task)
+                    if let Err(err) = self
+                        .store
+                        .tasks(trashed.original_list_id)
+                        .save(&trashed.task)
                     {
                         tracing::error!("Error restoring task from trash: {err}");
                     } else if let Err(err) = self.store.trash().delete(task_id) {
@@ -1092,6 +1099,48 @@ impl Content {
             let task_id = self.tasks.insert(task);
             self.inputs.insert(task_id, widget::Id::unique());
             self.editing.insert(task_id, EditState::Idle);
+        }
+    }
+
+    fn reconcile_tasks(&mut self, tasks: Vec<Task>) {
+        let disk_ids: HashSet<Uuid> = tasks.iter().map(|t| t.id).collect();
+
+        let stale_keys: Vec<DefaultKey> = self
+            .tasks
+            .iter()
+            .filter(|(_, t)| !disk_ids.contains(&t.id))
+            .map(|(key, _)| key)
+            .collect();
+        for key in stale_keys {
+            self.tasks.remove(key);
+            self.inputs.remove(key);
+            self.editing.remove(key);
+        }
+
+        for task in tasks {
+            let existing_key = self
+                .tasks
+                .iter()
+                .find(|(_, t)| t.id == task.id)
+                .map(|(k, _)| k);
+            match existing_key {
+                Some(key) => {
+                    let is_editing = matches!(
+                        self.editing.get(key),
+                        Some(EditState::Editing) | Some(EditState::Entering)
+                    );
+                    if !is_editing {
+                        if let Some(existing) = self.tasks.get_mut(key) {
+                            *existing = task;
+                        }
+                    }
+                }
+                None => {
+                    let key = self.tasks.insert(task);
+                    self.inputs.insert(key, widget::Id::unique());
+                    self.editing.insert(key, EditState::Idle);
+                }
+            }
         }
     }
 
