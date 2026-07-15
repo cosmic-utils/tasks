@@ -1,7 +1,8 @@
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /// Represents a list of tasks in the application.
 pub struct List {
     /// The unique identifier for the list.
@@ -14,6 +15,22 @@ pub struct List {
     pub icon: Option<String>,
     /// Whether to hide completed tasks in the list.
     pub hide_completed: bool,
+    /// When the list was created, used to preserve creation order.
+    #[serde(default = "Timestamp::now")]
+    pub created_at: Timestamp,
+}
+
+impl Default for List {
+    fn default() -> Self {
+        Self {
+            id: Uuid::default(),
+            name: String::default(),
+            description: String::default(),
+            icon: None,
+            hide_completed: false,
+            created_at: Timestamp::now(),
+        }
+    }
 }
 
 impl List {
@@ -24,6 +41,7 @@ impl List {
             description: String::new(),
             icon: None,
             hide_completed: false,
+            created_at: Timestamp::now(),
         }
     }
 }

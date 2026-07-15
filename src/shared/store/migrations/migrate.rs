@@ -93,6 +93,7 @@ impl Migrator {
             description: old_list.description,
             icon: old_list.icon,
             hide_completed: old_list.hide_completed,
+            created_at: jiff::Timestamp::now(),
         };
 
         // Save the new list

@@ -30,6 +30,7 @@ pub enum ApplicationAction {
     AppTheme(usize),
     ToggleShowFavorites(bool),
     ToggleShowTrash(bool),
+    ListSortBy(usize),
 }
 
 impl Action for MenuAction {
