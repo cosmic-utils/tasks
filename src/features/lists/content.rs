@@ -266,8 +266,9 @@ impl Content {
             }
             Message::TaskAdd => {
                 if let Some(list) = &self.selected_list {
-                    if !self.add_task_input.is_empty() {
-                        let task = Task::new(self.add_task_input.clone());
+                    let title = self.add_task_input.trim();
+                    if !title.is_empty() {
+                        let task = Task::new(title);
                         match self.store.tasks(list.id).save(&task) {
                             Ok(_) => {
                                 let id = self.tasks.insert(task);
