@@ -97,6 +97,7 @@ settings = Settings
 appearance = Appearance
 show-favorites = Show favorites
 show-trash = Show trash
+sort-lists-by = Sort lists by
 theme = Theme
 match-desktop = Match desktop
 dark = Dark

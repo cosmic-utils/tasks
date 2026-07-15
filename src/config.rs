@@ -16,6 +16,7 @@ pub struct AppConfig {
     pub show_trash: bool,
     pub sort_by: SortBy,
     pub last_list_id: Option<Uuid>,
+    pub list_sort_by: ListSortBy,
 }
 
 impl Default for AppConfig {
@@ -27,6 +28,36 @@ impl Default for AppConfig {
             show_trash: true,
             sort_by: SortBy::default(),
             last_list_id: None,
+            list_sort_by: ListSortBy::default(),
+        }
+    }
+}
+
+/// The sort order for lists in the navigation bar.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub enum ListSortBy {
+    #[default]
+    NameAsc,
+    NameDesc,
+    Manual,
+}
+
+impl From<usize> for ListSortBy {
+    fn from(value: usize) -> Self {
+        match value {
+            1 => ListSortBy::NameDesc,
+            2 => ListSortBy::Manual,
+            _ => ListSortBy::NameAsc,
+        }
+    }
+}
+
+impl From<ListSortBy> for usize {
+    fn from(value: ListSortBy) -> Self {
+        match value {
+            ListSortBy::NameAsc => 0,
+            ListSortBy::NameDesc => 1,
+            ListSortBy::Manual => 2,
         }
     }
 }

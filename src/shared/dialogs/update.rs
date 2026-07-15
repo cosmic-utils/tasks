@@ -80,6 +80,7 @@ impl AppModel {
                                         list.name.clone_from(&name.clone());
                                         let list = list.clone();
                                         self.nav.text_set(self.nav.active(), name.clone());
+                                        self.reposition_special_items();
                                         return cosmic::task::message(Message::Content(
                                             content::Message::SetList(Some(list)),
                                         ));

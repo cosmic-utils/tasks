@@ -48,6 +48,12 @@ impl AppModel {
                     }
                 }
             }
+            ApplicationAction::ListSortBy(sort_by) => {
+                if let Err(err) = self.config.set_list_sort_by(&self.handler, sort_by.into()) {
+                    tracing::error!("{err}");
+                }
+                self.reposition_special_items();
+            }
             ApplicationAction::ToggleShowTrash(show) => {
                 if let Err(err) = self.config.set_show_trash(&self.handler, show) {
                     tracing::error!("{err}");
