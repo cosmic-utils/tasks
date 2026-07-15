@@ -31,9 +31,7 @@ impl AppModel {
                 if show {
                     self.show_favorites_nav_item();
                 } else {
-                    // Remove the nav item unconditionally first.
                     self.hide_favorites_nav_item();
-                    // If the user was viewing favorites, navigate them to the first list.
                     if self.nav.active_data::<FavoritesMarker>().is_some() {
                         let entity = self
                             .nav

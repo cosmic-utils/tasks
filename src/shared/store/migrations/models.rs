@@ -4,7 +4,6 @@ use std::path::PathBuf;
 
 use crate::features::tasks::task::{Priority, Recurrence};
 
-/// Old Task structure with nested sub-tasks
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Task {
     pub id: String,
@@ -28,7 +27,6 @@ pub struct Task {
     pub last_modified_date_time: Timestamp,
 }
 
-/// Old List structure with file_path
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct List {
     pub id: String,

@@ -77,7 +77,6 @@ pub struct TrashStore<'s> {
 }
 
 impl TrashStore<'_> {
-    /// Persist a trashed task.
     pub fn save(&self, trashed: &TrashedTask) -> crate::Result<()> {
         fs::create_dir_all(self.store.trash_dir())?;
         let path = self.store.trashed_task_path(trashed.task.id);
@@ -86,7 +85,6 @@ impl TrashStore<'_> {
         Ok(())
     }
 
-    /// Load all trashed tasks, sorted newest-first.
     pub fn load_all(&self) -> crate::Result<Vec<TrashedTask>> {
         let trash_dir = self.store.trash_dir();
         if !trash_dir.exists() {
@@ -109,7 +107,6 @@ impl TrashStore<'_> {
         Ok(tasks)
     }
 
-    /// Permanently delete a single trashed task.
     pub fn delete(&self, task_id: Uuid) -> crate::Result<()> {
         let path = self.store.trashed_task_path(task_id);
         fs::remove_file(&path)
@@ -139,7 +136,6 @@ impl ListStore<'_> {
         Ok(ron::from_str(&content)?)
     }
 
-    /// Insert or overwrite a list in the registry and create its task directory.
     pub fn save(&self, list: &List) -> Result<()> {
         fs::create_dir_all(self.store.list_dir(list.id))?;
 
@@ -152,7 +148,6 @@ impl ListStore<'_> {
         self.flush_registry(&lists)
     }
 
-    /// Update a list in place via a closure.
     pub fn update<F>(&self, list_id: Uuid, f: F) -> Result<List>
     where
         F: FnOnce(&mut List),
@@ -169,7 +164,6 @@ impl ListStore<'_> {
         Ok(updated)
     }
 
-    /// Delete a list and all its tasks from disk.
     pub fn delete(&self, list_id: Uuid) -> Result<()> {
         let list_dir = self.store.list_dir(list_id);
         if list_dir.exists() {
@@ -199,7 +193,6 @@ pub struct StateStore<'s> {
 }
 
 impl StateStore<'_> {
-    /// Load all task states, seeding the built-in defaults on first run.
     pub fn load_all(&self) -> Result<Vec<TaskState>> {
         let path = self.store.states_registry_path();
         if !path.exists() {
@@ -211,7 +204,6 @@ impl StateStore<'_> {
         Ok(ron::from_str(&content)?)
     }
 
-    /// Insert or overwrite a state.
     #[allow(dead_code)]
     pub fn save(&self, state: &TaskState) -> Result<()> {
         let mut states = self.load_all()?;
@@ -222,7 +214,6 @@ impl StateStore<'_> {
         self.flush_registry(&states)
     }
 
-    /// Update a state in place via a closure.
     #[allow(dead_code)]
     pub fn update<F>(&self, state_id: Uuid, f: F) -> Result<TaskState>
     where
@@ -240,7 +231,6 @@ impl StateStore<'_> {
         Ok(updated)
     }
 
-    /// Delete a state.
     #[allow(dead_code)]
     pub fn delete(&self, state_id: Uuid) -> Result<()> {
         let mut states = self.load_all()?;
@@ -300,7 +290,6 @@ impl TaskStore<'_> {
         Ok(tasks)
     }
 
-    /// Insert or overwrite a task.
     pub fn save(&self, task: &Task) -> Result<()> {
         let list_dir = self.store.list_dir(self.list_id);
         if !list_dir.exists() {
@@ -313,7 +302,6 @@ impl TaskStore<'_> {
         Ok(())
     }
 
-    /// Update a task in place via a closure.
     pub fn update<F>(&self, task_id: Uuid, f: F) -> Result<Task>
     where
         F: FnOnce(&mut Task),

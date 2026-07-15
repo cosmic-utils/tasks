@@ -33,7 +33,6 @@ impl Default for AppConfig {
     }
 }
 
-/// The sort order for lists in the navigation bar.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ListSortBy {
     #[default]
@@ -62,7 +61,6 @@ impl From<ListSortBy> for usize {
     }
 }
 
-/// The sort order for tasks in the content view.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SortBy {
     NameAsc,

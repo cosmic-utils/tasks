@@ -165,16 +165,12 @@ impl Application for AppModel {
         let mut tasks = vec![];
         self.nav.activate(entity);
 
-        // Check if favorites was selected
         if self.nav.data::<FavoritesMarker>(entity).is_some() {
             let _ = self.update(Message::Content(content::Message::SetList(None)));
             return self.update(Message::Favorites(favorites::favorites::Message::Load));
         }
 
-        // Check if trash was selected
         if self.nav.data::<TrashMarker>(entity).is_some() {
-            // Clear the content selection so that switching back to any list
-            // (including the same one) always triggers a fresh task reload.
             return app::Task::batch(vec![
                 self.update(Message::Content(content::Message::SetList(None))),
                 self.update(Message::Trash(trash::trash::Message::Load)),
@@ -220,7 +216,6 @@ impl Application for AppModel {
             }),
         ];
 
-        // Tick the trash deletion countdown once per second while a task is pending.
         if self.trash.has_pending_deletion() {
             subscriptions.push(
                 cosmic::iced::time::every(std::time::Duration::from_secs(1))
@@ -228,8 +223,6 @@ impl Application for AppModel {
             );
         }
 
-        // Reminder subscription: ticks every 30 s so the update handler can
-        // scan tasks and fire desktop notifications for due reminders.
         subscriptions.push(
             cosmic::iced::time::every(std::time::Duration::from_secs(30))
                 .map(|_| Message::Reminder(reminder::ReminderMessage::Tick)),
@@ -278,7 +271,6 @@ impl Application for AppModel {
                             return app::Task::batch(tasks);
                         }
                         content::Output::TaskDeleted => {
-                            // Close the task-details drawer if it is open.
                             if self.core.window.show_context
                                 && self.context_page == ContextPage::TaskDetails
                             {
@@ -299,8 +291,6 @@ impl Application for AppModel {
                 if let Some(output) = self.details.update(message) {
                     match output {
                         details::Output::DeleteTask(key) => {
-                            // Route to content's undo-timer flow and close the
-                            // details drawer immediately.
                             let mut tasks: Vec<cosmic::Task<Message>> =
                                 vec![cosmic::task::message(Message::Content(
                                     content::Message::OpenTaskDeletionDialog(key),
@@ -380,7 +370,6 @@ impl Application for AppModel {
                 if let Some(output) = self.favorites.update(msg) {
                     match output {
                         favorites::favorites::Output::OpenTask { task, list_id } => {
-                            // Find the nav entity for this list and activate it.
                             let entity = self.nav.iter().find(|e| {
                                 self.nav.data::<List>(*e).is_some_and(|l| l.id == list_id)
                             });

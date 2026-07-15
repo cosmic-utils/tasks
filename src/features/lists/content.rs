@@ -28,7 +28,6 @@ use crate::{
     shared::store::Store,
 };
 
-/// MIME type used to identify task drag payloads.
 const TASK_DRAG_MIME: &str = "application/x-cosmic-tasks-item";
 
 #[derive(Debug, Clone)]
@@ -71,17 +70,11 @@ impl AllowedMimeTypes for TaskDrag {
     }
 }
 
-/// Represents the edit state of an input field.
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq)]
 enum EditState {
-    /// Input is not in edit mode.
     #[default]
     Idle,
-    /// Programmatic focus was requested (e.g. a newly created sub-task).
-    /// The widget has not yet self-focused via a user click, so we wait for
-    /// the first `on_toggle_edit` callback before moving to `Editing`.
     Entering,
-    /// The input is actively being edited.
     Editing,
 }
 
@@ -93,7 +86,6 @@ pub struct Content {
     config: config::AppConfig,
     store: Store,
     states: Vec<TaskState>,
-    /// IDs of task states whose section is currently collapsed in the UI.
     collapsed_sections: HashSet<Uuid>,
 
     search_bar_visible: bool,
@@ -102,7 +94,6 @@ pub struct Content {
     drag_hover: Option<DefaultKey>,
 }
 
-/// Re-export for convenience so callers can use `content::SortBy`.
 pub use crate::config::SortBy;
 
 #[derive(Debug, Clone)]
@@ -126,24 +117,18 @@ pub enum Message {
     SetConfig(config::AppConfig),
     RefreshTask(Task),
     Empty,
-    /// Request the deletion of a task; immediately moves the task to trash.
     OpenTaskDeletionDialog(DefaultKey),
 
     ToggleSearchBar,
     SearchQueryChanged(String),
     SetSort(SortBy),
-    /// A drag-and-drop operation started on a task.
     DragStarted(DefaultKey),
-    /// A dragged task entered another task's drop zone.
     DragEntered(DefaultKey),
-    /// A dragged task left a drop zone without dropping.
     DragLeft,
-    /// A task was dropped onto another task; `from` is the dragged task's UUID.
     TaskDropped {
         from: Option<Uuid>,
         onto: DefaultKey,
     },
-    /// Toggle the collapsed/expanded state of a task state section.
     ToggleSection(Uuid),
 }
 
@@ -151,8 +136,6 @@ pub enum Output {
     ToggleHideCompleted(List),
     Focus(widget::Id),
     OpenTaskDetails(DefaultKey, Uuid),
-    /// The pending deletion was committed; the app should close the details
-    /// drawer if it is currently showing task details.
     TaskDeleted,
 }
 
@@ -452,7 +435,6 @@ impl Content {
 
                     match self.store.tasks(list.id).save(&sub_task) {
                         Ok(_) => {
-                            // Add sub_task ID to parent's sub_task_ids
                             task.sub_task_ids.push(sub_task.id);
                             if let Err(error) = self
                                 .store
@@ -462,7 +444,6 @@ impl Content {
                                 tracing::error!("Failed to update task with sub-task: {:?}", error);
                             }
 
-                            // Insert subtask into the same tasks slotmap
                             let sub_task_id = self.tasks.insert(sub_task);
                             self.inputs.insert(sub_task_id, widget::Id::unique());
                             self.editing.insert(sub_task_id, EditState::Entering);
@@ -540,7 +521,6 @@ impl Content {
         }
     }
 
-    /// Find the slotmap key for a task by its UUID, if it is currently loaded.
     pub fn find_task_key(&self, task_id: uuid::Uuid) -> Option<DefaultKey> {
         self.tasks
             .iter()
@@ -608,7 +588,6 @@ impl Content {
         }
     }
 
-    /// Creates the main list view with tasks
     pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -640,7 +619,6 @@ impl Content {
         .into()
     }
 
-    /// Creates the header row for a list with title and action buttons
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -660,7 +638,6 @@ impl Content {
             .into()
     }
 
-    /// Creates the search input field
     fn create_search_input<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
         widget::text_input(fl!("search-tasks"), &self.search_query)
             .id(widget::Id::new("search-tasks-input"))
@@ -671,7 +648,6 @@ impl Content {
             .into()
     }
 
-    /// Creates the hide completed tasks button
     fn create_hide_completed_button<'a>(
         &'a self,
         list: &'a List,
@@ -694,7 +670,6 @@ impl Content {
         button.into()
     }
 
-    /// Creates the search toggle button
     fn create_search_button<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
         widget::button::icon(widget::icon::from_name("edit-find-symbolic").size(18))
             .selected(self.search_bar_visible)
@@ -703,14 +678,12 @@ impl Content {
             .into()
     }
 
-    /// Creates the list icon
     fn create_list_icon<'a>(&'a self, list: &'a List, spacing: &Spacing) -> Element<'a, Message> {
         widget::icon::from_name(list.icon.as_deref().unwrap_or("view-list-symbolic"))
             .size(spacing.space_m)
             .into()
     }
 
-    /// Sorts tasks according to the current sort type
     fn sort_tasks(&self) -> Vec<(DefaultKey, &Task)> {
         let mut tasks: Vec<_> = self.tasks.iter().collect();
 
@@ -735,9 +708,6 @@ impl Content {
         tasks
     }
 
-    /// Groups already-filtered, top-level tasks into accordion sections by
-    /// their [`Task::effective_state_id`], in state `position` order, and
-    /// renders each non-empty section.
     fn section_views<'a>(
         &'a self,
         tasks: Vec<(DefaultKey, &'a Task)>,
@@ -759,9 +729,6 @@ impl Content {
             .collect()
     }
 
-    /// Creates a collapsible accordion section for a single task state:
-    /// a header (name, count badge, chevron) and, unless collapsed, the
-    /// vertically stacked tasks in that state.
     fn section_view<'a>(
         &'a self,
         state: &'a TaskState,
@@ -785,9 +752,6 @@ impl Content {
             .into()
     }
 
-    /// Creates a section header row: name, task count badge, and a
-    /// chevron indicating collapsed/expanded state. The whole row toggles
-    /// the section when clicked.
     fn section_header<'a>(
         &'a self,
         state: &'a TaskState,
@@ -818,12 +782,9 @@ impl Content {
             .into()
     }
 
-    /// Determines if a task should be shown based on filters
     fn should_show_task(&self, list: &List, task: &Task) -> bool {
-        // Only show top-level tasks (no parent)
         let is_top_level = task.parent_id.is_none();
 
-        // Check search filter
         let matches_search = !self.search_bar_visible
             || self.search_query.is_empty()
             || task
@@ -831,14 +792,12 @@ impl Content {
                 .to_lowercase()
                 .contains(&self.search_query.to_lowercase());
 
-        // Check hide completed filter
         let should_hide_completed = list.hide_completed || self.config.hide_completed;
         let show_despite_completion = !should_hide_completed || !task.is_completed();
 
         is_top_level && matches_search && show_despite_completion
     }
 
-    /// Creates the view for a single task (with optional subtasks)
     pub fn task_view<'a>(&'a self, id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -886,7 +845,6 @@ impl Content {
         .into()
     }
 
-    /// Gets all direct subtasks of a task
     fn get_subtasks(&self, task: &Task, list: Option<&List>) -> Vec<(DefaultKey, &Task)> {
         let should_hide_completed = list
             .map(|l| l.hide_completed || self.config.hide_completed)
@@ -902,7 +860,6 @@ impl Content {
             .collect()
     }
 
-    /// Creates the main row for a task with all controls
     fn create_task_row<'a>(
         &'a self,
         id: DefaultKey,
@@ -942,14 +899,12 @@ impl Content {
             .into()
     }
 
-    /// Creates a checkbox for marking a task as complete
     fn create_task_checkbox<'a>(&'a self, id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
         widget::checkbox(task.is_completed())
             .on_toggle(move |value| Message::TaskComplete(id, value))
             .into()
     }
 
-    /// Creates a star button to toggle the favorite state of a task.
     fn create_favorite_button<'a>(
         &'a self,
         id: DefaultKey,
@@ -967,7 +922,6 @@ impl Content {
             .into()
     }
 
-    /// Creates the editable title input for a task
     fn create_task_title_input<'a>(
         &'a self,
         id: DefaultKey,
@@ -988,7 +942,6 @@ impl Content {
         .into()
     }
 
-    /// Creates an expand/collapse button for tasks with subtasks
     fn create_expand_button<'a>(
         &'a self,
         id: DefaultKey,
@@ -1014,7 +967,6 @@ impl Content {
         )
     }
 
-    /// Creates a counter showing completed/total subtasks
     fn create_subtask_counter<'a>(
         &'a self,
         sub_tasks: &[(DefaultKey, &Task)],
@@ -1034,7 +986,6 @@ impl Content {
         Some(widget::text(format!("{}/{}", completed, total)).into())
     }
 
-    /// Creates the context menu for task actions
     fn create_task_menu<'a>(&'a self, id: DefaultKey) -> Element<'a, Message> {
         widget::menu::MenuBar::new(vec![widget::menu::Tree::with_children(
             Element::from(
@@ -1062,7 +1013,6 @@ impl Content {
         .into()
     }
 
-    /// Creates the view for rendering subtasks
     fn create_subtasks_view<'a>(
         &'a self,
         sub_tasks: &[(DefaultKey, &'a Task)],
@@ -1080,7 +1030,6 @@ impl Content {
         widget::column::with_children(subtask_elements).into()
     }
 
-    /// Creates an empty state view when a list has no tasks
     pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -1094,7 +1043,6 @@ impl Content {
             .into()
     }
 
-    /// Creates the empty state content
     fn create_empty_state_content<'a>(&'a self) -> Element<'a, Message> {
         widget::container(
             widget::column::with_children(vec![
@@ -1114,7 +1062,6 @@ impl Content {
         .into()
     }
 
-    /// Creates the input field for adding new tasks
     pub fn new_task_view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -1144,7 +1091,6 @@ impl Content {
         }
     }
 
-    /// Creates the view shown when no list is selected
     fn create_no_list_selected_view<'a>(&'a self) -> Element<'a, Message> {
         widget::container(
             widget::column::with_children(vec![
