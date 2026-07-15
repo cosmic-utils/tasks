@@ -27,6 +27,12 @@ pub fn settings(app: &AppModel) -> Element<'_, Message> {
                 }),
             ))
             .add(widget::settings::item::item(
+                fl!("show-trash"),
+                widget::toggler(app.config.show_trash).on_toggle(|val| {
+                    Message::Application(ApplicationAction::ToggleShowTrash(val))
+                }),
+            ))
+            .add(widget::settings::item::item(
                 fl!("hide-completed"),
                 widget::toggler(app.config.hide_completed)
                     .on_toggle(|val| Message::Menu(MenuAction::ToggleHideCompleted(val))),

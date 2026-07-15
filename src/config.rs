@@ -12,6 +12,7 @@ pub struct AppConfig {
     pub app_theme: AppTheme,
     pub hide_completed: bool,
     pub show_favorites: bool,
+    pub show_trash: bool,
     pub sort_by: SortBy,
 }
 
@@ -21,6 +22,7 @@ impl Default for AppConfig {
             app_theme: AppTheme::default(),
             hide_completed: false,
             show_favorites: true,
+            show_trash: true,
             sort_by: SortBy::default(),
         }
     }

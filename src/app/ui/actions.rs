@@ -29,6 +29,7 @@ pub enum ApplicationAction {
     Modifiers(Modifiers),
     AppTheme(usize),
     ToggleShowFavorites(bool),
+    ToggleShowTrash(bool),
 }
 
 impl Action for MenuAction {
