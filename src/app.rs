@@ -184,6 +184,9 @@ impl Application for AppModel {
         let location_opt = self.nav.data::<List>(entity);
 
         if let Some(list) = location_opt {
+            if let Err(err) = self.config.set_last_list_id(&self.handler, Some(list.id)) {
+                tracing::error!("{err}");
+            }
             let message = Message::Content(content::Message::SetList(Some(list.clone())));
             let window_title = format!("{} - {}", list.name, fl!("tasks"));
             if let Some(window_id) = self.core.main_window_id() {
