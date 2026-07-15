@@ -48,9 +48,12 @@ impl AppModel {
             sent_reminders: std::collections::HashSet::new(),
         };
 
-        let mut tasks = vec![cosmic::task::message(Message::Tasks(
-            TasksAction::FetchLists,
-        ))];
+        let mut tasks = vec![
+            cosmic::task::message(Message::Tasks(TasksAction::FetchLists)),
+            cosmic::task::message(Message::Trash(
+                crate::features::trash::trash::Message::Load,
+            )),
+        ];
 
         if let Some(id) = app.core.main_window_id() {
             tasks.push(app.set_window_title(fl!("tasks"), id));

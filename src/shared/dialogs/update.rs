@@ -125,6 +125,11 @@ impl AppModel {
                                 ));
                             }
                         }
+                        DialogPage::EmptyTrash => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::EmptyTrashConfirmed,
+                            ));
+                        }
                         DialogPage::Calendar(date) => {
                             self.details
                                 .update(details::Message::SetDueDate(date.selected));

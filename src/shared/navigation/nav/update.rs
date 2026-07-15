@@ -116,9 +116,11 @@ impl AppModel {
                 )));
             }
             NavMenuAction::TrashEmptyAll => {
-                return cosmic::task::message(Message::Trash(
-                    crate::features::trash::trash::Message::EmptyTrash,
-                ));
+                if !self.trash.is_empty() {
+                    return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                        DialogPage::EmptyTrash,
+                    )));
+                }
             }
             NavMenuAction::TrashRestoreAll => {
                 return cosmic::task::message(Message::Trash(
