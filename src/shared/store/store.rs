@@ -49,6 +49,10 @@ impl Store {
         StateStore { store: self }
     }
 
+    pub fn base_dir(&self) -> &Path {
+        &self.base_dir
+    }
+
     fn registry_path(&self) -> PathBuf {
         self.base_dir.join(LISTS_REGISTRY)
     }

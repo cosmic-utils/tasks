@@ -4,9 +4,6 @@ use cosmic::{
     theme, widget, Element,
 };
 
-/// Wraps a header and its (optionally hidden) rows in the standard
-/// collapsible-section shell used across the task, favorites, and trash
-/// views: a bordered list column whose rows only render when expanded.
 pub fn section<'a, Message: Clone + 'static>(
     header: Element<'a, Message>,
     rows: Vec<Element<'a, Message>>,
@@ -25,9 +22,6 @@ pub fn section<'a, Message: Clone + 'static>(
         .into()
 }
 
-/// Builds the header row for a [`section`]: title (with an optional
-/// subtitle), a count badge, any section-level action buttons, and a
-/// chevron button that is the *only* click target toggling collapse state.
 pub fn section_header<'a, Message: Clone + 'static>(
     title: String,
     subtitle: Option<String>,
@@ -71,8 +65,6 @@ pub fn section_header<'a, Message: Clone + 'static>(
     row.into()
 }
 
-/// Wraps a single row's content in the standard list-item shell used for
-/// rows inside a [`section`].
 pub fn row_item<'a, Message: Clone + 'static>(row: Element<'a, Message>) -> Element<'a, Message> {
     widget::list_column().list_item_padding(0).add(row).into()
 }

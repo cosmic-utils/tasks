@@ -181,8 +181,6 @@ impl Favorites {
             .into()
     }
 
-    /// Groups favorited tasks by their originating list, sorted
-    /// alphabetically by name.
     fn list_sections(&self) -> Vec<Element<'_, Message>> {
         let mut list_ids: Vec<Uuid> = Vec::new();
         for e in &self.entries {

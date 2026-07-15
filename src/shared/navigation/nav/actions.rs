@@ -10,6 +10,7 @@ pub enum TasksAction {
     RestoreTaskFromList(uuid::Uuid, uuid::Uuid),
     FetchLists,
     NavSelect(segmented_button::Entity),
+    SyncFromDisk,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]

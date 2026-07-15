@@ -21,7 +21,8 @@ impl AppModel {
 
     pub fn refresh_trash_nav_icon(&mut self) {
         if self.nav.data::<TrashMarker>(self.trash_entity).is_some() {
-            self.nav.icon_set(self.trash_entity, self.trash.icon().icon());
+            self.nav
+                .icon_set(self.trash_entity, self.trash.icon().icon());
         }
     }
 }
