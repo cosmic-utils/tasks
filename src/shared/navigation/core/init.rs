@@ -46,6 +46,7 @@ impl AppModel {
             favorites: Favorites::new(flags.store.clone()),
             favorites_entity: widget::segmented_button::Entity::default(),
             sent_reminders: std::collections::HashSet::new(),
+            toasts: widget::Toasts::new(Message::CloseToast),
         };
 
         let mut tasks = vec![

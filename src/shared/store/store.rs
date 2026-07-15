@@ -1,4 +1,4 @@
-use crate::features::lists::list::List;
+use crate::features::lists::list::{List, TrashedList};
 use crate::features::tasks::state::{default_states, TaskState};
 use crate::features::tasks::task::{Task, TrashedTask};
 use crate::StoreError;
@@ -11,6 +11,8 @@ use uuid::Uuid;
 const LISTS_REGISTRY: &str = "lists.ron";
 const STATES_REGISTRY: &str = "states.ron";
 const TRASH_DIR: &str = "_trash";
+const TRASHED_LISTS_REGISTRY: &str = "lists.ron";
+const TRASHED_LISTS_DIR: &str = "lists";
 
 fn pretty() -> PrettyConfig {
     PrettyConfig::new().depth_limit(6).struct_names(true)
@@ -63,6 +65,18 @@ impl Store {
         self.trash_dir().join(format!("{task_id}.ron"))
     }
 
+    fn trashed_lists_dir(&self) -> PathBuf {
+        self.trash_dir().join(TRASHED_LISTS_DIR)
+    }
+
+    fn trashed_lists_registry_path(&self) -> PathBuf {
+        self.trashed_lists_dir().join(TRASHED_LISTS_REGISTRY)
+    }
+
+    fn trashed_list_data_dir(&self, list_id: Uuid) -> PathBuf {
+        self.trashed_lists_dir().join(list_id.to_string())
+    }
+
     fn list_dir(&self, list_id: Uuid) -> PathBuf {
         self.base_dir.join(list_id.to_string())
     }
@@ -111,6 +125,155 @@ impl TrashStore<'_> {
         let path = self.store.trashed_task_path(task_id);
         fs::remove_file(&path)
             .map_err(|_| crate::Error::Store(crate::StoreError::TaskNotFound(task_id)))
+    }
+
+    pub fn trash_list(&self, list_id: Uuid) -> crate::Result<()> {
+        let list = self.store.lists().detach(list_id)?;
+
+        fs::create_dir_all(self.store.trashed_lists_dir())?;
+        let list_dir = self.store.list_dir(list_id);
+        if list_dir.exists() {
+            fs::rename(&list_dir, self.store.trashed_list_data_dir(list_id))?;
+        }
+
+        let mut lists = self.load_all_lists()?;
+        lists.retain(|t| t.list.id != list_id);
+        lists.push(TrashedList::new(list));
+        self.flush_lists_registry(&lists)
+    }
+
+    pub fn load_all_lists(&self) -> crate::Result<Vec<TrashedList>> {
+        let path = self.store.trashed_lists_registry_path();
+        if !path.exists() {
+            return Ok(vec![]);
+        }
+        let content = fs::read_to_string(&path)?;
+        Ok(ron::from_str(&content)?)
+    }
+
+    pub fn restore_list(&self, list_id: Uuid) -> crate::Result<List> {
+        let mut lists = self.load_all_lists()?;
+        let pos = lists
+            .iter()
+            .position(|t| t.list.id == list_id)
+            .ok_or(Error::Store(StoreError::ListNotFound(list_id)))?;
+        let trashed = lists.remove(pos);
+
+        let data_dir = self.store.trashed_list_data_dir(list_id);
+        let list_dir = self.store.list_dir(list_id);
+        if data_dir.exists() {
+            fs::rename(&data_dir, &list_dir)?;
+        } else {
+            fs::create_dir_all(&list_dir)?;
+        }
+
+        self.store.lists().save(&trashed.list)?;
+        self.flush_lists_registry(&lists)?;
+        Ok(trashed.list)
+    }
+
+    pub fn delete_list(&self, list_id: Uuid) -> crate::Result<()> {
+        let mut lists = self.load_all_lists()?;
+        let before = lists.len();
+        lists.retain(|t| t.list.id != list_id);
+
+        if lists.len() == before {
+            return Err(Error::Store(StoreError::ListNotFound(list_id)));
+        }
+
+        let data_dir = self.store.trashed_list_data_dir(list_id);
+        if data_dir.exists() {
+            fs::remove_dir_all(&data_dir)?;
+        }
+
+        self.flush_lists_registry(&lists)
+    }
+
+    fn flush_lists_registry(&self, lists: &[TrashedList]) -> crate::Result<()> {
+        fs::create_dir_all(self.store.trashed_lists_dir())?;
+        let content = ron::ser::to_string_pretty(lists, pretty())?;
+        fs::write(self.store.trashed_lists_registry_path(), content)?;
+        Ok(())
+    }
+
+    pub fn load_trashed_list_tasks(&self, list_id: Uuid) -> crate::Result<Vec<Task>> {
+        let data_dir = self.store.trashed_list_data_dir(list_id);
+        if !data_dir.exists() {
+            return Ok(vec![]);
+        }
+
+        let mut tasks = Vec::new();
+        for entry in fs::read_dir(&data_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("ron") {
+                continue;
+            }
+            match fs::read_to_string(&path).map(|s| ron::from_str::<Task>(&s)) {
+                Ok(Ok(task)) => tasks.push(task),
+                Ok(Err(e)) => tracing::error!("skipping {:?}: {e}", path.file_name()),
+                Err(e) => tracing::error!("could not read {:?}: {e}", path.file_name()),
+            }
+        }
+        tasks.sort_by(|a, b| a.creation_date.cmp(&b.creation_date));
+        Ok(tasks)
+    }
+
+    pub fn restore_task_from_list(&self, list_id: Uuid, task_id: Uuid) -> crate::Result<List> {
+        let mut lists = self.load_all_lists()?;
+        let pos = lists
+            .iter()
+            .position(|t| t.list.id == list_id)
+            .ok_or(Error::Store(StoreError::ListNotFound(list_id)))?;
+        let list = lists[pos].list.clone();
+
+        self.store.lists().save(&list)?;
+        let list_dir = self.store.list_dir(list_id);
+        fs::create_dir_all(&list_dir)?;
+
+        let data_dir = self.store.trashed_list_data_dir(list_id);
+        let src = data_dir.join(format!("{task_id}.ron"));
+        let dest = self.store.task_path(list_id, task_id);
+        fs::rename(&src, &dest)
+            .map_err(|_| crate::Error::Store(crate::StoreError::TaskNotFound(task_id)))?;
+
+        if !Self::dir_has_ron_files(&data_dir) {
+            if data_dir.exists() {
+                fs::remove_dir_all(&data_dir)?;
+            }
+            lists.remove(pos);
+            self.flush_lists_registry(&lists)?;
+        }
+
+        Ok(list)
+    }
+
+    pub fn delete_task_from_list(&self, list_id: Uuid, task_id: Uuid) -> crate::Result<()> {
+        let data_dir = self.store.trashed_list_data_dir(list_id);
+        let path = data_dir.join(format!("{task_id}.ron"));
+        fs::remove_file(&path)
+            .map_err(|_| crate::Error::Store(crate::StoreError::TaskNotFound(task_id)))?;
+
+        if !Self::dir_has_ron_files(&data_dir) {
+            if data_dir.exists() {
+                fs::remove_dir_all(&data_dir)?;
+            }
+            let mut lists = self.load_all_lists()?;
+            lists.retain(|t| t.list.id != list_id);
+            self.flush_lists_registry(&lists)?;
+        }
+
+        Ok(())
+    }
+
+    fn dir_has_ron_files(dir: &Path) -> bool {
+        fs::read_dir(dir)
+            .map(|entries| {
+                entries
+                    .filter_map(|e| e.ok())
+                    .any(|e| e.path().extension().and_then(|x| x.to_str()) == Some("ron"))
+            })
+            .unwrap_or(false)
     }
 }
 
@@ -164,21 +327,18 @@ impl ListStore<'_> {
         Ok(updated)
     }
 
-    pub fn delete(&self, list_id: Uuid) -> Result<()> {
-        let list_dir = self.store.list_dir(list_id);
-        if list_dir.exists() {
-            fs::remove_dir_all(&list_dir)?;
-        }
-
+    /// Removes a list from the registry without touching its task directory.
+    /// Used when moving a list to trash, where the directory is relocated
+    /// rather than deleted.
+    pub fn detach(&self, list_id: Uuid) -> Result<List> {
         let mut lists = self.load_all()?;
-        let before = lists.len();
-        lists.retain(|l| l.id != list_id);
-
-        if lists.len() == before {
-            return Err(Error::Store(StoreError::ListNotFound(list_id)));
-        }
-
-        self.flush_registry(&lists)
+        let pos = lists
+            .iter()
+            .position(|l| l.id == list_id)
+            .ok_or(Error::Store(StoreError::ListNotFound(list_id)))?;
+        let list = lists.remove(pos);
+        self.flush_registry(&lists)?;
+        Ok(list)
     }
 
     fn flush_registry(&self, lists: &[List]) -> Result<()> {

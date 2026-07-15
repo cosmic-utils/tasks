@@ -38,3 +38,23 @@ impl List {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrashedList {
+    pub list: List,
+    pub deleted_at: Timestamp,
+}
+
+impl TrashedList {
+    pub fn new(list: List) -> Self {
+        Self {
+            list,
+            deleted_at: Timestamp::now(),
+        }
+    }
+
+    pub fn deleted_at_local(&self) -> String {
+        let tz = jiff::tz::TimeZone::system();
+        self.deleted_at.to_zoned(tz).strftime("%m-%d-%Y %H:%M").to_string()
+    }
+}

@@ -6,6 +6,8 @@ pub enum TasksAction {
     PopulateLists(Vec<List>),
     AddList(List),
     DeleteList(Option<segmented_button::Entity>),
+    RestoreList(uuid::Uuid),
+    RestoreTaskFromList(uuid::Uuid, uuid::Uuid),
     FetchLists,
     NavSelect(segmented_button::Entity),
 }

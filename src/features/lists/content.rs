@@ -118,6 +118,7 @@ pub enum Message {
     RefreshTask(Task),
     Empty,
     OpenTaskDeletionDialog(DefaultKey),
+    RestoreTask(Uuid, Uuid),
 
     ToggleSearchBar,
     SearchQueryChanged(String),
@@ -136,7 +137,11 @@ pub enum Output {
     ToggleHideCompleted(List),
     Focus(widget::Id),
     OpenTaskDetails(DefaultKey, Uuid),
-    TaskDeleted,
+    TaskDeleted {
+        task_id: Uuid,
+        list_id: Uuid,
+        title: String,
+    },
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -380,7 +385,33 @@ impl Content {
                     if let Err(err) = self.store.tasks(list_id).delete(task.id) {
                         tracing::error!("Error removing task from list after trashing: {err}");
                     }
-                    output = Some(Output::TaskDeleted);
+                    output = Some(Output::TaskDeleted {
+                        task_id: task.id,
+                        list_id,
+                        title: task.title.clone(),
+                    });
+                }
+            }
+            Message::RestoreTask(task_id, list_id) => {
+                let trashed = self.store.trash().load_all().unwrap_or_else(|err| {
+                    tracing::error!("Failed to load trash for restore: {err}");
+                    Vec::new()
+                });
+                if let Some(trashed) = trashed.into_iter().find(|t| t.task.id == task_id) {
+                    if let Err(err) = self.store.tasks(trashed.original_list_id).save(&trashed.task)
+                    {
+                        tracing::error!("Error restoring task from trash: {err}");
+                    } else if let Err(err) = self.store.trash().delete(task_id) {
+                        tracing::error!("Error removing restored task from trash: {err}");
+                    } else if self
+                        .selected_list
+                        .as_ref()
+                        .is_some_and(|list| list.id == list_id)
+                    {
+                        if let Ok(tasks) = self.store.tasks(list_id).load_all() {
+                            self.update(Message::SetTasks(tasks));
+                        }
+                    }
                 }
             }
             Message::TaskComplete(id, complete) => {

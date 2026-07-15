@@ -37,4 +37,5 @@ pub struct AppModel {
     pub(crate) favorites: Favorites,
     pub(crate) favorites_entity: nav_bar::Id,
     pub(crate) sent_reminders: HashSet<(Uuid, i64)>,
+    pub(crate) toasts: cosmic::widget::Toasts<super::message::Message>,
 }
