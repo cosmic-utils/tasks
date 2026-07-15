@@ -643,7 +643,6 @@ impl Content {
         widget::text_input(fl!("search-tasks"), &self.search_query)
             .id(widget::Id::new("search-tasks-input"))
             .on_input(Message::SearchQueryChanged)
-            .on_unfocus(Message::ToggleSearchBar)
             .width(Length::Fill)
             .padding([spacing.space_xxs, spacing.space_xxs])
             .into()
@@ -675,7 +674,7 @@ impl Content {
         widget::button::icon(widget::icon::from_name("edit-find-symbolic").size(18))
             .selected(self.search_bar_visible)
             .padding(spacing.space_xxs)
-            .on_press_maybe((!self.search_bar_visible).then_some(Message::ToggleSearchBar))
+            .on_press(Message::ToggleSearchBar)
             .into()
     }
 
