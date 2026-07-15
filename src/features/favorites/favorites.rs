@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use cosmic::{
-    cosmic_theme::Spacing,
     iced::{
         alignment::{Horizontal, Vertical},
         Alignment, Length,
@@ -14,7 +13,7 @@ use uuid::Uuid;
 use crate::{
     features::{lists::list::List, tasks::task::Task},
     fl,
-    shared::store::Store,
+    shared::{store::Store, widgets::collapsible_section},
 };
 
 pub struct FavoriteEntry {
@@ -226,50 +225,22 @@ impl Favorites {
         let collapsed = self.collapsed_sections.contains(&list_id);
         let count = entries.len();
 
-        let mut list = widget::list_column()
-            .list_item_padding(0)
-            .add(self.list_section_header(list_id, name, count, collapsed, &spacing));
+        let header = collapsible_section::section_header(
+            name,
+            None,
+            count,
+            collapsed,
+            Vec::new(),
+            Message::ToggleSection(list_id),
+            &spacing,
+        );
 
-        if !collapsed {
-            for entry in entries {
-                list = list.add(self.entry_row(entry));
-            }
-        }
+        let rows = entries
+            .into_iter()
+            .map(|entry| self.entry_row(entry))
+            .collect();
 
-        widget::container(list)
-            .class(cosmic::style::Container::List)
-            .into()
-    }
-
-    fn list_section_header<'a>(
-        &'a self,
-        list_id: Uuid,
-        name: String,
-        count: usize,
-        collapsed: bool,
-        spacing: &Spacing,
-    ) -> Element<'a, Message> {
-        let chevron = if collapsed {
-            "go-down-symbolic"
-        } else {
-            "go-up-symbolic"
-        };
-
-        let badge = widget::container(widget::text(count.to_string()))
-            .class(theme::Container::Tooltip)
-            .padding([spacing.space_xxxs, spacing.space_xs]);
-
-        widget::row::with_capacity(4)
-            .align_y(Alignment::Center)
-            .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_s])
-            .push(widget::text::heading(name).width(Length::Fill))
-            .push(badge)
-            .push(
-                widget::button::icon(widget::icon::from_name(chevron).size(16))
-                    .on_press(Message::ToggleSection(list_id)),
-            )
-            .into()
+        collapsible_section::section(header, rows, collapsed)
     }
 
     fn entry_row<'a>(&'a self, entry: &'a FavoriteEntry) -> Element<'a, Message> {
@@ -296,7 +267,7 @@ impl Favorites {
             .push(title)
             .push(open_button);
 
-        widget::list_column().list_item_padding(0).add(row).into()
+        collapsible_section::row_item(row.into())
     }
 
     fn empty_view(&self) -> Element<'_, Message> {

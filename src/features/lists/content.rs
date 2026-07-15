@@ -25,7 +25,7 @@ use crate::{
         },
     },
     fl,
-    shared::store::Store,
+    shared::{store::Store, widgets::collapsible_section},
 };
 
 const TASK_DRAG_MIME: &str = "application/x-cosmic-tasks-item";
@@ -768,50 +768,22 @@ impl Content {
         let spacing = theme::active().cosmic().spacing;
         let collapsed = self.collapsed_sections.contains(&state.id);
 
-        let mut list = widget::list_column()
-            .list_item_padding(0)
-            .add(self.section_header(state, tasks.len(), collapsed, &spacing));
+        let header = collapsible_section::section_header(
+            state.name.clone(),
+            None,
+            tasks.len(),
+            collapsed,
+            Vec::new(),
+            Message::ToggleSection(state.id),
+            &spacing,
+        );
 
-        if !collapsed {
-            for (id, task) in tasks {
-                list = list.add(self.task_view(id, task));
-            }
-        }
+        let rows = tasks
+            .into_iter()
+            .map(|(id, task)| self.task_view(id, task))
+            .collect();
 
-        widget::container(list)
-            .class(cosmic::style::Container::List)
-            .into()
-    }
-
-    fn section_header<'a>(
-        &'a self,
-        state: &'a TaskState,
-        count: usize,
-        collapsed: bool,
-        spacing: &Spacing,
-    ) -> Element<'a, Message> {
-        let chevron = if collapsed {
-            "go-down-symbolic"
-        } else {
-            "go-up-symbolic"
-        };
-
-        let badge = widget::container(widget::text(count.to_string()))
-            .class(theme::Container::Tooltip)
-            .padding([spacing.space_xxxs, spacing.space_xs]);
-
-        let row = widget::row::with_capacity(3)
-            .align_y(Alignment::Center)
-            .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_s])
-            .push(widget::text::heading(state.name.clone()).width(Length::Fill))
-            .push(badge)
-            .push(
-                widget::button::icon(widget::icon::from_name(chevron).size(16))
-                    .on_press(Message::ToggleSection(state.id)),
-            );
-
-        row.into()
+        collapsible_section::section(header, rows, collapsed)
     }
 
     fn should_show_task(&self, list: &List, task: &Task) -> bool {

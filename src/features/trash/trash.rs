@@ -18,7 +18,7 @@ use crate::{
         tasks::task::{Task, TrashedTask},
     },
     fl,
-    shared::store::Store,
+    shared::{store::Store, widgets::collapsible_section},
 };
 
 struct PendingDeletion {
@@ -401,93 +401,67 @@ impl Trash {
         let collapsed = self.collapsed_sections.contains(&list_id);
         let count = individually.len() + from_list.len();
 
-        let mut list = widget::list_column()
-            .list_item_padding(0)
-            .add(self.list_section_header(list_id, name, trashed_list, count, collapsed, &spacing));
+        // Once any single task has been restored out of a trashed list, the
+        // list itself becomes active again (see `restore_task_from_list`),
+        // even though some of its tasks may remain in trash. In that case
+        // whole-list actions no longer apply — only the per-task ones do.
+        let list_is_trashed =
+            trashed_list.is_some() && !self.lists.iter().any(|l| l.id == list_id);
 
-        if !collapsed {
-            for trashed in individually {
-                list = list.add(self.task_row(
+        let mut extra_buttons: Vec<Element<'a, Message>> = Vec::new();
+        if list_is_trashed {
+            extra_buttons.push(
+                widget::button::icon(widget::icon::from_name("edit-undo"))
+                    .tooltip(fl!("restore-list"))
+                    .class(theme::Button::Standard)
+                    .on_press(Message::RequestRestoreList(list_id))
+                    .into(),
+            );
+            extra_buttons.push(
+                widget::button::icon(widget::icon::from_name("edit-delete"))
+                    .tooltip(fl!("delete-permanently"))
+                    .class(theme::Button::Destructive)
+                    .on_press(Message::RequestDeleteList(list_id))
+                    .into(),
+            );
+        }
+
+        let subtitle = trashed_list.map(|trashed_list| {
+            let deleted_at = trashed_list.deleted_at_local();
+            fl!("deleted-at", date = deleted_at.as_str())
+        });
+
+        let header = collapsible_section::section_header(
+            name,
+            subtitle,
+            count,
+            collapsed,
+            extra_buttons,
+            Message::ToggleSection(list_id),
+            &spacing,
+        );
+
+        let rows = individually
+            .into_iter()
+            .map(|trashed| {
+                self.task_row(
                     trashed.task.title.as_str(),
                     Some(trashed.deleted_at_local()),
                     Message::RestoreTask(trashed.task.id),
                     Message::RequestDeleteTask(trashed.task.id),
-                ));
-            }
-            for task in from_list {
-                list = list.add(self.task_row(
+                )
+            })
+            .chain(from_list.into_iter().map(|task| {
+                self.task_row(
                     task.title.as_str(),
                     None,
                     Message::RequestRestoreTaskFromList(list_id, task.id),
                     Message::RequestDeleteTaskFromList(list_id, task.id),
-                ));
-            }
-        }
-
-        widget::container(list)
-            .class(cosmic::style::Container::List)
-            .into()
-    }
-
-    fn list_section_header<'a>(
-        &'a self,
-        list_id: Uuid,
-        name: String,
-        trashed_list: Option<&'a TrashedList>,
-        count: usize,
-        collapsed: bool,
-        spacing: &Spacing,
-    ) -> Element<'a, Message> {
-        let chevron = if collapsed {
-            "go-down-symbolic"
-        } else {
-            "go-up-symbolic"
-        };
-
-        let badge = widget::container(widget::text(count.to_string()))
-            .class(theme::Container::Tooltip)
-            .padding([spacing.space_xxxs, spacing.space_xs]);
-
-        let mut title_children: Vec<Element<'a, Message>> =
-            vec![widget::text::heading(name).into()];
-        if let Some(trashed_list) = trashed_list {
-            let deleted_at = trashed_list.deleted_at_local();
-            title_children
-                .push(widget::text::caption(fl!("deleted-at", date = deleted_at.as_str())).into());
-        }
-        let title_col = widget::column::with_children(title_children).width(Length::Fill);
-
-        let mut row = widget::row::with_capacity(5)
-            .align_y(Alignment::Center)
-            .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_s])
-            .push(title_col)
-            .push(badge);
-
-        let list_is_trashed = trashed_list.is_some() && !self.lists.iter().any(|l| l.id == list_id);
-
-        if list_is_trashed {
-            row = row
-                .push(
-                    widget::button::icon(widget::icon::from_name("edit-undo"))
-                        .tooltip(fl!("restore-list"))
-                        .class(theme::Button::Standard)
-                        .on_press(Message::RequestRestoreList(list_id)),
                 )
-                .push(
-                    widget::button::icon(widget::icon::from_name("edit-delete"))
-                        .tooltip(fl!("delete-permanently"))
-                        .class(theme::Button::Destructive)
-                        .on_press(Message::RequestDeleteList(list_id)),
-                );
-        }
+            }))
+            .collect();
 
-        row = row.push(
-            widget::button::icon(widget::icon::from_name(chevron).size(16))
-                .on_press(Message::ToggleSection(list_id)),
-        );
-
-        row.into()
+        collapsible_section::section(header, rows, collapsed)
     }
 
     fn task_row<'a>(
@@ -527,7 +501,7 @@ impl Trash {
             .push(restore_button)
             .push(delete_button);
 
-        widget::list_column().list_item_padding(0).add(row).into()
+        collapsible_section::row_item(row.into())
     }
 
     fn deletion_banner<'a>(
