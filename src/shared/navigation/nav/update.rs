@@ -30,7 +30,16 @@ impl AppModel {
                     self.create_nav_item(&list);
                 }
                 self.reposition_special_items();
-                let Some(entity) = self.nav.iter().next() else {
+                let entity = self
+                    .config
+                    .last_list_id
+                    .and_then(|id| {
+                        self.nav
+                            .iter()
+                            .find(|e| self.nav.data::<List>(*e).is_some_and(|l| l.id == id))
+                    })
+                    .or_else(|| self.nav.iter().next());
+                let Some(entity) = entity else {
                     return app::Task::none();
                 };
                 self.nav.activate(entity);

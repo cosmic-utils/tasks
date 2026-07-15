@@ -3,6 +3,7 @@ use cosmic::{
     theme,
 };
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub const CONFIG_VERSION: u64 = 1;
 
@@ -14,6 +15,7 @@ pub struct AppConfig {
     pub show_favorites: bool,
     pub show_trash: bool,
     pub sort_by: SortBy,
+    pub last_list_id: Option<Uuid>,
 }
 
 impl Default for AppConfig {
@@ -24,6 +26,7 @@ impl Default for AppConfig {
             show_favorites: true,
             show_trash: true,
             sort_by: SortBy::default(),
+            last_list_id: None,
         }
     }
 }
