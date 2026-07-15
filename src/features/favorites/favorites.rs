@@ -170,9 +170,7 @@ impl Favorites {
         let spacing = theme::active().cosmic().spacing;
 
         let icon = widget::icon::from_name("starred-symbolic").size(spacing.space_m);
-        let title = widget::text::body(fl!("favorites"))
-            .size(24)
-            .width(Length::Fill);
+        let title = widget::text::title4(fl!("favorites")).width(Length::Fill);
 
         widget::row::with_capacity(2)
             .align_y(Alignment::Center)

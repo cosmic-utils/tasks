@@ -321,9 +321,7 @@ impl Trash {
 
         let icon = widget::icon::from_name("user-trash-full-symbolic").size(spacing.space_m);
 
-        let title = widget::text::body(fl!("trash"))
-            .size(24)
-            .width(Length::Fill);
+        let title = widget::text::title4(fl!("trash")).width(Length::Fill);
 
         let empty_button = widget::button::destructive(fl!("empty-trash")).on_press_maybe(
             self.pending_deletion
