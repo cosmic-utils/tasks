@@ -1,8 +1,8 @@
 use crate::{
     config::AppConfig,
     features::{
-        favorites::favorites, lists::content, reminders::reminder::ReminderMessage,
-        search::search, tasks::details, trash::trash,
+        favorites::favorites, lists::content, reminders::reminder::ReminderMessage, search::search,
+        tasks::details, trash::trash,
     },
     shared::{
         dialogs::DialogAction,
