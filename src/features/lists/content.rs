@@ -162,14 +162,14 @@ impl MenuAction for TaskAction {
 }
 
 impl Content {
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self, is_condensed: bool) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let Some(ref list) = self.selected_list else {
             return self.create_no_list_selected_view();
         };
 
-        let mut column = widget::column(vec![self.list_view(list)]);
+        let mut column = widget::column(vec![self.list_view(list, is_condensed)]);
 
         column = column.push(self.new_task_view());
 
@@ -609,11 +609,15 @@ impl Content {
         }
     }
 
-    pub fn list_view<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
+    pub fn list_view<'a>(&'a self, list: &'a List, is_condensed: bool) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let mut column = widget::column::with_capacity(3);
-        column = column.push(self.list_header(list));
+        column = column.push(self.list_header(list, is_condensed));
+
+        if is_condensed && self.search_bar_visible {
+            column = column.push(self.create_search_input(&spacing, is_condensed));
+        }
 
         let sorted_tasks = self.sort_tasks();
         let visible_tasks: Vec<_> = sorted_tasks
@@ -622,7 +626,7 @@ impl Content {
             .collect();
 
         if visible_tasks.is_empty() && self.search_query.is_empty() {
-            return self.empty(list);
+            return self.empty(list, is_condensed);
         }
 
         let sections = self.section_views(visible_tasks);
@@ -636,13 +640,15 @@ impl Content {
         .into()
     }
 
-    fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
+    fn list_header<'a>(&'a self, list: &'a List, is_condensed: bool) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let list_icon = self.create_list_icon(list, &spacing);
         let search_button = self.create_search_button(&spacing);
 
-        let title_width = if self.search_bar_visible {
+        let inline_search = self.search_bar_visible && !is_condensed;
+
+        let title_width = if inline_search {
             Length::Shrink
         } else {
             Length::Fill
@@ -656,25 +662,35 @@ impl Content {
             .push(list_icon)
             .push(title);
 
-        if self.search_bar_visible {
+        if inline_search {
             row = row.push(widget::space::horizontal());
-            row = row.push(self.create_search_input(&spacing));
+            row = row.push(self.create_search_input(&spacing, is_condensed));
         }
 
         row.push(search_button).into()
     }
 
-    fn create_search_input<'a>(&'a self, _spacing: &Spacing) -> Element<'a, Message> {
+    fn create_search_input<'a>(
+        &'a self,
+        _spacing: &Spacing,
+        is_condensed: bool,
+    ) -> Element<'a, Message> {
         let placeholder = match &self.selected_list {
             Some(list) => fl!("search-list", list = list.name.as_str()),
             None => fl!("search-tasks"),
+        };
+
+        let width = if is_condensed {
+            Length::Fill
+        } else {
+            Length::Fixed(240.0)
         };
 
         widget::search_input(placeholder, &self.search_query)
             .id(widget::Id::new("search-tasks-input"))
             .on_input(Message::SearchQueryChanged)
             .on_clear(Message::SearchQueryChanged(String::new()))
-            .width(Length::Fixed(240.0))
+            .width(width)
             .into()
     }
 
@@ -1014,13 +1030,13 @@ impl Content {
         widget::column::with_children(subtask_elements).into()
     }
 
-    pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
+    pub fn empty<'a>(&'a self, list: &'a List, is_condensed: bool) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let empty_state = self.create_empty_state_content();
 
         widget::column::with_capacity(2)
-            .push(self.list_header(list))
+            .push(self.list_header(list, is_condensed))
             .push(empty_state)
             .padding([spacing.space_none, spacing.space_l])
             .spacing(spacing.space_s)
