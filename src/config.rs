@@ -102,16 +102,8 @@ impl From<AppTheme> for usize {
 impl AppTheme {
     pub fn theme(&self) -> theme::Theme {
         match self {
-            Self::Dark => {
-                let mut t = theme::system_dark();
-                t.theme_type.prefer_dark(Some(true));
-                t
-            }
-            Self::Light => {
-                let mut t = theme::system_light();
-                t.theme_type.prefer_dark(Some(false));
-                t
-            }
+            Self::Dark => theme::Theme::dark(),
+            Self::Light => theme::Theme::light(),
             Self::System => theme::system_preference(),
         }
     }
