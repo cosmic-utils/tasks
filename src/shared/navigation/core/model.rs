@@ -12,8 +12,8 @@ use uuid::Uuid;
 use crate::{
     config,
     features::{
-        favorites::favorites::Favorites, lists::content::Content, tasks::details::Details,
-        trash::trash::Trash,
+        favorites::favorites::Favorites, lists::content::Content, search::search::Search,
+        tasks::details::Details, trash::trash::Trash,
     },
     shared::{dialogs::DialogPage, navigation::ui::MenuAction, store::Store},
 };
@@ -38,4 +38,5 @@ pub struct AppModel {
     pub(crate) favorites_entity: nav_bar::Id,
     pub(crate) sent_reminders: HashSet<(Uuid, i64)>,
     pub(crate) toasts: cosmic::widget::Toasts<super::message::Message>,
+    pub(crate) search: Search,
 }

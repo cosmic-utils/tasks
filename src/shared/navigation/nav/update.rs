@@ -184,9 +184,12 @@ impl AppModel {
         }
         self.reposition_special_items();
 
-        let mut tasks = vec![cosmic::task::message(Message::Trash(
-            crate::features::trash::trash::Message::Load,
-        ))];
+        let mut tasks = vec![
+            cosmic::task::message(Message::Trash(crate::features::trash::trash::Message::Load)),
+            cosmic::task::message(Message::Search(
+                crate::features::search::search::Message::Load,
+            )),
+        ];
 
         if removed_active {
             tasks.push(cosmic::task::message(Message::Content(

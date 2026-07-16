@@ -1,8 +1,8 @@
 use crate::{
     config::AppConfig,
     features::{
-        favorites::favorites, lists::content, reminders::reminder::ReminderMessage, tasks::details,
-        trash::trash,
+        favorites::favorites, lists::content, reminders::reminder::ReminderMessage,
+        search::search, tasks::details, trash::trash,
     },
     shared::{
         dialogs::DialogAction,
@@ -32,4 +32,5 @@ pub enum Message {
     Favorites(favorites::Message),
     Reminder(ReminderMessage),
     CloseToast(cosmic::widget::ToastId),
+    Search(search::Message),
 }

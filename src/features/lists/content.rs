@@ -615,10 +615,6 @@ impl Content {
         let mut column = widget::column::with_capacity(3);
         column = column.push(self.list_header(list));
 
-        if self.search_bar_visible {
-            column = column.push(self.create_search_input(&spacing));
-        }
-
         let sorted_tasks = self.sort_tasks();
         let visible_tasks: Vec<_> = sorted_tasks
             .into_iter()
@@ -643,36 +639,53 @@ impl Content {
     fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        let title = widget::text::title4(&list.name).width(Length::Fill);
-        let search_button = self.create_search_button(&spacing);
         let list_icon = self.create_list_icon(list, &spacing);
+        let search_button = self.create_search_button(&spacing);
 
-        widget::row::with_capacity(3)
+        let title_width = if self.search_bar_visible {
+            Length::Shrink
+        } else {
+            Length::Fill
+        };
+        let title = widget::text::title4(&list.name).width(title_width);
+
+        let mut row = widget::row::with_capacity(4)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
             .push(list_icon)
-            .push(title)
-            .push(search_button)
-            .into()
+            .push(title);
+
+        if self.search_bar_visible {
+            row = row.push(widget::space::horizontal());
+            row = row.push(self.create_search_input(&spacing));
+        }
+
+        row.push(search_button).into()
     }
 
-    fn create_search_input<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
+    fn create_search_input<'a>(&'a self, _spacing: &Spacing) -> Element<'a, Message> {
         let placeholder = match &self.selected_list {
             Some(list) => fl!("search-list", list = list.name.as_str()),
             None => fl!("search-tasks"),
         };
 
-        widget::text_input(placeholder, &self.search_query)
+        widget::search_input(placeholder, &self.search_query)
             .id(widget::Id::new("search-tasks-input"))
             .on_input(Message::SearchQueryChanged)
-            .width(Length::Fill)
-            .padding([spacing.space_xxs, spacing.space_xxs])
+            .on_clear(Message::SearchQueryChanged(String::new()))
+            .width(Length::Fixed(240.0))
             .into()
     }
 
     fn create_search_button<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
-        widget::button::icon(widget::icon::from_name("edit-find-symbolic").size(18))
+        let icon_name = if self.search_bar_visible {
+            "window-close-symbolic"
+        } else {
+            "edit-find-symbolic"
+        };
+
+        widget::button::icon(widget::icon::from_name(icon_name).size(18))
             .selected(self.search_bar_visible)
             .padding(spacing.space_xxs)
             .on_press(Message::ToggleSearchBar)
