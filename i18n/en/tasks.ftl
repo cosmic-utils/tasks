@@ -21,6 +21,7 @@ about = About
 # Content
 add-new-task = Add new task
 search-tasks = Search tasks
+search-list = Search { $list }
 
 # Details
 title = Title

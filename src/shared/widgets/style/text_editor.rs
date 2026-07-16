@@ -9,8 +9,8 @@ fn style(
     let cosmic = theme.cosmic();
     let container = theme.current_container();
 
-    let mut background: cosmic::iced::Color = cosmic.palette.neutral_2.into();
-    background.a = 0.50;
+    let mut background: cosmic::iced::Color = container.small_widget.into();
+    background.a = 0.25;
 
     let selection = cosmic.accent.base.into();
     let value = cosmic.palette.neutral_9.into();
@@ -25,7 +25,7 @@ fn style(
                 background: background.into(),
                 border: cosmic::iced::Border {
                     radius: cosmic.corner_radii.radius_s.into(),
-                    width: 1.0,
+                    width: 2.0,
                     color: container.component.divider.into(),
                 },
                 placeholder,
@@ -33,13 +33,25 @@ fn style(
                 selection,
             }
         }
-        cosmic::iced::widget::text_editor::Status::Hovered
-        | cosmic::iced::widget::text_editor::Status::Focused { .. } => {
+        cosmic::iced::widget::text_editor::Status::Hovered => {
             cosmic::iced::widget::text_editor::Style {
                 background: background.into(),
                 border: cosmic::iced::Border {
                     radius: cosmic.corner_radii.radius_s.into(),
-                    width: 1.0,
+                    width: 2.0,
+                    color: cosmic::iced::Color::from(cosmic.accent.base),
+                },
+                placeholder,
+                value,
+                selection,
+            }
+        }
+        cosmic::iced::widget::text_editor::Status::Focused { .. } => {
+            cosmic::iced::widget::text_editor::Style {
+                background: background.into(),
+                border: cosmic::iced::Border {
+                    radius: cosmic.corner_radii.radius_s.into(),
+                    width: 3.0,
                     color: cosmic::iced::Color::from(cosmic.accent.base),
                 },
                 placeholder,
