@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
+use cosmic::widget::ToastId;
 use cosmic::{
     cosmic_theme::Spacing,
     iced::{
@@ -117,7 +118,7 @@ pub enum Message {
     RefreshTask(Task),
     Empty,
     OpenTaskDeletionDialog(DefaultKey),
-    RestoreTask(Uuid, Uuid),
+    RestoreTask(Uuid, Uuid, ToastId),
 
     ToggleSearchBar,
     SearchQueryChanged(String),
@@ -393,7 +394,7 @@ impl Content {
                     });
                 }
             }
-            Message::RestoreTask(task_id, list_id) => {
+            Message::RestoreTask(task_id, list_id, _) => {
                 let trashed = self.store.trash().load_all().unwrap_or_else(|err| {
                     tracing::error!("Failed to load trash for restore: {err}");
                     Vec::new()

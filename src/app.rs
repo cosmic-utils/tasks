@@ -253,6 +253,9 @@ impl Application for AppModel {
                 }
             }
             Message::Content(message) => {
+                if let content::Message::RestoreTask(_, _, toast_id) = message {
+                    self.toasts.remove(toast_id);
+                }
                 if let Some(output) = self.content.update(message) {
                     match output {
                         content::Output::Focus(id) => return cosmic::widget::text_input::focus(id),
@@ -293,9 +296,9 @@ impl Application for AppModel {
                                         ))
                                         .action(
                                             fl!("undo"),
-                                            move |_id| {
+                                            move |toast_id| {
                                                 Message::Content(content::Message::RestoreTask(
-                                                    task_id, list_id,
+                                                    task_id, list_id, toast_id,
                                                 ))
                                             },
                                         ),
