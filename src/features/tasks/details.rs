@@ -244,7 +244,6 @@ impl Details {
                 }))
                 .into(),
             widget::button::destructive(fl!("delete"))
-                .trailing_icon(widget::icon::from_name("edit-delete-symbolic").size(14))
                 .on_press(Message::Delete)
                 .into(),
         ])

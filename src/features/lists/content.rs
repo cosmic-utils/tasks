@@ -110,8 +110,6 @@ pub enum Message {
     TaskTitleSubmit(DefaultKey),
     TaskTitleUpdate(DefaultKey, String),
 
-    ToggleHideCompleted,
-
     SetList(Option<List>),
     SetTasks(Vec<Task>),
     SyncTasks(Vec<Task>),
@@ -135,7 +133,6 @@ pub enum Message {
 }
 
 pub enum Output {
-    ToggleHideCompleted(List),
     Focus(widget::Id),
     OpenTaskDetails(DefaultKey, Uuid),
     TaskDeleted {
@@ -494,21 +491,6 @@ impl Content {
                     }
                 }
             }
-            Message::ToggleHideCompleted => {
-                if let Some(ref mut selected_list) = self.selected_list {
-                    match self.store.lists().update(selected_list.id, |list| {
-                        list.hide_completed = !selected_list.hide_completed;
-                    }) {
-                        Ok(updated) => {
-                            selected_list.hide_completed = updated.hide_completed;
-                            output = Some(Output::ToggleHideCompleted(updated.clone()));
-                        }
-                        Err(err) => {
-                            tracing::error!("Error updating list: {err}");
-                        }
-                    }
-                }
-            }
             Message::SetSort(sort_by) => {
                 self.config.sort_by = sort_by;
             }
@@ -640,7 +622,7 @@ impl Content {
         let sorted_tasks = self.sort_tasks();
         let visible_tasks: Vec<_> = sorted_tasks
             .into_iter()
-            .filter(|(_, task)| self.should_show_task(list, task))
+            .filter(|(_, task)| self.should_show_task(task))
             .collect();
 
         if visible_tasks.is_empty() && self.search_query.is_empty() {
@@ -662,50 +644,31 @@ impl Content {
         let spacing = theme::active().cosmic().spacing;
 
         let title = widget::text::title4(&list.name).width(Length::Fill);
-        let hide_completed_button = self.create_hide_completed_button(list, &spacing);
         let search_button = self.create_search_button(&spacing);
         let list_icon = self.create_list_icon(list, &spacing);
 
-        widget::row::with_capacity(4)
+        widget::row::with_capacity(3)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
             .push(list_icon)
             .push(title)
-            .push(hide_completed_button)
             .push(search_button)
             .into()
     }
 
     fn create_search_input<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
-        widget::text_input(fl!("search-tasks"), &self.search_query)
+        let placeholder = match &self.selected_list {
+            Some(list) => fl!("search-list", list = list.name.as_str()),
+            None => fl!("search-tasks"),
+        };
+
+        widget::text_input(placeholder, &self.search_query)
             .id(widget::Id::new("search-tasks-input"))
             .on_input(Message::SearchQueryChanged)
             .width(Length::Fill)
             .padding([spacing.space_xxs, spacing.space_xxs])
             .into()
-    }
-
-    fn create_hide_completed_button<'a>(
-        &'a self,
-        list: &'a List,
-        spacing: &Spacing,
-    ) -> Element<'a, Message> {
-        let is_active = list.hide_completed || self.config.hide_completed;
-        let mut button =
-            widget::button::icon(widget::icon::from_name("checkbox-checked-symbolic").size(18))
-                .selected(is_active)
-                .padding(spacing.space_xxs);
-
-        if is_active {
-            button = button.class(cosmic::style::Button::Suggested);
-        }
-
-        if !self.config.hide_completed {
-            button = button.on_press(Message::ToggleHideCompleted);
-        }
-
-        button.into()
     }
 
     fn create_search_button<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
@@ -793,7 +756,7 @@ impl Content {
         collapsible_section::section(header, rows, collapsed)
     }
 
-    fn should_show_task(&self, list: &List, task: &Task) -> bool {
+    fn should_show_task(&self, task: &Task) -> bool {
         let is_top_level = task.parent_id.is_none();
 
         let matches_search = !self.search_bar_visible
@@ -803,8 +766,7 @@ impl Content {
                 .to_lowercase()
                 .contains(&self.search_query.to_lowercase());
 
-        let should_hide_completed = list.hide_completed || self.config.hide_completed;
-        let show_despite_completion = !should_hide_completed || !task.is_completed();
+        let show_despite_completion = !self.config.hide_completed || !task.is_completed();
 
         is_top_level && matches_search && show_despite_completion
     }
@@ -812,7 +774,7 @@ impl Content {
     pub fn task_view<'a>(&'a self, id: DefaultKey, task: &'a Task) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        let sub_tasks = self.get_subtasks(task, self.selected_list.as_ref());
+        let sub_tasks = self.get_subtasks(task);
         let task_row = self.create_task_row(id, task, &sub_tasks, &spacing);
 
         let mut column = widget::column::with_capacity(2).push(task_row);
@@ -856,10 +818,8 @@ impl Content {
         .into()
     }
 
-    fn get_subtasks(&self, task: &Task, list: Option<&List>) -> Vec<(DefaultKey, &Task)> {
-        let should_hide_completed = list
-            .map(|l| l.hide_completed || self.config.hide_completed)
-            .unwrap_or(false);
+    fn get_subtasks(&self, task: &Task) -> Vec<(DefaultKey, &Task)> {
+        let should_hide_completed = self.config.hide_completed;
 
         self.tasks
             .iter()

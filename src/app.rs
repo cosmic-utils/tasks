@@ -307,11 +307,6 @@ impl Application for AppModel {
                             }
                             return app::Task::batch(tasks);
                         }
-                        content::Output::ToggleHideCompleted(list) => {
-                            if let Some(data) = self.nav.active_data_mut::<List>() {
-                                data.hide_completed = list.hide_completed;
-                            }
-                        }
                     }
                 }
             }

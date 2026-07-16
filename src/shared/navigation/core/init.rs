@@ -108,11 +108,17 @@ pub fn key_binds() -> HashMap<KeyBind, MenuAction> {
     bind!([Ctrl], Key::Character("n".into()), NewList);
     bind!([Ctrl], Key::Named(Named::Delete), DeleteList);
     bind!([Ctrl], Key::Character("r".into()), RenameList);
-    bind!([Ctrl], Key::Character("I".into()), Icon);
+    bind!([Ctrl, Shift], Key::Character("i".into()), Icon);
     bind!([Ctrl], Key::Character("w".into()), WindowClose);
     bind!([Ctrl, Shift], Key::Character("n".into()), WindowNew);
     bind!([Ctrl], Key::Character(",".into()), Settings);
     bind!([Ctrl], Key::Character("i".into()), About);
+    bind!([Ctrl], Key::Character("f".into()), ToggleSearchBar);
+    bind!(
+        [Ctrl],
+        Key::Character("h".into()),
+        ToggleHideCompletedShortcut
+    );
 
     key_binds
 }

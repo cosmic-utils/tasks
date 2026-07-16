@@ -123,6 +123,13 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
             items(
                 &state.key_binds,
                 vec![
+                    Item::CheckBox(
+                        fl!("hide-completed"),
+                        None,
+                        state.config.hide_completed,
+                        MenuAction::ToggleHideCompleted(!state.config.hide_completed),
+                    ),
+                    Item::Divider,
                     Item::Button(
                         fl!("menu-settings"),
                         Some(

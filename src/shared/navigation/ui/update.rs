@@ -141,6 +141,16 @@ impl AppModel {
                     self.config.clone(),
                 )));
             }
+            MenuAction::ToggleHideCompletedShortcut => {
+                let completed = !self.config.hide_completed;
+                if let Err(err) = self.config.set_hide_completed(&self.handler, completed) {
+                    tracing::error!("{err}")
+                }
+                return cosmic::task::message(Message::Content(content::Message::SetConfig(
+                    self.config.clone(),
+                )));
+            }
+            MenuAction::ToggleSearchBar => {}
             MenuAction::SortByNameAsc => {
                 if let Err(err) = self
                     .config
