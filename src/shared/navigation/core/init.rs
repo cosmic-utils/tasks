@@ -12,8 +12,8 @@ use cosmic::{
 
 use crate::{
     features::{
-        favorites::favorites::Favorites, lists::content::Content, tasks::details::Details,
-        trash::trash::Trash,
+        favorites::favorites::Favorites, lists::content::Content, search::search::Search,
+        tasks::details::Details, trash::trash::Trash,
     },
     fl,
     shared::navigation::{nav::TasksAction, ui::MenuAction},
@@ -47,11 +47,15 @@ impl AppModel {
             favorites_entity: widget::segmented_button::Entity::default(),
             sent_reminders: std::collections::HashSet::new(),
             toasts: widget::Toasts::new(Message::CloseToast),
+            search: Search::new(flags.store.clone()),
         };
 
         let mut tasks = vec![
             cosmic::task::message(Message::Tasks(TasksAction::FetchLists)),
             cosmic::task::message(Message::Trash(crate::features::trash::trash::Message::Load)),
+            cosmic::task::message(Message::Search(
+                crate::features::search::search::Message::Load,
+            )),
         ];
 
         if let Some(id) = app.core.main_window_id() {

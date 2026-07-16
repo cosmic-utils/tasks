@@ -77,6 +77,10 @@ impl Application for AppModel {
         vec![ui::menu::menu_bar(&self)]
     }
 
+    fn header_end(&self) -> Vec<Element<'_, Self::Message>> {
+        vec![self.search.header_view().map(Message::Search)]
+    }
+
     fn nav_context_menu(&self) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
         let items = self.nav.iter().map(|entity| {
             let favorites_index_opt = self.nav.data::<FavoritesMarker>(entity);
@@ -469,6 +473,50 @@ impl Application for AppModel {
                     }
                 }
             }
+            Message::Search(msg) => {
+                if let Some(output) = self.search.update(msg) {
+                    match output {
+                        crate::features::search::search::Output::OpenTask { task, list_id } => {
+                            let entity = self.nav.iter().find(|e| {
+                                self.nav.data::<List>(*e).is_some_and(|l| l.id == list_id)
+                            });
+                            let Some(entity) = entity else {
+                                tracing::error!("Nav entity not found for list {list_id}");
+                                return app::Task::none();
+                            };
+                            self.nav.activate(entity);
+
+                            let mut tasks = vec![
+                                cosmic::task::message(Message::Search(
+                                    crate::features::search::search::Message::QueryChanged(
+                                        String::new(),
+                                    ),
+                                )),
+                                cosmic::task::message(Message::ToggleContextPage(
+                                    ContextPage::TaskDetails,
+                                )),
+                            ];
+
+                            if let Some(list) = self.nav.data::<List>(entity) {
+                                tasks.push(self.update(Message::Content(
+                                    content::Message::SetList(Some(list.clone())),
+                                )));
+                            }
+
+                            let Some(key) = self.content.find_task_key(task.id) else {
+                                tracing::error!("Task key not found after loading list");
+                                return app::Task::none();
+                            };
+
+                            tasks.push(cosmic::task::message(Message::Details(
+                                details::Message::SetTask(key, task, list_id),
+                            )));
+
+                            return app::Task::batch(tasks);
+                        }
+                    }
+                }
+            }
             Message::Tasks(action) => {
                 return self.update_tasks(action);
             }
@@ -501,7 +549,9 @@ impl Application for AppModel {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let content = if self.nav.active_data::<TrashMarker>().is_some() {
+        let content = if self.search.has_query() {
+            self.search.view().map(Message::Search)
+        } else if self.nav.active_data::<TrashMarker>().is_some() {
             self.trash.view().map(Message::Trash)
         } else if self.nav.active_data::<FavoritesMarker>().is_some() {
             self.favorites.view().map(Message::Favorites)
