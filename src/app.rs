@@ -556,7 +556,9 @@ impl Application for AppModel {
         } else if self.nav.active_data::<FavoritesMarker>().is_some() {
             self.favorites.view().map(Message::Favorites)
         } else {
-            self.content.view().map(Message::Content)
+            self.content
+                .view(self.core.is_condensed())
+                .map(Message::Content)
         };
 
         widget::toaster(&self.toasts, content)
