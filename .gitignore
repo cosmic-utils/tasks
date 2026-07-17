@@ -17,6 +17,7 @@ target/
 /.vscode
 /.flatpak-builder
 /flatpak_build
+/build_dir
 **/.venv
 **/.DS_Store
 .claude/
