@@ -14,6 +14,7 @@
     "--socket=fallback-x11",
     "--device=dri",
     "--talk-name=com.system76.CosmicSettingsDaemon.*",
+    "--talk-name=com.system76.CosmicSettingsDaemon",
     "--filesystem=xdg-config/cosmic:rw"
   ],
   "build-options": {
