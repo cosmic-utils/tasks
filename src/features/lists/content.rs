@@ -89,9 +89,7 @@ pub struct Content {
     states: Vec<TaskState>,
     collapsed_sections: HashSet<Uuid>,
 
-    search_bar_visible: bool,
     add_task_input: String,
-    search_query: String,
     drag_hover: Option<DefaultKey>,
 }
 
@@ -120,8 +118,6 @@ pub enum Message {
     OpenTaskDeletionDialog(DefaultKey),
     RestoreTask(Uuid, Uuid, ToastId),
 
-    ToggleSearchBar,
-    SearchQueryChanged(String),
     SetSort(SortBy),
     DragStarted(DefaultKey),
     DragEntered(DefaultKey),
@@ -163,14 +159,14 @@ impl MenuAction for TaskAction {
 }
 
 impl Content {
-    pub fn view(&self, is_condensed: bool) -> Element<'_, Message> {
+    pub fn view(&self, search_query: &str) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let Some(ref list) = self.selected_list else {
             return self.create_no_list_selected_view();
         };
 
-        let mut column = widget::column(vec![self.list_view(list, is_condensed)]);
+        let mut column = widget::column(vec![self.list_view(list, search_query)]);
 
         column = column.push(self.new_task_view());
 
@@ -188,17 +184,6 @@ impl Content {
     pub fn update(&mut self, message: Message) -> Option<Output> {
         let mut output = None;
         match message {
-            Message::ToggleSearchBar => {
-                self.search_bar_visible = !self.search_bar_visible;
-                if self.search_bar_visible {
-                    output = Some(Output::Focus(widget::Id::new("search-tasks-input")));
-                } else {
-                    self.search_query.clear();
-                }
-            }
-            Message::SearchQueryChanged(query) => {
-                self.search_query = query;
-            }
             Message::Empty => (),
             Message::SetTasks(tasks) => {
                 self.tasks.clear();
@@ -537,8 +522,6 @@ impl Content {
             store: storage,
             states,
             collapsed_sections: HashSet::new(),
-            search_bar_visible: false,
-            search_query: String::new(),
             drag_hover: None,
         }
     }
@@ -610,24 +593,20 @@ impl Content {
         }
     }
 
-    pub fn list_view<'a>(&'a self, list: &'a List, is_condensed: bool) -> Element<'a, Message> {
+    pub fn list_view<'a>(&'a self, list: &'a List, search_query: &str) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
-        let mut column = widget::column::with_capacity(3);
-        column = column.push(self.list_header(list, is_condensed));
-
-        if is_condensed && self.search_bar_visible {
-            column = column.push(self.create_search_input(&spacing, is_condensed));
-        }
+        let mut column = widget::column::with_capacity(2);
+        column = column.push(self.list_header(list));
 
         let sorted_tasks = self.sort_tasks();
         let visible_tasks: Vec<_> = sorted_tasks
             .into_iter()
-            .filter(|(_, task)| self.should_show_task(task))
+            .filter(|(_, task)| self.should_show_task(task, search_query))
             .collect();
 
-        if visible_tasks.is_empty() && self.search_query.is_empty() {
-            return self.empty(list, is_condensed);
+        if visible_tasks.is_empty() && search_query.is_empty() {
+            return self.empty(list);
         }
 
         let sections = self.section_views(visible_tasks);
@@ -641,71 +620,18 @@ impl Content {
         .into()
     }
 
-    fn list_header<'a>(&'a self, list: &'a List, is_condensed: bool) -> Element<'a, Message> {
+    fn list_header<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let list_icon = self.create_list_icon(list, &spacing);
-        let search_button = self.create_search_button(&spacing);
+        let title = widget::text::title4(&list.name).width(Length::Fill);
 
-        let inline_search = self.search_bar_visible && !is_condensed;
-
-        let title_width = if inline_search {
-            Length::Shrink
-        } else {
-            Length::Fill
-        };
-        let title = widget::text::title4(&list.name).width(title_width);
-
-        let mut row = widget::row::with_capacity(4)
+        widget::row::with_capacity(2)
             .align_y(Alignment::Center)
             .spacing(spacing.space_s)
             .padding([spacing.space_none, spacing.space_xxs])
             .push(list_icon)
-            .push(title);
-
-        if inline_search {
-            row = row.push(widget::space::horizontal());
-            row = row.push(self.create_search_input(&spacing, is_condensed));
-        }
-
-        row.push(search_button).into()
-    }
-
-    fn create_search_input<'a>(
-        &'a self,
-        _spacing: &Spacing,
-        is_condensed: bool,
-    ) -> Element<'a, Message> {
-        let placeholder = match &self.selected_list {
-            Some(list) => fl!("search-list", list = list.name.as_str()),
-            None => fl!("search-tasks"),
-        };
-
-        let width = if is_condensed {
-            Length::Fill
-        } else {
-            Length::Fixed(240.0)
-        };
-
-        widget::search_input(placeholder, &self.search_query)
-            .id(widget::Id::new("search-tasks-input"))
-            .on_input(Message::SearchQueryChanged)
-            .on_clear(Message::SearchQueryChanged(String::new()))
-            .width(width)
-            .into()
-    }
-
-    fn create_search_button<'a>(&'a self, spacing: &Spacing) -> Element<'a, Message> {
-        let icon_name = if self.search_bar_visible {
-            "window-close-symbolic"
-        } else {
-            "edit-find-symbolic"
-        };
-
-        widget::button::icon(widget::icon::from_name(icon_name).size(18))
-            .selected(self.search_bar_visible)
-            .padding(spacing.space_xxs)
-            .on_press(Message::ToggleSearchBar)
+            .push(title)
             .into()
     }
 
@@ -786,15 +712,14 @@ impl Content {
         collapsible_section::section(header, rows, collapsed)
     }
 
-    fn should_show_task(&self, task: &Task) -> bool {
+    fn should_show_task(&self, task: &Task, search_query: &str) -> bool {
         let is_top_level = task.parent_id.is_none();
 
-        let matches_search = !self.search_bar_visible
-            || self.search_query.is_empty()
+        let matches_search = search_query.is_empty()
             || task
                 .title
                 .to_lowercase()
-                .contains(&self.search_query.to_lowercase());
+                .contains(&search_query.to_lowercase());
 
         let show_despite_completion = !self.config.hide_completed || !task.is_completed();
 
@@ -1031,13 +956,13 @@ impl Content {
         widget::column::with_children(subtask_elements).into()
     }
 
-    pub fn empty<'a>(&'a self, list: &'a List, is_condensed: bool) -> Element<'a, Message> {
+    pub fn empty<'a>(&'a self, list: &'a List) -> Element<'a, Message> {
         let spacing = theme::active().cosmic().spacing;
 
         let empty_state = self.create_empty_state_content();
 
         widget::column::with_capacity(2)
-            .push(self.list_header(list, is_condensed))
+            .push(self.list_header(list))
             .push(empty_state)
             .padding([spacing.space_none, spacing.space_l])
             .spacing(spacing.space_s)

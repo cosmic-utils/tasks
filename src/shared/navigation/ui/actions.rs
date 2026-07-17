@@ -4,7 +4,6 @@ use cosmic::{
 };
 
 use crate::app::{ContextPage, Message};
-use crate::features::lists::content;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MenuAction {
@@ -42,7 +41,6 @@ impl Action for MenuAction {
         match self {
             MenuAction::About => Message::ToggleContextPage(ContextPage::About),
             MenuAction::Settings => Message::ToggleContextPage(ContextPage::Settings),
-            MenuAction::ToggleSearchBar => Message::Content(content::Message::ToggleSearchBar),
             action => Message::Menu(*action),
         }
     }
