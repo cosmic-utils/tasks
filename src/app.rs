@@ -552,16 +552,14 @@ impl Application for AppModel {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let content = if self.search.has_query() {
+        let content = if self.search.has_query() && self.search.is_global() {
             self.search.view().map(Message::Search)
         } else if self.nav.active_data::<TrashMarker>().is_some() {
             self.trash.view().map(Message::Trash)
         } else if self.nav.active_data::<FavoritesMarker>().is_some() {
             self.favorites.view().map(Message::Favorites)
         } else {
-            self.content
-                .view(self.core.is_condensed())
-                .map(Message::Content)
+            self.content.view(self.search.query()).map(Message::Content)
         };
 
         widget::toaster(&self.toasts, content)

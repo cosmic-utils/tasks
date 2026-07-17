@@ -150,7 +150,11 @@ impl AppModel {
                     self.config.clone(),
                 )));
             }
-            MenuAction::ToggleSearchBar => {}
+            MenuAction::ToggleSearchBar => {
+                return cosmic::widget::text_input::focus(cosmic::widget::Id::new(
+                    "global-search-input",
+                ));
+            }
             MenuAction::SortByNameAsc => {
                 if let Err(err) = self
                     .config

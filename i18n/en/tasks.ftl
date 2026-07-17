@@ -21,13 +21,14 @@ about = About
 # Content
 add-new-task = Add new task
 search-tasks = Search tasks
-search-list = Search { $list }
 
 # Search
 search-all-tasks = Search all tasks
 search-results = Search results ({ $count })
 no-search-results = No results
 no-search-results-suggestion = Try a different search term
+search-scope-current-list = Search current list
+search-scope-global = Search all lists
 
 # Details
 title = Title

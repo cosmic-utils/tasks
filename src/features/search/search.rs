@@ -23,8 +23,16 @@ pub struct SearchEntry {
     pub list_name: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SearchScope {
+    #[default]
+    CurrentList,
+    Global,
+}
+
 pub struct Search {
     query: String,
+    scope: SearchScope,
     entries: Vec<SearchEntry>,
     collapsed_sections: HashSet<Uuid>,
     store: Store,
@@ -33,6 +41,7 @@ pub struct Search {
 #[derive(Debug, Clone)]
 pub enum Message {
     QueryChanged(String),
+    ToggleScope,
     Load,
     Loaded(Vec<SearchEntry>),
     Open(Uuid),
@@ -47,6 +56,7 @@ impl Search {
     pub fn new(store: Store) -> Self {
         Self {
             query: String::new(),
+            scope: SearchScope::default(),
             entries: Vec::new(),
             collapsed_sections: HashSet::new(),
             store,
@@ -57,10 +67,24 @@ impl Search {
         !self.query.trim().is_empty()
     }
 
+    pub fn query(&self) -> &str {
+        &self.query
+    }
+
+    pub fn is_global(&self) -> bool {
+        self.scope == SearchScope::Global
+    }
+
     pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
             Message::QueryChanged(query) => {
                 self.query = query;
+            }
+            Message::ToggleScope => {
+                self.scope = match self.scope {
+                    SearchScope::CurrentList => SearchScope::Global,
+                    SearchScope::Global => SearchScope::CurrentList,
+                };
             }
             Message::Load => {
                 let lists: Vec<List> = self.store.lists().load_all().unwrap_or_else(|e| {
@@ -106,11 +130,45 @@ impl Search {
     }
 
     pub fn header_view(&self) -> Element<'_, Message> {
-        widget::search_input(fl!("search-all-tasks"), &self.query)
+        let spacing = theme::active().cosmic().spacing;
+
+        let placeholder = if self.is_global() {
+            fl!("search-all-tasks")
+        } else {
+            fl!("search-tasks")
+        };
+
+        let input = widget::search_input(placeholder, &self.query)
             .id(widget::Id::new("global-search-input"))
             .on_input(Message::QueryChanged)
             .on_clear(Message::QueryChanged(String::new()))
-            .width(Length::Fixed(240.0))
+            .width(Length::Fixed(240.0));
+
+        let scope_icon = if self.is_global() {
+            "globe-symbolic"
+        } else {
+            "view-list-symbolic"
+        };
+        let scope_tooltip = if self.is_global() {
+            fl!("search-scope-global")
+        } else {
+            fl!("search-scope-current-list")
+        };
+
+        let scope_button = widget::tooltip(
+            widget::button::icon(widget::icon::from_name(scope_icon).size(16))
+                .selected(self.is_global())
+                .padding(spacing.space_xxs)
+                .on_press(Message::ToggleScope),
+            widget::text::body(scope_tooltip),
+            widget::tooltip::Position::Bottom,
+        );
+
+        widget::row::with_capacity(2)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_xxs)
+            .push(input)
+            .push(scope_button)
             .into()
     }
 
