@@ -51,6 +51,24 @@
   <icon type="remote" height="256" width="256">https://raw.githubusercontent.com/edfloreshz/tasks/master/res/icons/hicolor/scalable/apps/dev.edfloreshz.Tasks.svg</icon>
   <launchable type="desktop-id">dev.edfloreshz.Tasks.desktop</launchable>
   <releases>
+    <release version="0.3.1" date="2026-07-16">
+        <description>
+            <p>Cross-window sync, global search, and a Flatpak theme fix</p>
+            <ul>
+                <li>Lists and tasks created or edited in one window now sync automatically to every other open window</li>
+                <li>Add a global search box, always visible in the header, that searches every list's tasks at once and groups results by list</li>
+                <li>Search field placeholder is now context-aware ("Search &lt;list&gt;") instead of the generic "Search tasks"</li>
+                <li>Search bar moves below the title instead of overlapping it when the window is condensed</li>
+                <li>"Hide completed" is now a single toggle in the View menu instead of a per-list checkbox</li>
+                <li>Add Ctrl+F (toggle search) and Ctrl+H (toggle hide-completed) shortcuts</li>
+                <li>Fixed Ctrl+I: "Set icon" and "About" silently collided on the same shortcut, so "Set icon" never fired; rebound to Ctrl+Shift+I</li>
+                <li>Delete button in the task edit pane is text-only, no redundant icon</li>
+                <li>Notes editor border and background now match the rest of the app's text fields</li>
+                <li>Toasts now close when dismissed instead of lingering</li>
+                <li>Fixed a long-standing bug where the Flatpak build never picked up system dark/light theme changes; switches are now detected instantly, matching native builds</li>
+            </ul>
+        </description>
+    </release>
     <release version="0.3.0" date="2026-07-15">
         <description>
             <p>Undo deletions and grouped views</p>
