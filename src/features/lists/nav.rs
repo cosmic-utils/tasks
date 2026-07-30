@@ -3,12 +3,21 @@ use cosmic::widget::{
     segmented_button::{EntityMut, SingleSelect},
 };
 
-use crate::{app::AppModel, features::lists::list::List, shared::widgets::Markdown};
+use crate::{
+    app::AppModel, features::lists::list::List, shared::store::source::TaskSource,
+    shared::widgets::Markdown,
+};
 
 impl AppModel {
     pub fn create_nav_item(&mut self, list: &List) -> EntityMut<'_, SingleSelect> {
-        let icon =
-            widget::icon::from_name(list.icon.as_deref().unwrap_or("view-list-symbolic")).size(16);
+        let default_icon = match list.source {
+            TaskSource::Local => "view-list-symbolic",
+            // No official Google/Microsoft brand icon is bundled; a
+            // generic "cloud" glyph distinguishes remote-mirrored lists
+            // from local ones until a themed icon is added.
+            TaskSource::Google { .. } | TaskSource::Microsoft { .. } => "weather-clouds-symbolic",
+        };
+        let icon = widget::icon::from_name(list.icon.as_deref().unwrap_or(default_icon)).size(16);
         self.nav
             .insert()
             .text(list.name.clone())

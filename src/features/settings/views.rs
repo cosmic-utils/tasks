@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn settings(app: &AppModel) -> Element<'_, Message> {
-    widget::scrollable(
+    widget::scrollable(widget::column::with_children(vec![
         widget::settings::section()
             .title(fl!("appearance"))
             .add(widget::settings::item::item(
@@ -45,7 +45,9 @@ pub fn settings(app: &AppModel) -> Element<'_, Message> {
                 fl!("hide-completed"),
                 widget::toggler(app.config.hide_completed)
                     .on_toggle(|val| Message::Menu(MenuAction::ToggleHideCompleted(val))),
-            )),
-    )
+            ))
+            .into(),
+        crate::features::accounts::views::settings_entry(app),
+    ]))
     .into()
 }

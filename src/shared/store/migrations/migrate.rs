@@ -85,6 +85,7 @@ impl Migrator {
             icon: old_list.icon,
             hide_completed: old_list.hide_completed,
             created_at: jiff::Timestamp::now(),
+            source: Default::default(),
         };
 
         self.store.lists().save(&new_list)?;
@@ -191,6 +192,10 @@ impl Migrator {
             reminder_date: old_task.reminder_date,
             creation_date: old_task.created_date_time,
             sort_order: 0,
+            source: Default::default(),
+            remote_updated_at: None,
+            last_synced_at: None,
+            dirty: false,
         };
 
         self.store.tasks(list_id).save(&new_task)?;
@@ -235,6 +240,10 @@ impl Migrator {
             reminder_date: old_task.reminder_date,
             creation_date: old_task.created_date_time,
             sort_order: 0,
+            source: Default::default(),
+            remote_updated_at: None,
+            last_synced_at: None,
+            dirty: false,
         };
 
         self.store.tasks(list_id).save(&new_task)?;

@@ -2,6 +2,8 @@ use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::shared::store::source::TaskSource;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct List {
     pub id: Uuid,
@@ -11,6 +13,9 @@ pub struct List {
     pub hide_completed: bool,
     #[serde(default = "Timestamp::now")]
     pub created_at: Timestamp,
+    /// Local (default) or mirrored from a remote Google/Microsoft account.
+    #[serde(default)]
+    pub source: TaskSource,
 }
 
 impl Default for List {
@@ -22,6 +27,7 @@ impl Default for List {
             icon: None,
             hide_completed: false,
             created_at: Timestamp::now(),
+            source: TaskSource::Local,
         }
     }
 }
@@ -35,6 +41,7 @@ impl List {
             icon: None,
             hide_completed: false,
             created_at: Timestamp::now(),
+            source: TaskSource::Local,
         }
     }
 }

@@ -12,8 +12,8 @@ use cosmic::{
 
 use crate::{
     features::{
-        favorites::favorites::Favorites, lists::content::Content, search::search::Search,
-        tasks::details::Details, trash::trash::Trash,
+        accounts::AccountsAction, favorites::favorites::Favorites, lists::content::Content,
+        search::search::Search, tasks::details::Details, trash::trash::Trash,
     },
     fl,
     shared::navigation::{nav::TasksAction, ui::MenuAction},
@@ -48,6 +48,15 @@ impl AppModel {
             sent_reminders: std::collections::HashSet::new(),
             toasts: widget::Toasts::new(Message::CloseToast),
             search: Search::new(flags.store.clone()),
+            accounts: None,
+            accounts_daemon_checked: false,
+            accounts_loaded_once: false,
+            remote_accounts: Vec::new(),
+            sync_status: None,
+            providers: Vec::new(),
+            provider_icons: std::collections::HashMap::new(),
+            provider_icon_fetch_attempted: std::collections::HashSet::new(),
+            account_header_entities: std::collections::HashMap::new(),
         };
 
         let mut tasks = vec![
@@ -56,6 +65,15 @@ impl AppModel {
             cosmic::task::message(Message::Search(
                 crate::features::search::search::Message::Load,
             )),
+            cosmic::task::future(async move {
+                match accounts::AccountsClient::new().await {
+                    Ok(client) => Message::Accounts(AccountsAction::DaemonConnected(client)),
+                    Err(err) => {
+                        tracing::info!("accounts-daemon unavailable, running local-only: {err}");
+                        Message::Accounts(AccountsAction::DaemonUnavailable)
+                    }
+                }
+            }),
         ];
 
         if let Some(id) = app.core.main_window_id() {

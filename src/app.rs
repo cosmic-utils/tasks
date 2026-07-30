@@ -11,6 +11,7 @@ use cosmic::{
 use crate::{
     config::AppConfig,
     features::{
+        accounts,
         favorites::{self, FavoritesMarker},
         lists::{content, List},
         reminders::reminder,
@@ -61,6 +62,11 @@ impl Application for AppModel {
             .title(self.context_page.title()),
             ContextPage::TaskDetails => app::context_drawer::context_drawer(
                 self.details.view().map(Message::Details),
+                Message::ToggleContextDrawer,
+            )
+            .title(self.context_page.title()),
+            ContextPage::Accounts => app::context_drawer::context_drawer(
+                accounts::views::page(self),
                 Message::ToggleContextDrawer,
             )
             .title(self.context_page.title()),
@@ -166,6 +172,15 @@ impl Application for AppModel {
     }
 
     fn on_nav_select(&mut self, entity: Entity) -> app::Task<Self::Message> {
+        // Account-group headers are labels, not navigable destinations.
+        if self
+            .nav
+            .data::<accounts::AccountHeaderMarker>(entity)
+            .is_some()
+        {
+            return app::Task::none();
+        }
+
         let mut tasks = vec![];
         self.nav.activate(entity);
 
@@ -235,6 +250,18 @@ impl Application for AppModel {
         subscriptions.push(crate::shared::store::watcher::subscription(
             self.store.base_dir().to_path_buf(),
         ));
+
+        if self.accounts.is_some() {
+            subscriptions.push(accounts::subscription::subscription());
+
+            if !self.remote_accounts.is_empty() {
+                subscriptions.push(
+                    cosmic::iced::time::every(std::time::Duration::from_secs(300)).map(|_| {
+                        Message::Accounts(crate::features::accounts::AccountsAction::SyncNow)
+                    }),
+                );
+            }
+        }
 
         Subscription::batch(subscriptions)
     }
@@ -545,6 +572,9 @@ impl Application for AppModel {
             }
             Message::ToggleContextDrawer => {
                 self.core.window.show_context = !self.core.window.show_context;
+            }
+            Message::Accounts(action) => {
+                return self.update_accounts(action);
             }
         }
 
