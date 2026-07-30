@@ -20,20 +20,6 @@ pub fn account_label(accounts: &[Account], id: Uuid) -> String {
         .unwrap_or_else(|| crate::fl!("account"))
 }
 
-// Bundled fallbacks (copied from the `accounts` project's own assets), used
-// until a provider's manifest-declared icon URL finishes downloading, or for
-// any provider that doesn't declare one at all.
-const GOOGLE_LOGO: &[u8] = include_bytes!("../../../res/img/google.png");
-const MICROSOFT_LOGO: &[u8] = include_bytes!("../../../res/img/microsoft.png");
-
-fn bundled_fallback_icon(provider_id: &str) -> widget::Icon {
-    match provider_id {
-        "google" => widget::icon::icon(widget::icon::from_raster_bytes(GOOGLE_LOGO)),
-        "microsoft" => widget::icon::icon(widget::icon::from_raster_bytes(MICROSOFT_LOGO)),
-        _ => widget::icon::from_name("weather-clouds-symbolic").icon(),
-    }
-}
-
 /// The three shapes a provider manifest's `icon` string can take. Mirrors
 /// `accounts-ui`'s own classification (`accounts-ui/src/app.rs`): pending
 /// upstream is a shared `IconSource`/`DbusProviderInfo::icon_source()` helper
@@ -62,16 +48,19 @@ fn classify_icon(icon: &str) -> IconSource<'_> {
 /// icon (a URL, an absolute path, or a freedesktop icon-theme name) via
 /// `DbusProviderInfo::icon` to any D-Bus consumer — that's the source of
 /// truth, not a Tasks-specific choice:
-/// - `Url`: use the downloaded bytes from `icon_cache` once the async fetch
-///   (kicked off in `update_accounts` on `ProvidersLoaded`) completes.
-/// - `Path`: load directly from disk.
-/// - `ThemeName`: resolve through the platform icon theme.
+/// - `Url`: reuse the `Handle` already decoded once in `icon_cache` by the
+///   async fetch (kicked off in `update_accounts` on `ProvidersLoaded`).
+///   Must not re-decode the bytes here on every call — see the
+///   `AppModel::provider_icons` field doc for why that caused flicker.
+/// - `Path`: load directly from disk (stable, path-hashed `Handle::Id`, no
+///   caching needed).
+/// - `ThemeName`: resolve through the platform icon theme (same as above).
 ///
-/// Falls back to a bundled logo (or a generic symbolic icon) if the
-/// provider is unknown, declares no icon, or its URL hasn't resolved yet.
+/// Falls back to a generic symbolic icon if the provider is unknown,
+/// declares no icon, or its URL hasn't resolved yet.
 pub fn provider_icon(
     providers: &[DbusProviderInfo],
-    icon_cache: &HashMap<String, Vec<u8>>,
+    icon_cache: &HashMap<String, widget::icon::Handle>,
     provider_id: &str,
 ) -> widget::Icon {
     let icon = providers
@@ -82,14 +71,12 @@ pub fn provider_icon(
     if let Some(icon) = icon {
         match classify_icon(icon) {
             IconSource::Url => {
-                if let Some(bytes) = icon_cache.get(provider_id) {
-                    return widget::icon::icon(widget::icon::from_raster_bytes(bytes.clone()));
+                if let Some(handle) = icon_cache.get(provider_id) {
+                    return widget::icon::icon(handle.clone());
                 }
             }
             IconSource::Path(path) => {
-                return widget::icon::icon(widget::icon::from_path(
-                    std::path::PathBuf::from(path),
-                ));
+                return widget::icon::icon(widget::icon::from_path(std::path::PathBuf::from(path)));
             }
             IconSource::ThemeName(name) => {
                 return widget::icon::from_name(name.to_string()).icon();
@@ -97,5 +84,5 @@ pub fn provider_icon(
         }
     }
 
-    bundled_fallback_icon(provider_id)
+    widget::icon::from_name("weather-clouds-symbolic").icon()
 }

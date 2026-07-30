@@ -56,6 +56,7 @@ impl AppModel {
             providers: Vec::new(),
             provider_icons: std::collections::HashMap::new(),
             provider_icon_fetch_attempted: std::collections::HashSet::new(),
+            account_header_entities: std::collections::HashMap::new(),
         };
 
         let mut tasks = vec![

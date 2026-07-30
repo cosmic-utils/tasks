@@ -23,18 +23,6 @@ impl AppModel {
         }
         let first_list_pos = pos;
 
-        // Account-group headers are rebuilt fresh every call rather than
-        // incrementally maintained, since the set/order of accounts and
-        // lists can both change between calls.
-        let old_headers: Vec<Entity> = self
-            .nav
-            .iter()
-            .filter(|e| self.nav.data::<AccountHeaderMarker>(*e).is_some())
-            .collect();
-        for entity in old_headers {
-            self.nav.remove(entity);
-        }
-
         let list_entities: Vec<Entity> = self
             .nav
             .iter()
@@ -67,6 +55,28 @@ impl AppModel {
             (Some(_), Some(_)) => a.1.cmp(&b.1),
         });
 
+        // Drop headers for accounts that no longer have a group (account
+        // removed/disabled, or its lists all gone) — everything else is
+        // updated in place below rather than torn down and recreated, since
+        // that previously caused a visible flicker (a fresh nav bar Entity
+        // means a fresh widget, forcing the header image to remount) and
+        // wasted work on every nav rebuild, which happens often.
+        let current_account_ids: std::collections::HashSet<Uuid> = ordered
+            .iter()
+            .filter_map(|(account_id, _, _)| *account_id)
+            .collect();
+        let stale_headers: Vec<Uuid> = self
+            .account_header_entities
+            .keys()
+            .filter(|id| !current_account_ids.contains(id))
+            .copied()
+            .collect();
+        for account_id in stale_headers {
+            if let Some(entity) = self.account_header_entities.remove(&account_id) {
+                self.nav.remove(entity);
+            }
+        }
+
         let mut pos = first_list_pos;
         for (account_id, label, mut entities) in ordered {
             self.sort_list_entities(&mut entities);
@@ -78,20 +88,35 @@ impl AppModel {
                     .find(|a| a.id == account_id)
                     .map(|a| a.provider.as_str())
                     .unwrap_or_default();
+
+                let header = match self.account_header_entities.get(&account_id) {
+                    Some(&entity) => {
+                        self.nav.text_set(entity, label.clone());
+                        entity
+                    }
+                    None => {
+                        let entity = self
+                            .nav
+                            .insert()
+                            .text(label.clone())
+                            .data(AccountHeaderMarker)
+                            .id();
+                        self.nav.enable(entity, false);
+                        self.account_header_entities.insert(account_id, entity);
+                        entity
+                    }
+                };
+                // Always refreshed (cheap in-place update, no entity churn):
+                // this is what picks up a provider icon once its async
+                // fetch completes, upgrading it from the bundled fallback.
                 let icon = crate::features::accounts::provider_icon(
                     &self.providers,
                     &self.provider_icons,
                     provider,
                 )
                 .size(16);
-                let header = self
-                    .nav
-                    .insert()
-                    .text(label)
-                    .icon(icon)
-                    .data(AccountHeaderMarker)
-                    .id();
-                self.nav.enable(header, false);
+                self.nav.icon_set(header, icon);
+
                 self.nav.position_set(header, pos);
                 pos += 1;
             }

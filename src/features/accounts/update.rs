@@ -133,9 +133,13 @@ impl AppModel {
             }
             AccountsAction::ProviderIconFetched(provider_id, bytes) => {
                 if let Some(bytes) = bytes {
-                    self.provider_icons.insert(provider_id, bytes);
+                    // Built exactly once per fetch, so its `Handle::Id`
+                    // stays stable across every future render (see the
+                    // `provider_icons` field doc for why that matters).
+                    let handle = cosmic::widget::icon::from_raster_bytes(bytes);
+                    self.provider_icons.insert(provider_id, handle);
                     // Re-render nav headers now that this provider's real
-                    // icon is available instead of the bundled fallback.
+                    // icon is available instead of the generic fallback.
                     self.reposition_special_items();
                 }
             }
