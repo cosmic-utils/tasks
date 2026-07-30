@@ -454,7 +454,38 @@ impl TaskStore<'_> {
         Ok(tasks)
     }
 
+    /// Saves a task, marking it dirty if it's mirrored from a remote account
+    /// so the sync engine knows to push this edit. Use `save_synced` from
+    /// sync code, which needs to control the `dirty`/timestamp fields itself.
     pub fn save(&self, task: &Task) -> Result<()> {
+        let mut task = task.clone();
+        if !task.source.is_local() {
+            task.dirty = true;
+        }
+        self.write(&task)
+    }
+
+    pub fn update<F>(&self, task_id: Uuid, f: F) -> Result<Task>
+    where
+        F: FnOnce(&mut Task),
+    {
+        let mut task = self.get(task_id)?;
+        f(&mut task);
+        if !task.source.is_local() {
+            task.dirty = true;
+        }
+        self.write(&task)?;
+        Ok(task)
+    }
+
+    /// Writes a task as-is, without forcing `dirty = true`. Used by the sync
+    /// engine, which manages `dirty`/`remote_updated_at`/`last_synced_at`
+    /// itself when pulling from or confirming a push to a remote provider.
+    pub fn save_synced(&self, task: &Task) -> Result<()> {
+        self.write(task)
+    }
+
+    fn write(&self, task: &Task) -> Result<()> {
         let list_dir = self.store.list_dir(self.list_id);
         if !list_dir.exists() {
             return Err(Error::Store(StoreError::ListNotFound(self.list_id)));
@@ -464,16 +495,6 @@ impl TaskStore<'_> {
         let content = ron::ser::to_string_pretty(task, pretty())?;
         fs::write(path, content)?;
         Ok(())
-    }
-
-    pub fn update<F>(&self, task_id: Uuid, f: F) -> Result<Task>
-    where
-        F: FnOnce(&mut Task),
-    {
-        let mut task = self.get(task_id)?;
-        f(&mut task);
-        self.save(&task)?;
-        Ok(task)
     }
 
     pub fn delete(&self, task_id: Uuid) -> Result<()> {

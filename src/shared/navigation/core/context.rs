@@ -5,6 +5,7 @@ pub enum ContextPage {
     About,
     TaskDetails,
     Settings,
+    Accounts,
 }
 
 impl ContextPage {
@@ -13,6 +14,7 @@ impl ContextPage {
             Self::About => fl!("about"),
             Self::Settings => fl!("settings"),
             Self::TaskDetails => fl!("details"),
+            Self::Accounts => fl!("accounts"),
         }
     }
 }

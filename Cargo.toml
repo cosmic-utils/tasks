@@ -25,9 +25,20 @@ jiff = { version = "0.2.32", features = ["serde"] }
 notify-rust = "4.18.0"
 notify = "8.2.0"
 tokio = { version = "1", features = ["time"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+serde_json = "1"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
 
 [dependencies.rust-extensions]
 git = "https://github.com/edfloreshz/rust-extensions.git"
+
+[dependencies.accounts]
+git = "https://github.com/cosmic-utils/accounts"
+branch = "main"
 
 # See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
 [dependencies.libcosmic]

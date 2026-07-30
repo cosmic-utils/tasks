@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use cosmic::{
     cosmic_config::{self, cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry},
     theme,
@@ -17,6 +19,13 @@ pub struct AppConfig {
     pub sort_by: SortBy,
     pub last_list_id: Option<Uuid>,
     pub list_sort_by: ListSortBy,
+    /// Accounts the user has turned off *within Tasks only* (e.g. via the
+    /// Accounts page toggle). This is local app state, separate from
+    /// whether the account's Todo capability is enabled in the system
+    /// Accounts app — that's read-only from here. An account absent from
+    /// this set is synced by default as long as its Todo capability is on.
+    #[serde(default)]
+    pub disabled_accounts: BTreeSet<Uuid>,
 }
 
 impl Default for AppConfig {
@@ -29,6 +38,7 @@ impl Default for AppConfig {
             sort_by: SortBy::default(),
             last_list_id: None,
             list_sort_by: ListSortBy::default(),
+            disabled_accounts: BTreeSet::new(),
         }
     }
 }

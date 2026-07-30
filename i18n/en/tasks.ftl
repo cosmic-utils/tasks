@@ -156,3 +156,19 @@ sort-name-desc = Name Z-A
 sort-date-asc = Date added (Old to New)
 sort-date-desc = Date added (New to Old)
 sort-manual = Manual
+
+## Accounts
+accounts = Accounts
+account = Account
+accounts-daemon-unavailable = Account sync is unavailable. Install and run the accounts service to connect Google or Microsoft.
+no-accounts-connected = No accounts connected
+manage-accounts = Manage accounts
+manage-accounts-description = Connect or disconnect Google and Microsoft accounts in the Accounts app.
+accounts-app-launch-failed = Could not open the Accounts app. Is it installed?
+sync = Sync
+syncing = Syncing...
+last-synced = Synced
+sync-error = Sync error
+sync-conflict-resolved = Kept the newer version of "{$title}"
+reconnect-account = Reconnect your account to keep syncing
+open = Open
