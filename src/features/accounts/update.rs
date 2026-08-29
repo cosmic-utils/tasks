@@ -94,11 +94,7 @@ impl AppModel {
 
                 let mut fetches: Vec<app::Task<Message>> = Vec::new();
                 for provider in &self.providers {
-                    let Some(url) = provider
-                        .icon
-                        .as_deref()
-                        .filter(|icon| icon.starts_with("http://") || icon.starts_with("https://"))
-                        .map(str::to_string)
+                    let Some(accounts::models::IconSource::Url(url)) = provider.icon_source()
                     else {
                         continue;
                     };
@@ -121,10 +117,7 @@ impl AppModel {
                         if bytes.is_none() {
                             tracing::error!("Failed to fetch provider icon from {url}");
                         }
-                        Message::Accounts(AccountsAction::ProviderIconFetched(
-                            provider_id,
-                            bytes,
-                        ))
+                        Message::Accounts(AccountsAction::ProviderIconFetched(provider_id, bytes))
                     }));
                 }
                 if !fetches.is_empty() {
@@ -133,13 +126,10 @@ impl AppModel {
             }
             AccountsAction::ProviderIconFetched(provider_id, bytes) => {
                 if let Some(bytes) = bytes {
-                    // Built exactly once per fetch, so its `Handle::Id`
-                    // stays stable across every future render (see the
-                    // `provider_icons` field doc for why that matters).
+                    // Build the `Handle` once per fetch so its `Id` stays stable.
                     let handle = cosmic::widget::icon::from_raster_bytes(bytes);
                     self.provider_icons.insert(provider_id, handle);
-                    // Re-render nav headers now that this provider's real
-                    // icon is available instead of the generic fallback.
+                    // Re-render nav headers now that the real icon is available.
                     self.reposition_special_items();
                 }
             }
@@ -211,7 +201,7 @@ impl AppModel {
 fn todo_active_ids(accounts: &[accounts::models::Account]) -> BTreeSet<uuid::Uuid> {
     accounts
         .iter()
-        .filter(|a| a.enabled && a.services.get(&Service::Todo).copied().unwrap_or(false))
+        .filter(|a| a.enabled && a.services.get(&Service::Tasks).copied().unwrap_or(false))
         .map(|a| a.id)
         .collect()
 }

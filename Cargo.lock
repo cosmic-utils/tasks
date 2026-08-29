@@ -102,9 +102,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "accounts"
+name = "accounts_core"
 version = "0.1.0"
-source = "git+https://github.com/cosmic-utils/accounts?branch=main#04f991b70c8a24f6a4337a082240f00cbcfc6d9b"
+source = "git+https://github.com/cosmic-utils/accounts?branch=main#d95fc5cecf686490156f1d12f56468fb51779110"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2330,7 +2330,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -4409,7 +4409,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.1",
  "rustls 0.23.43",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -4447,7 +4447,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "tracing",
  "windows-sys 0.61.2",
 ]
@@ -5535,7 +5535,7 @@ dependencies = [
 name = "tasks"
 version = "0.3.1"
 dependencies = [
- "accounts",
+ "accounts_core",
  "async-trait",
  "chrono",
  "cli-clipboard",

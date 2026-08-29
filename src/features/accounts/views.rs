@@ -40,7 +40,7 @@ fn todo_accounts(app: &AppModel) -> Vec<&accounts::models::Account> {
         .iter()
         .filter(|a| {
             a.services
-                .get(&accounts::models::Service::Todo)
+                .get(&accounts::models::Service::Tasks)
                 .copied()
                 .unwrap_or(false)
         })

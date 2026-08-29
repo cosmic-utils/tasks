@@ -7,9 +7,8 @@ use crate::{
 };
 
 pub fn settings(app: &AppModel) -> Element<'_, Message> {
-    widget::scrollable(
-        widget::column::with_children(vec![
-            widget::settings::section()
+    widget::scrollable(widget::column::with_children(vec![
+        widget::settings::section()
             .title(fl!("appearance"))
             .add(widget::settings::item::item(
                 fl!("theme"),
@@ -48,8 +47,7 @@ pub fn settings(app: &AppModel) -> Element<'_, Message> {
                     .on_toggle(|val| Message::Menu(MenuAction::ToggleHideCompleted(val))),
             ))
             .into(),
-            crate::features::accounts::views::settings_entry(app),
-        ]),
-    )
+        crate::features::accounts::views::settings_entry(app),
+    ]))
     .into()
 }

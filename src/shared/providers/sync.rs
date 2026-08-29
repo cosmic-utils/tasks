@@ -93,15 +93,8 @@ pub fn purge_orphaned_accounts(store: &Store, active_account_ids: &BTreeSet<Uuid
     purged
 }
 
-/// Runs a full two-way sync pass against every account with the Todo service
+/// Runs a full two-way sync pass against every account with the Tasks service
 /// enabled, excluding any the user has turned off within Tasks (`disabled`).
-/// Whether an account *can* sync Todo data at all is controlled entirely by
-/// the Accounts app (the daemon's `Service::Todo` flag); Tasks only adds a
-/// local on/off switch on top of that, it never changes the daemon's state.
-/// Local RON storage (`Store`) remains the read model throughout: results
-/// are written through the normal save/delete methods so the rest of the
-/// app (nav, content, file watcher, trash) needs no special-casing for
-/// remote-origin lists.
 pub async fn run_sync(
     store: Store,
     mut accounts: AccountsClient,
@@ -109,10 +102,12 @@ pub async fn run_sync(
 ) -> SyncReport {
     let mut report = SyncReport::default();
 
-    let enabled = match accounts.list_enabled_accounts(Service::Todo).await {
+    let enabled = match accounts.list_enabled_accounts(Service::Tasks).await {
         Ok(accounts) => accounts,
         Err(err) => {
-            report.errors.push(format!("Failed to list accounts: {err}"));
+            report
+                .errors
+                .push(format!("Failed to list accounts: {err}"));
             return report;
         }
     };
@@ -123,18 +118,23 @@ pub async fn run_sync(
         };
 
         if let Err(err) = accounts.ensure_credentials(&account.id).await {
-            report
-                .errors
-                .push(format!("{}: failed to refresh credentials: {err}", account.display_name));
+            report.errors.push(format!(
+                "{}: failed to refresh credentials: {err}",
+                account.display_name
+            ));
             continue;
         }
 
-        let token = match accounts.get_access_token(&account.id).await {
-            Ok(token) => token,
+        let token = match accounts
+            .get_access_token(&account.id, &Service::Tasks)
+            .await
+        {
+            Ok((token, _expires_at)) => token,
             Err(err) => {
-                report
-                    .errors
-                    .push(format!("{}: failed to get access token: {err}", account.display_name));
+                report.errors.push(format!(
+                    "{}: failed to get access token: {err}",
+                    account.display_name
+                ));
                 continue;
             }
         };
@@ -167,21 +167,22 @@ async fn sync_account(
     let mut report = SyncReport::default();
 
     let remote_lists = provider.list_lists(token).await?;
-    let local_lists = store
-        .lists()
-        .load_all()
-        .unwrap_or_default();
+    let local_lists = store.lists().load_all().unwrap_or_default();
 
     // Pull: new/renamed remote lists, and detect remote deletions.
     for remote_list in &remote_lists {
         let existing = local_lists.iter().find(|l| {
-            matches_account(&l.source, account.id) && l.source.remote_id() == Some(remote_list.remote_id.as_str())
+            matches_account(&l.source, account.id)
+                && l.source.remote_id() == Some(remote_list.remote_id.as_str())
         });
 
         let list_id = match existing {
             Some(list) => {
                 if list.name != remote_list.title {
-                    if let Err(err) = store.lists().update(list.id, |l| l.name = remote_list.title.clone()) {
+                    if let Err(err) = store
+                        .lists()
+                        .update(list.id, |l| l.name = remote_list.title.clone())
+                    {
                         tracing::error!("Failed to update list name: {err}");
                     }
                 }
@@ -189,7 +190,8 @@ async fn sync_account(
             }
             None => {
                 let mut list = List::new(&remote_list.title);
-                list.source = make_source(&account.provider, account.id, remote_list.remote_id.clone());
+                list.source =
+                    make_source(&account.provider, account.id, remote_list.remote_id.clone());
                 if let Err(err) = store.lists().save(&list) {
                     report.errors.push(format!("Failed to save list: {err}"));
                     continue;
@@ -199,7 +201,16 @@ async fn sync_account(
             }
         };
 
-        match sync_list_tasks(store, provider, account, token, list_id, &remote_list.remote_id).await {
+        match sync_list_tasks(
+            store,
+            provider,
+            account,
+            token,
+            list_id,
+            &remote_list.remote_id,
+        )
+        .await
+        {
             Ok(list_report) => {
                 report.tasks_pulled += list_report.tasks_pulled;
                 report.tasks_pushed += list_report.tasks_pushed;
@@ -252,7 +263,8 @@ async fn sync_list_tasks(
     // Pull + push per matched remote task.
     for remote in &remote_tasks {
         let local = local_tasks.iter().find(|t| {
-            matches_account(&t.source, account.id) && t.source.remote_id() == Some(remote.remote_id.as_str())
+            matches_account(&t.source, account.id)
+                && t.source.remote_id() == Some(remote.remote_id.as_str())
         });
 
         match local {
@@ -267,7 +279,9 @@ async fn sync_list_tasks(
                     .update_task(token, list_remote_id, &remote.remote_id, &draft)
                     .await
                 {
-                    report.errors.push(format!("Failed to push task '{}': {err}", local.title));
+                    report
+                        .errors
+                        .push(format!("Failed to push task '{}': {err}", local.title));
                     continue;
                 }
                 let mut updated = local.clone();
@@ -300,7 +314,9 @@ async fn sync_list_tasks(
                 task.remote_updated_at = remote.updated_at.or(Some(now));
                 task.last_synced_at = Some(now);
                 if let Err(err) = task_store.save_synced(&task) {
-                    report.errors.push(format!("Failed to save pulled task: {err}"));
+                    report
+                        .errors
+                        .push(format!("Failed to save pulled task: {err}"));
                     continue;
                 }
                 report.tasks_pulled += 1;
@@ -333,7 +349,9 @@ async fn sync_list_tasks(
                 report.tasks_pushed += 1;
             }
             Err(err) => {
-                report.errors.push(format!("Failed to push new task '{}': {err}", local.title));
+                report
+                    .errors
+                    .push(format!("Failed to push new task '{}': {err}", local.title));
             }
         }
     }

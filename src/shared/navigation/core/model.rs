@@ -57,24 +57,13 @@ pub struct AppModel {
     /// carrying each provider's declared icon (URL / path / theme name).
     pub(crate) providers: Vec<DbusProviderInfo>,
     /// Provider id -> decoded icon `Handle`, for providers whose manifest
-    /// icon is a URL. Populated asynchronously as fetches complete.
-    ///
-    /// Deliberately caches the constructed `Handle`, not the raw bytes:
-    /// `iced::widget::image::Handle::from_bytes` stamps every call with a
-    /// fresh globally-unique `Id` (not a content hash), so decoding the same
-    /// bytes again on every nav rebuild produced a *different* `Handle` each
-    /// time — the renderer could never recognize it as the same image,
-    /// forcing a full re-decode/re-upload (visible as flicker, and the
-    /// reason the nav bar felt slow) on every single call. Building the
-    /// `Handle` once here and reusing it keeps its `Id` stable so repeated
-    /// `icon_set` calls with the same image are free.
+    /// icon is a URL. Caches the `Handle` rather than the bytes so its `Id`
+    /// stays stable and repeated `icon_set` calls don't re-decode (flicker).
     pub(crate) provider_icons: HashMap<String, cosmic::widget::icon::Handle>,
     /// Provider ids whose icon fetch has already been attempted this
     /// session (success or failure), so we don't refetch on every reload.
     pub(crate) provider_icon_fetch_attempted: HashSet<String>,
-    /// Account id -> its nav bar group-header entity. Reused across
-    /// `reposition_special_items()` calls instead of tearing the header
-    /// down and recreating it every time (which was both slow and caused
-    /// the header image to visibly flicker on every nav rebuild).
+    /// Account id -> its nav bar group-header entity, reused across
+    /// `reposition_special_items()` calls instead of being recreated (flicker).
     pub(crate) account_header_entities: HashMap<Uuid, nav_bar::Id>,
 }

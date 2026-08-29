@@ -22,12 +22,11 @@ pub fn subscription() -> Subscription<Message> {
                 }
             };
 
-            let (mut added, mut removed, mut changed) = match (
+            let (mut added, mut removed) = match (
                 client.receive_account_added().await,
                 client.receive_account_removed().await,
-                client.receive_account_changed().await,
             ) {
-                (Ok(added), Ok(removed), Ok(changed)) => (added, removed, changed),
+                (Ok(added), Ok(removed)) => (added, removed),
                 _ => {
                     tracing::error!("accounts signal subscription: failed to subscribe to signals");
                     return;
@@ -38,7 +37,6 @@ pub fn subscription() -> Subscription<Message> {
                 let more = tokio::select! {
                     item = added.next() => item.is_some(),
                     item = removed.next() => item.is_some(),
-                    item = changed.next() => item.is_some(),
                 };
                 if !more {
                     break;

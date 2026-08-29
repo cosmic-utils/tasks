@@ -173,7 +173,11 @@ impl Application for AppModel {
 
     fn on_nav_select(&mut self, entity: Entity) -> app::Task<Self::Message> {
         // Account-group headers are labels, not navigable destinations.
-        if self.nav.data::<accounts::AccountHeaderMarker>(entity).is_some() {
+        if self
+            .nav
+            .data::<accounts::AccountHeaderMarker>(entity)
+            .is_some()
+        {
             return app::Task::none();
         }
 

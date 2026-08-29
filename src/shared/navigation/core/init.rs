@@ -67,9 +67,7 @@ impl AppModel {
             )),
             cosmic::task::future(async move {
                 match accounts::AccountsClient::new().await {
-                    Ok(client) => {
-                        Message::Accounts(AccountsAction::DaemonConnected(client))
-                    }
+                    Ok(client) => Message::Accounts(AccountsAction::DaemonConnected(client)),
                     Err(err) => {
                         tracing::info!("accounts-daemon unavailable, running local-only: {err}");
                         Message::Accounts(AccountsAction::DaemonUnavailable)

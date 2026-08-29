@@ -39,6 +39,7 @@ git = "https://github.com/edfloreshz/rust-extensions.git"
 [dependencies.accounts]
 git = "https://github.com/cosmic-utils/accounts"
 branch = "main"
+package = "accounts_core"
 
 # See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
 [dependencies.libcosmic]

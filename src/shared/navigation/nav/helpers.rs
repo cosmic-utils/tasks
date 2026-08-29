@@ -55,12 +55,7 @@ impl AppModel {
             (Some(_), Some(_)) => a.1.cmp(&b.1),
         });
 
-        // Drop headers for accounts that no longer have a group (account
-        // removed/disabled, or its lists all gone) — everything else is
-        // updated in place below rather than torn down and recreated, since
-        // that previously caused a visible flicker (a fresh nav bar Entity
-        // means a fresh widget, forcing the header image to remount) and
-        // wasted work on every nav rebuild, which happens often.
+        // Drop headers for accounts that no longer have a group; the rest are updated in place.
         let current_account_ids: std::collections::HashSet<Uuid> = ordered
             .iter()
             .filter_map(|(account_id, _, _)| *account_id)
@@ -106,9 +101,7 @@ impl AppModel {
                         entity
                     }
                 };
-                // Always refreshed (cheap in-place update, no entity churn):
-                // this is what picks up a provider icon once its async
-                // fetch completes, upgrading it from the bundled fallback.
+                // Refreshed every call so a provider icon is picked up once its fetch completes.
                 let icon = crate::features::accounts::provider_icon(
                     &self.providers,
                     &self.provider_icons,

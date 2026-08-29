@@ -37,7 +37,11 @@ pub trait RemoteTaskProvider: Send + Sync {
     async fn update_list(&self, token: &str, remote_id: &str, name: &str) -> ProviderResult<()>;
     async fn delete_list(&self, token: &str, remote_id: &str) -> ProviderResult<()>;
 
-    async fn list_tasks(&self, token: &str, list_remote_id: &str) -> ProviderResult<Vec<RemoteTask>>;
+    async fn list_tasks(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+    ) -> ProviderResult<Vec<RemoteTask>>;
     async fn create_task(
         &self,
         token: &str,

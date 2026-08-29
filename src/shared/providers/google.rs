@@ -92,9 +92,7 @@ fn draft_to_json(draft: &RemoteTaskDraft) -> GoogleTask {
         id: None,
         title: draft.title.clone(),
         notes: draft.notes.clone(),
-        due: draft
-            .due_date
-            .map(|d| format!("{}T00:00:00.000Z", d)),
+        due: draft.due_date.map(|d| format!("{}T00:00:00.000Z", d)),
         status: Some(if draft.completed {
             "completed".to_string()
         } else {
@@ -104,7 +102,10 @@ fn draft_to_json(draft: &RemoteTaskDraft) -> GoogleTask {
     }
 }
 
-async fn check_status(provider: &'static str, response: reqwest::Response) -> ProviderResult<reqwest::Response> {
+async fn check_status(
+    provider: &'static str,
+    response: reqwest::Response,
+) -> ProviderResult<reqwest::Response> {
     let status = response.status();
     if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
         return Err(ProviderError::Unauthorized);
@@ -174,7 +175,11 @@ impl RemoteTaskProvider for GoogleTasksProvider {
         Ok(())
     }
 
-    async fn list_tasks(&self, token: &str, list_remote_id: &str) -> ProviderResult<Vec<RemoteTask>> {
+    async fn list_tasks(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+    ) -> ProviderResult<Vec<RemoteTask>> {
         let response = self
             .client
             .get(format!("{BASE_URL}/lists/{list_remote_id}/tasks"))
@@ -214,7 +219,9 @@ impl RemoteTaskProvider for GoogleTasksProvider {
     ) -> ProviderResult<()> {
         let response = self
             .client
-            .patch(format!("{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"))
+            .patch(format!(
+                "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
+            ))
             .bearer_auth(token)
             .json(&draft_to_json(task))
             .send()
@@ -223,10 +230,17 @@ impl RemoteTaskProvider for GoogleTasksProvider {
         Ok(())
     }
 
-    async fn delete_task(&self, token: &str, list_remote_id: &str, remote_id: &str) -> ProviderResult<()> {
+    async fn delete_task(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+        remote_id: &str,
+    ) -> ProviderResult<()> {
         let response = self
             .client
-            .delete(format!("{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"))
+            .delete(format!(
+                "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
+            ))
             .bearer_auth(token)
             .send()
             .await?;
