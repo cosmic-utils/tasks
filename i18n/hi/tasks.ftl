@@ -36,7 +36,7 @@ delete-list = चयनित सूची मिटाई जाने वा�
 delete-list-confirm = क्या वाकई इस सूची को मिटाना चाहते हैं?
 
 # Icon Dialog
-icon = चिह्न तय करें
+icon = चिह्न तय करें...
 icon-select = चिह्न चुनें
 icon-select-body = सूची के लिए एक चिह्न चुनें
 search-icons = चिह्न खोजें...
@@ -75,17 +75,17 @@ light = हल्की थीम
 ## File
 file = फाइल
 new-window = नई विंडो
-new-list = नई सूची
+new-list = नई सूची...
 quit = बंद करें
 
 ## Edit
 edit = संपादन
-rename = नाम बदलें
+rename = नाम बदलें...
 delete = मिटाएं
 
 ## View
 view = देखें
-menu-settings = सेटिंग
+menu-settings = सेटिंग...
 menu-about = टास्क के बारे में...
 hide-completed = पूर्ण कार्य छुपाएं
 

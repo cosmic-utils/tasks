@@ -36,7 +36,7 @@ delete-list = 选中的列表即将被删除
 delete-list-confirm = 确定要删除此列表吗？
 
 # Icon Dialog
-icon = 设置图标
+icon = 设置图标...
 icon-select = 选择图标
 icon-select-body = 选择列表的图标
 search-icons = 搜索图标...
@@ -75,17 +75,17 @@ light = 浅色
 ## File
 file = 文件
 new-window = 新窗口
-new-list = 新列表
+new-list = 新列表...
 quit = 退出
 
 ## Edit
 edit = 编辑
-rename = 重命名
+rename = 重命名...
 delete = 删除
 
 ## View
 view = 视图
-menu-settings = 配置
+menu-settings = 配置...
 menu-about = 关于任务...
 hide-completed = 隐藏已完成
 

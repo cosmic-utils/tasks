@@ -36,7 +36,7 @@ delete-list = De geselecteerde lijst wordt verwijderd
 delete-list-confirm = Weet u zeker dat u deze lijst wilt wissen?
 
 # Icon Dialog
-icon = Pictogram instellen
+icon = Pictogram instellen...
 icon-select = Een pictogram selecteren
 icon-select-body = Een pictogram voor de lijst selecteren
 search-icons = Pictogrammen zoeken...
@@ -75,17 +75,17 @@ light = Licht
 ## File
 file = Bestand
 new-window = Nieuw venster
-new-list = Nieuwe lijst
+new-list = Nieuwe lijst...
 quit = Sluiten
 
 ## Edit
 edit = Bewerken
-rename = Hernoemen
+rename = Hernoemen...
 delete = Verwijderen
 
 ## View
 view = Beeld
-menu-settings = Instellingen
+menu-settings = Instellingen...
 menu-about = Over Tasks...
 hide-completed = Voltooide taken verbergen
 

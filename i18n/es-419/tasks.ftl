@@ -36,7 +36,7 @@ delete-list = La lista seleccionada será eliminada
 delete-list-confirm = ¿Estas seguro de que deseas eliminar esta lista?
 
 # Icon Dialog
-icon = Establecer icono
+icon = Establecer icono...
 icon-select = Seleccionar un icono
 icon-select-body = Seleccionar un icono para la lista de tareas
 search-icons = Buscar iconos...
@@ -72,18 +72,18 @@ light = Claro
 ## File
 file = Archivo
 new-window = Nueva ventana
-new-list = Nueva lista
+new-list = Nueva lista...
 quit = Cerrar
 
 ## Edit
 edit = Editar
-rename = Renombrar
+rename = Renombrar...
 delete = Eliminar
 
 ## View
 view = Ver
-menu-settings = Ajustes
-menu-about = Acerca de Tareas
+menu-settings = Ajustes...
+menu-about = Acerca de Tareas...
 hide-completed = Ocultar completadas
 
 ## About

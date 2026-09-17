@@ -39,7 +39,7 @@ no-list-suggestion = Créez ou sélectionnez une liste pour démarrer
 
 sub-tasks = Sous-tâches
 add-sub-task = Ajouter une sous-tâche
-move-to-trash = Déplacer vers la corbeille
+move-to-trash = Déplacer vers la corbeille...
 
 # New List Dialog
 create-list = Créer une nouvelle liste
@@ -61,7 +61,7 @@ delete-task = La tâche sélectionnée va être supprimée
 delete-task-confirm = Êtes-vous sûr de vouloir supprimer cette tâche ?
 
 # Icon Dialog
-icon = Changer l'icone
+icon = Changer l'icone...
 icon-select = Choisissez une icone
 icon-select-body = Choisissez une icone pour la liste
 search-icons = Recherche
@@ -106,17 +106,17 @@ light = Clair
 ## File
 file = Fichier
 new-window = Nouvelle fenêtre
-new-list = Nouvelle liste
+new-list = Nouvelle liste...
 quit = Quitter
 
 ## Edit
 edit = Éditer
-rename = Renommer
+rename = Renommer...
 delete = Supprimer
 
 ## View
 view = Affichage
-menu-settings = Préférences
+menu-settings = Préférences...
 menu-about = À propos de Tâches...
 hide-completed = Cacher les tâches achevées
 

@@ -39,7 +39,7 @@ no-list-suggestion = Skapa eller välj en ny lista för att komma igång
 
 sub-tasks = Deluppgifter
 add-sub-task = Lägg till ny deluppgift
-move-to-trash = Flytta till papperskorg
+move-to-trash = Flytta till papperskorg...
 
 # Ny lista dialogruta
 create-list = Skapa en ny lista
@@ -61,7 +61,7 @@ delete-list = Den valda listan är på väg att raderas
 delete-list-confirm = Är du säker på att du vill ta bort den här listan?
 
 # Ikon dialogruta
-icon = Ställ in ikon
+icon = Ställ in ikon...
 icon-select = Välj en ikon
 icon-select-body = Välj en ikon för listan
 search-icons = Sök ikoner...
@@ -106,17 +106,17 @@ light = Ljust
 ## Fil
 file = Fil
 new-window = Nytt fönster
-new-list = Ny lista
+new-list = Ny lista...
 quit = Avsluta
 
 ## Redigera
 edit = Redigera
-rename = Byt namn
+rename = Byt namn...
 delete = Ta bort
 
 ## Visa
 view = Visa
-menu-settings = Inställningar
+menu-settings = Inställningar...
 menu-about = Om Tasks...
 hide-completed = Dölj slutförda
 
@@ -137,4 +137,3 @@ sort-name-desc = Namn Ö-A
 sort-date-asc = Datum tillagd (Äldst till Nyast)
 sort-date-desc = Datum tillagd (Nyast till Äldst)
 sort-manual = Manuell
-

@@ -36,7 +36,7 @@ delete-list = Vybraný seznam bude smazán
 delete-list-confirm = Opravdu chcete tento seznam smazat?
 
 # Icon Dialog
-icon = Nastavit ikonu
+icon = Nastavit ikonu...
 icon-select = Vybrat ikonu
 icon-select-body = Vyberte ikonu pro seznam
 search-icons = Hledat ikony...
@@ -75,17 +75,17 @@ light = Světlý
 ## File
 file = Soubor
 new-window = Nové okno
-new-list = Nový seznam
+new-list = Nový seznam...
 quit = Ukončit
 
 ## Edit
 edit = Úpravy
-rename = Přejmenovat
+rename = Přejmenovat...
 delete = Smazat
 
 ## View
 view = Zobrazení
-menu-settings = Nastavení
+menu-settings = Nastavení...
 menu-about = O aplikaci Úkoly...
 hide-completed = Skrýt dokončené
 

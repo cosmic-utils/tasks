@@ -36,7 +36,7 @@ delete-list = Выбранный список будет удален
 delete-list-confirm = Вы уверены, что хотите удалить этот список?
 
 # Icon Dialog
-icon = Установить значок
+icon = Установить значок...
 icon-select = Выберите значок
 icon-select-body = Выберите значок для списка
 search-icons = Искать значки...
@@ -75,17 +75,17 @@ light = Светлая
 ## File
 file = Файл
 new-window = Новое окно
-new-list = Новый список
+new-list = Новый список...
 quit = Завершить
 
 ## Edit
 edit = Правка
-rename = Переименовать
+rename = Переименовать...
 delete = Удалить
 
 ## View
 view = Вид
-menu-settings = Параметры
+menu-settings = Параметры...
 menu-about = О Задачах...
 hide-completed = Скрыть выполненные
 
