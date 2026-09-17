@@ -2,7 +2,6 @@
 
 use cosmic::{
     widget::{
-        self,
         menu::{items, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
     },
     Element,
@@ -24,96 +23,73 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
             Element::from(root(fl!("file"))),
             items(
                 &state.key_binds,
-                vec![
-                    Item::Button(
-                        fl!("new-window"),
-                        Some(
-                            widget::icon::from_name("new-window-symbolic")
-                                .size(14)
-                                .handle(),
-                        ),
-                        MenuAction::WindowNew,
-                    ),
-                    Item::Divider,
-                    Item::Button(
-                        fl!("new-list"),
-                        Some(
-                            widget::icon::from_name("list-add-symbolic")
-                                .size(14)
-                                .handle(),
-                        ),
-                        MenuAction::NewList,
-                    ),
-                    Item::Divider,
-                    Item::Button(
-                        fl!("quit"),
-                        Some(
-                            widget::icon::from_name("application-exit-symbolic")
-                                .size(14)
-                                .handle(),
-                        ),
-                        MenuAction::WindowClose,
-                    ),
-                ],
-            ),
-        ),
-        Tree::with_children(
-            Element::from(root(fl!("edit"))),
-            items(
-                &state.key_binds,
                 list_selected
                     .then_some(vec![
                         Item::Button(
+                            fl!("new-window"),
+                            None,
+                            MenuAction::WindowNew,
+                        ),
+                        Item::Button(
+                            fl!("new-list"),
+                            None,
+                            MenuAction::NewList,
+                        ),
+                        Item::Divider,
+                        Item::Button(
                             fl!("rename"),
-                            Some(widget::icon::from_name("edit-symbolic").size(14).handle()),
+                            None,
                             MenuAction::RenameList,
                         ),
-                        Item::Divider,
                         Item::Button(
                             fl!("icon"),
-                            Some(
-                                widget::icon::from_name("face-smile-big-symbolic")
-                                    .size(14)
-                                    .handle(),
-                            ),
+                            None,
                             MenuAction::Icon,
+                        ),
+                        Item::Button(
+                            fl!("move-to-trash"),
+                            None,
+                            MenuAction::DeleteList,
                         ),
                         Item::Divider,
                         Item::Button(
-                            fl!("delete"),
-                            Some(
-                                widget::icon::from_name("user-trash-full-symbolic")
-                                    .size(14)
-                                    .handle(),
-                            ),
-                            MenuAction::DeleteList,
+                            fl!("quit"),
+                            None,
+                            MenuAction::WindowClose,
                         ),
                     ])
                     .unwrap_or(vec![
+                        Item::Button(
+                            fl!("new-window"),
+                            None,
+                            MenuAction::WindowNew,
+                        ),
+                        Item::Button(
+                            fl!("new-list"),
+                            None,
+                            MenuAction::NewList,
+                        ),
+                        Item::Divider,
                         Item::ButtonDisabled(
                             fl!("rename"),
-                            Some(widget::icon::from_name("edit-symbolic").size(14).handle()),
+                            None,
                             MenuAction::RenameList,
                         ),
-                        Item::Divider,
                         Item::ButtonDisabled(
                             fl!("icon"),
-                            Some(
-                                widget::icon::from_name("face-smile-big-symbolic")
-                                    .size(14)
-                                    .handle(),
-                            ),
+                            None,
                             MenuAction::Icon,
                         ),
-                        Item::Divider,
                         Item::ButtonDisabled(
-                            fl!("delete"),
-                            Some(
-                                widget::icon::from_name("user-trash-full-symbolic")
-                                    .size(14)
-                                    .handle(),
-                            ),
+                            fl!("move-to-trash"),
+                            None,
                             MenuAction::DeleteList,
+                        ),
+                        Item::Divider,
+                        Item::Button(
+                            fl!("quit"),
+                            None,
+                            MenuAction::WindowClose,
                         ),
                     ]),
             ),
@@ -132,21 +108,13 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
                     Item::Divider,
                     Item::Button(
                         fl!("menu-settings"),
-                        Some(
-                            widget::icon::from_name("preferences-system-symbolic")
-                                .size(14)
-                                .handle(),
-                        ),
+                        None,
                         MenuAction::Settings,
                     ),
                     Item::Divider,
                     Item::Button(
                         fl!("menu-about"),
-                        Some(
-                            widget::icon::from_name("dialog-information-symbolic")
-                                .size(14)
-                                .handle(),
-                        ),
+                        None,
                         MenuAction::About,
                     ),
                 ],
@@ -208,7 +176,7 @@ pub fn menu_bar<'a>(state: &AppModel) -> Element<'a, Message> {
         ),
     ])
     .item_height(ItemHeight::Dynamic(40))
-    .item_width(ItemWidth::Uniform(260))
+    .item_width(ItemWidth::Uniform(360))
     .spacing(4.0)
     .into()
 }
