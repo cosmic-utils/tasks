@@ -39,7 +39,7 @@ no-list-suggestion = Створіть або оберіть список, щоб
 
 sub-tasks = Підзавдання
 add-sub-task = Додати підзавдання
-move-to-trash = Перемістити до смітника
+move-to-trash = Перемістити до смітника...
 
 # New List Dialog
 create-list = Створити новий список
@@ -61,7 +61,7 @@ delete-task = Завдання буде видалено
 delete-task-confirm = Ви дійсно хочете видалити завдання?
 
 # Icon Dialog
-icon = Встановити іконку
+icon = Встановити іконку...
 icon-select = Вибрати іконку
 icon-select-body = Виберіть іконку для списку
 search-icons = Пошук іконок...
@@ -106,17 +106,17 @@ light = Світла
 ## File
 file = Файл
 new-window = Нове вікно
-new-list = Новий список
+new-list = Новий список...
 quit = Вийти
 
 ## Edit
 edit = Змінити
-rename = Перейменувати
+rename = Перейменувати...
 delete = Видалити
 
 ## View
 view = Перегляд
-menu-settings = Налаштування
+menu-settings = Налаштування...
 menu-about = Про Завдання...
 hide-completed = Приховати виконані
 

@@ -39,7 +39,7 @@ no-list-suggestion = Hozz létre vagy válassz ki egy listát a kezdéshez
 
 sub-tasks = Alfeladatok
 add-sub-task = Alfeladat hozzáadása
-move-to-trash = Áthelyezés a kukába
+move-to-trash = Áthelyezés a kukába...
 
 # New List Dialog
 create-list = Új lista létrehozása
@@ -61,7 +61,7 @@ delete-task = A kiválasztott feladat törlésre kerül
 delete-task-confirm = Biztosan törölni szeretnéd ezt a feladatot?
 
 # Icon Dialog
-icon = Ikon beállítása
+icon = Ikon beállítása...
 icon-select = Ikon kiválasztása
 icon-select-body = Válassz egy ikont a listához
 search-icons = Ikonok keresése…
@@ -106,18 +106,18 @@ light = Világos
 ## File
 file = Fájl
 new-window = Új ablak
-new-list = Új lista
+new-list = Új lista...
 quit = Kilépés
 
 ## Edit
 edit = Szerkesztés
-rename = Átnevezés
+rename = Átnevezés...
 delete = Törlés
 
 ## View
 view = Nézet
-menu-settings = Beállítások
-menu-about = A Feladatok névjegye…
+menu-settings = Beállítások...
+menu-about = A Feladatok névjegye...
 hide-completed = Befejezettek elrejtése
 
 ## About

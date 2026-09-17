@@ -36,7 +36,7 @@ delete-list = Seçilen liste silinecektir
 delete-list-confirm = Bu listeyi silmek istediğinize emin misiniz?
 
 # Icon Dialog
-icon = Simge belirle
+icon = Simge belirle...
 icon-select = Simge seç
 icon-select-body = Liste için bir simge seçin
 search-icons = Simge ara...
@@ -75,17 +75,17 @@ light = Aydınlık
 ## File
 file = Dosya
 new-window = Yeni pencere
-new-list = Yeni liste
+new-list = Yeni liste...
 quit = Çıkış
 
 ## Edit
 edit = Düzenle
-rename = Yeniden adlandır
+rename = Yeniden adlandır...
 delete = Sil
 
 ## View
 view = Görünüm
-menu-settings = Ayarlar
+menu-settings = Ayarlar...
 menu-about = Görevler Hakkında...
 hide-completed = Tamamlananları gizle
 

@@ -36,7 +36,7 @@ delete-list = 選択したリストが削除されます
 delete-list-confirm = このリストを削除してもよろしいですか？
 
 # Icon Dialog
-icon = アイコンを設定
+icon = アイコンを設定...
 icon-select = アイコンを選択
 icon-select-body = リストのアイコンを選択
 search-icons = アイコンを検索...
@@ -90,17 +90,17 @@ light = ライト
 ## File
 file = ファイル
 new-window = 新しいウィンドウ
-new-list = 新しいリスト
+new-list = 新しいリスト...
 quit = 終了
 
 ## Edit
 edit = 編集
-rename = 名前を変更
+rename = 名前を変更...
 delete = 削除
 
 ## View
 view = 表示
-menu-settings = 設定
+menu-settings = 設定...
 menu-about = COSMICファイルについて...
 hide-completed = 完了したタスクを非表示
 

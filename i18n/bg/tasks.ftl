@@ -36,7 +36,7 @@ delete-list = Избраният списък ще бъде изтрит
 delete-list-confirm = Сигурни ли сте, че искате да изтриете този списък?
 
 # Icon Dialog
-icon = Задаване на иконка
+icon = Задаване на иконка...
 icon-select = Избор на иконка
 icon-select-body = Изберете иконка за списъка
 search-icons = Търсене на икони...
@@ -75,17 +75,17 @@ light = Светъл
 ## File
 file = Файл
 new-window = Нов прозорец
-new-list = Нов списък
+new-list = Нов списък...
 quit = Спиране на програмата
 
 ## Edit
 edit = Редактиране
-rename = Преименуване
+rename = Преименуване...
 delete = Изтриване
 
 ## View
 view = Изглед
-menu-settings = Настройки
+menu-settings = Настройки...
 menu-about = Относно „Задачи“...
 hide-completed = Скриване на завършените
 

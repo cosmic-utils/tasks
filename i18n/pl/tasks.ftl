@@ -50,7 +50,7 @@ no-list-suggestion = Utwórz lub wybierz nową listę, aby rozpocząć
 
 sub-tasks = Podzadania
 add-sub-task = Dodaj podzadanie
-move-to-trash = Przenieś do kosza
+move-to-trash = Przenieś do kosza...
 
 # New List Dialog
 create-list = Utwórz nową listę
@@ -78,7 +78,7 @@ delete-list-permanently = Bezpowrotnie usuń listę
 delete-list-permanently-confirm = Na pewno chcesz bezpowrotnie usunąć "{ $name }" i wszystkie zadania na niej? Nie można tego cofnąć.
 
 # Icon Dialog
-icon = Ustaw ikonę
+icon = Ustaw ikonę...
 icon-select = Wybierz ikonę
 icon-select-body = Wybierz ikonę dla listy
 search-icons = Szukaj ikon...
@@ -125,17 +125,17 @@ light = Jasny
 ## File
 file = Plik
 new-window = Nowe okno
-new-list = Nowa lista
+new-list = Nowa lista...
 quit = Zamknij
 
 ## Edit
 edit = Edytuj
-rename = Zmień nazwę
+rename = Zmień nazwę...
 delete = Usuń
 
 ## View
 view = Widok
-menu-settings = Ustawienia
+menu-settings = Ustawienia...
 menu-about = O Zadaniach...
 hide-completed = Ukryj ukończone
 

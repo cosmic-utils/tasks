@@ -50,7 +50,7 @@ no-list-suggestion = Create or select a new list to get started
 
 sub-tasks = Sub-tasks
 add-sub-task = Add sub-task
-move-to-trash = Move to trash
+move-to-trash = Move to trash...
 
 # New List Dialog
 create-list = Create a new list
@@ -78,7 +78,7 @@ delete-list-permanently = Delete list permanently
 delete-list-permanently-confirm = Are you sure you want to permanently delete "{ $name }" and all of its tasks? This action cannot be undone.
 
 # Icon Dialog
-icon = Set icon
+icon = Set icon...
 icon-select = Select an icon
 icon-select-body = Choose an icon for the list
 search-icons = Search icons...
@@ -125,17 +125,17 @@ light = Light
 ## File
 file = File
 new-window = New window
-new-list = New list
+new-list = New list...
 quit = Quit
 
 ## Edit
 edit = Edit
-rename = Rename
+rename = Rename...
 delete = Delete
 
 ## View
 view = View
-menu-settings = Settings
+menu-settings = Settings...
 menu-about = About Tasks...
 hide-completed = Hide completed
 

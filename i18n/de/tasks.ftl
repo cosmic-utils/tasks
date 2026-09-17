@@ -36,7 +36,7 @@ delete-list = Die ausgewählte Liste wird gelöscht
 delete-list-confirm = Soll diese Liste gelöscht werden?
 
 # Icon Dialog
-icon = Symbolauswahl
+icon = Symbolauswahl...
 icon-select = Symbol auswählen
 icon-select-body = Wähle ein Symbol für die Liste
 search-icons = Symbole suchen...
@@ -75,17 +75,17 @@ light = Hell
 ## File
 file = Datei
 new-window = Neues Fenster
-new-list = Neue Liste
+new-list = Neue Liste...
 quit = Beenden
 
 ## Edit
 edit = Bearbeiten
-rename = Umbennenen
+rename = Umbennenen...
 delete = Löschen
 
 ## View
 view = Ansicht
-menu-settings = Einstellungen
+menu-settings = Einstellungen...
 menu-about = Über Tasks...
 hide-completed = Abgeschlossene ausblenden
 

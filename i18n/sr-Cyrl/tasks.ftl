@@ -36,7 +36,7 @@ delete-list = Изабрани списак ће бити обрисан
 delete-list-confirm = Да ли сте сигурни да желите да избришете овај списак?
 
 # Icon Dialog
-icon = Постави иконицу
+icon = Постави иконицу...
 icon-select = Изаберите иконицу
 icon-select-body = Изаберите иконицу за списак
 search-icons = Претражи иконице...
@@ -75,17 +75,17 @@ light = Светла
 ## File
 file = Датотека
 new-window = Нови прозор
-new-list = Нови списак
+new-list = Нови списак...
 quit = Изађи
 
 ## Edit
 edit = Уреди
-rename = Преименуј
+rename = Преименуј...
 delete = Избриши
 
 ## View
 view = Приказ
-menu-settings = Подешавања
+menu-settings = Подешавања...
 menu-about = О Задацима...
 hide-completed = Сакриј завршене
 

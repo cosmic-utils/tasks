@@ -36,7 +36,7 @@ delete-list = A lista selecionada será excluída
 delete-list-confirm = Tem certeza de que deseja excluir esta lista?
 
 # Icon Dialog
-icon = Definir ícone
+icon = Definir ícone...
 icon-select = Selecionar ícone
 icon-select-body = Escolha um ícone para a lista
 search-icons = Procurar ícones...
@@ -75,17 +75,17 @@ light = Claro
 ## File
 file = Ficheiro
 new-window = Nova janela
-new-list = Nova lista
+new-list = Nova lista...
 quit = Sair
 
 ## Edit
 edit = Editar
-rename = Renomear
+rename = Renomear...
 delete = Eliminar
 
 ## View
 view = Ver
-menu-settings = Definições
+menu-settings = Definições...
 menu-about = Sobre o Tarefas...
 hide-completed = Ocultar concluídas
 
