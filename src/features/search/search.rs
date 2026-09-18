@@ -145,14 +145,14 @@ impl Search {
             .width(Length::Fixed(240.0));
 
         let scope_icon = if self.is_global() {
-            "globe-symbolic"
-        } else {
             "view-list-symbolic"
+        } else {
+            "web-browser-symbolic"
         };
         let scope_tooltip = if self.is_global() {
-            fl!("search-scope-global")
-        } else {
             fl!("search-scope-current-list")
+        } else {
+            fl!("search-scope-global")
         };
 
         let scope_button = widget::tooltip(
