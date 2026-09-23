@@ -152,7 +152,7 @@ impl Favorites {
             .push(header)
             .push(widget::scrollable(list).height(Length::Fill))
             .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_xxxs]);
+            .padding([0, spacing.space_xl, spacing.space_m, spacing.space_xl]);
 
         widget::container(content)
             .height(Length::Fill)

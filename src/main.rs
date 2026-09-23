@@ -77,7 +77,6 @@ pub fn main() -> Result<()> {
     let settings = Settings::default()
         .theme(config.app_theme.theme())
         .size_limits(Limits::NONE.min_width(350.0).min_height(180.0))
-        .size(Size::new(850.0, 700.0))
         .debug(false);
 
     // Get the application flags, which include the config handler, app config, and store.

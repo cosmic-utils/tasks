@@ -298,7 +298,7 @@ impl Trash {
             .push(header)
             .push(widget::scrollable(list).height(Length::Fill))
             .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_xxxs]);
+            .padding([0, spacing.space_xl, spacing.space_m, spacing.space_xl]);
 
         if let Some(ref pending) = self.pending_deletion {
             content = content.push(self.deletion_banner(pending, &spacing));

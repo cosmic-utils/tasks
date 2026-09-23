@@ -172,7 +172,7 @@ impl Content {
 
         column
             .max_width(800.)
-            .padding([spacing.space_xxs, spacing.space_xxxs])
+            .padding([0, spacing.space_xl, spacing.space_m, spacing.space_xl])
             .spacing(spacing.space_xxs)
             .apply(widget::container)
             .height(Length::Fill)
