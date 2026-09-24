@@ -1,10 +1,13 @@
-use crate::features::lists::list::List;
-use crate::features::tasks::task::Task;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
+use uuid::Uuid;
+
+use crate::features::{lists::list::List, tasks::task::Task};
 use crate::shared::store::Store;
 use crate::Result;
-use std::fs;
-use std::path::{Path, PathBuf};
-use uuid::Uuid;
 
 use super::models::{List as PreviousList, Task as PreviousTask};
 

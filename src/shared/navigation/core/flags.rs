@@ -1,5 +1,6 @@
-use crate::{config::AppConfig, shared::store::Store};
 use cosmic::cosmic_config::Config;
+
+use crate::{config::AppConfig, shared::store::Store};
 
 #[derive(Clone, Debug)]
 pub struct Flags {

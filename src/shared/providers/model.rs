@@ -1,13 +1,13 @@
 /// Provider-agnostic representation of a remote task list, mapped from
 /// either Google Tasks or Microsoft Graph To Do API responses.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct RemoteList {
     pub remote_id: String,
     pub title: String,
 }
 
 /// Provider-agnostic representation of a remote task.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct RemoteTask {
     pub remote_id: String,
     pub title: String,
@@ -21,7 +21,7 @@ pub struct RemoteTask {
 
 /// Fields sent when creating/updating a remote task. Kept separate from
 /// `RemoteTask` since providers ignore `remote_id`/`updated_at` on write.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct RemoteTaskDraft {
     pub title: String,
     pub notes: String,

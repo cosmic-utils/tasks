@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
-use cosmic::iced::futures::channel::mpsc::Sender;
-use cosmic::iced::futures::{SinkExt, StreamExt};
-use cosmic::iced::{stream, Subscription};
+use cosmic::iced::{
+    futures::{channel::mpsc::Sender, SinkExt, StreamExt},
+    stream, Subscription,
+};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::app::Message;

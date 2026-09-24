@@ -25,7 +25,7 @@ pub enum MenuAction {
     SortByManual,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum ApplicationAction {
     Key(Modifiers, Key),
     Modifiers(Modifiers),

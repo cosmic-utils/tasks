@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    widget::{
-        menu::{items, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
-    },
+    widget::menu::{items, root, Item, ItemHeight, ItemWidth, MenuBar, Tree},
     Element,
 };
 

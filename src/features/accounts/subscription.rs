@@ -1,6 +1,7 @@
-use cosmic::iced::futures::channel::mpsc::Sender;
-use cosmic::iced::futures::{SinkExt, StreamExt};
-use cosmic::iced::{stream, Subscription};
+use cosmic::iced::{
+    futures::{channel::mpsc::Sender, SinkExt, StreamExt},
+    stream, Subscription,
+};
 
 use crate::app::Message;
 

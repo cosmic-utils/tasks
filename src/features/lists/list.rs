@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::shared::store::source::TaskSource;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct List {
     pub id: Uuid,
     pub name: String,
@@ -46,7 +46,7 @@ impl List {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TrashedList {
     pub list: List,
     pub deleted_at: Timestamp,

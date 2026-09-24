@@ -1,4 +1,3 @@
-pub use crate::shared::navigation::core::{AppModel, ContextPage, Flags, Message};
 use std::collections::HashMap;
 
 use cosmic::{
@@ -7,6 +6,8 @@ use cosmic::{
     widget::{self, calendar::CalendarModel, segmented_button::Entity},
     Application, ApplicationExt, Element,
 };
+
+pub use crate::shared::navigation::core::{AppModel, ContextPage, Flags, Message};
 
 use crate::{
     config::AppConfig,
@@ -21,7 +22,10 @@ use crate::{
     fl,
     shared::{
         dialogs::{DialogAction, DialogPage},
-        navigation::{nav::NavMenuAction, ui},
+        navigation::{
+            nav::NavMenuAction,
+            ui,
+        },
     },
 };
 

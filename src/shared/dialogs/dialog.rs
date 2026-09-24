@@ -10,7 +10,7 @@ use cosmic::{
 
 use crate::{app::Message, fl};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum DialogAction {
     Open(DialogPage),
     Update(DialogPage),

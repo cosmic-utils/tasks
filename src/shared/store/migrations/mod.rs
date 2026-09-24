@@ -38,11 +38,12 @@
 mod migrate;
 mod models;
 
+use std::path::Path;
+
 pub use migrate::{MigrationReport, Migrator};
 
 use crate::shared::store::Store;
 use crate::{Error, Result};
-use std::path::Path;
 
 pub fn run_migration(
     old_base_dir: impl AsRef<Path>,

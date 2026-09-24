@@ -36,7 +36,7 @@ pub struct Trash {
     collapsed_sections: HashSet<Uuid>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     Load,
     Loaded(

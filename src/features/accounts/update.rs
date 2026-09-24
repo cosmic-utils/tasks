@@ -1,9 +1,9 @@
-use accounts::models::Service;
-use cosmic::app;
 use std::collections::BTreeSet;
 
-use crate::app::Message;
-use crate::shared::navigation::core::AppModel;
+use accounts::models::Service;
+use cosmic::app;
+
+use crate::{app::Message, shared::navigation::core::AppModel};
 
 use super::AccountsAction;
 

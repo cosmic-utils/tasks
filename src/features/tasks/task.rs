@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::features::tasks::state::{COMPLETED_STATE_ID, PENDING_STATE_ID};
 use crate::shared::store::source::TaskSource;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Task {
     pub id: Uuid,
     pub title: String,
@@ -123,7 +123,7 @@ impl Task {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub enum Priority {
     #[default]
     Low,
@@ -131,7 +131,7 @@ pub enum Priority {
     High,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TrashedTask {
     pub task: Task,
     pub original_list_id: uuid::Uuid,
@@ -151,7 +151,7 @@ impl TrashedTask {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Recurrence {
     pub monday: bool,
     pub tuesday: bool,
