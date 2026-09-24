@@ -1,14 +1,15 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use accounts::models::{Account, DbusProviderInfo};
-use accounts::AccountsClient;
+use accounts::{
+    models::{Account, DbusProviderInfo},
+    AccountsClient,
+};
 use cosmic::{
     app::Core,
     cosmic_config,
     iced::keyboard::Modifiers,
     widget::{about::About, menu::key_bind::KeyBind, nav_bar},
 };
-
 use uuid::Uuid;
 
 use crate::{

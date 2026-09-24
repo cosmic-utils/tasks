@@ -1,12 +1,20 @@
-use crate::features::lists::list::{List, TrashedList};
-use crate::features::tasks::state::{default_states, TaskState};
-use crate::features::tasks::task::{Task, TrashedTask};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
+use ron::ser::PrettyConfig;
+use uuid::Uuid;
+
+use crate::features::{
+    lists::list::{List, TrashedList},
+    tasks::{
+        state::{default_states, TaskState},
+        task::{Task, TrashedTask},
+    },
+};
 use crate::StoreError;
 use crate::{Error, Result};
-use ron::ser::PrettyConfig;
-use std::fs;
-use std::path::{Path, PathBuf};
-use uuid::Uuid;
 
 const LISTS_REGISTRY: &str = "lists.ron";
 const STATES_REGISTRY: &str = "states.ron";
@@ -18,7 +26,7 @@ fn pretty() -> PrettyConfig {
     PrettyConfig::new().depth_limit(6).struct_names(true)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Store {
     base_dir: PathBuf,
 }

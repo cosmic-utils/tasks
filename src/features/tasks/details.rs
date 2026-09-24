@@ -1,5 +1,3 @@
-use jiff::civil::Date;
-
 use cosmic::{
     iced::{Alignment, Length},
     theme,
@@ -10,6 +8,7 @@ use cosmic::{
     },
     Element,
 };
+use jiff::civil::Date;
 use slotmap::DefaultKey;
 use uuid::Uuid;
 
@@ -28,7 +27,7 @@ pub struct Details {
     pub store: Store,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     SetTask(DefaultKey, model::Task, Uuid),
     SetTitle(String),

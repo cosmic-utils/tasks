@@ -1,5 +1,4 @@
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
-
 use cosmic::{app, widget};
 
 use crate::{

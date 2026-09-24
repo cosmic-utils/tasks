@@ -1,7 +1,8 @@
-use crate::features::lists::List;
 use cosmic::{widget::menu::Action, widget::segmented_button};
 
-#[derive(Debug, Clone)]
+use crate::features::lists::List;
+
+#[derive(Clone, Debug)]
 pub enum TasksAction {
     PopulateLists(Vec<List>),
     AddList(List),
@@ -13,7 +14,7 @@ pub enum TasksAction {
     SyncFromDisk,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum NavMenuAction {
     Rename(segmented_button::Entity),
     SetIcon(segmented_button::Entity),

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::shared::store::Store;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum ReminderMessage {
     Tick,
 }

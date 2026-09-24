@@ -1,5 +1,4 @@
-use jiff::civil::Date;
-use jiff::Timestamp;
+use jiff::{civil::Date, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use super::model::{RemoteList, RemoteTask, RemoteTaskDraft};

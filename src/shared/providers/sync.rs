@@ -1,7 +1,9 @@
 use std::collections::BTreeSet;
 
-use accounts::models::{Account, Service};
-use accounts::AccountsClient;
+use accounts::{
+    models::{Account, Service},
+    AccountsClient,
+};
 use jiff::Timestamp;
 use uuid::Uuid;
 
@@ -15,13 +17,13 @@ use super::microsoft::MicrosoftTodoProvider;
 use super::model::RemoteTaskDraft;
 use super::provider::{ProviderError, RemoteTaskProvider};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum SyncStatus {
     Syncing,
     Idle { at: Timestamp, had_errors: bool },
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone, Debug, Default)]
 pub struct SyncReport {
     pub accounts_synced: usize,
     pub lists_pulled: usize,

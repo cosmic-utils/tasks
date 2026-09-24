@@ -28,7 +28,7 @@ pub struct Favorites {
     collapsed_sections: HashSet<Uuid>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     Load,
     Loaded(Vec<FavoriteEntry>),

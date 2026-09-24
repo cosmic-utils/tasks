@@ -15,7 +15,7 @@ use crate::{
 
 use super::ContextPage;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     Content(content::Message),
     Details(details::Message),

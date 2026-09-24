@@ -4,7 +4,7 @@ use uuid::Uuid;
 pub const PENDING_STATE_ID: Uuid = Uuid::from_u128(1);
 pub const COMPLETED_STATE_ID: Uuid = Uuid::from_u128(2);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TaskState {
     pub id: Uuid,
     pub name: String,

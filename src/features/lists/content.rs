@@ -1,7 +1,8 @@
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
-use cosmic::widget::ToastId;
 use cosmic::{
     cosmic_theme::Spacing,
     iced::{
@@ -10,7 +11,7 @@ use cosmic::{
         Alignment, Length,
     },
     theme,
-    widget::{self, menu::Action as MenuAction},
+    widget::{self, menu::Action as MenuAction, ToastId},
     Apply, Element,
 };
 use slotmap::{DefaultKey, SecondaryMap, SlotMap};
@@ -31,7 +32,7 @@ use crate::{
 
 const TASK_DRAG_MIME: &str = "application/x-cosmic-tasks-item";
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 struct TaskDrag {
     uuid: Uuid,
 }
@@ -71,7 +72,7 @@ impl AllowedMimeTypes for TaskDrag {
     }
 }
 
-#[derive(Debug, Clone, Default, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 enum EditState {
     #[default]
     Idle,
@@ -95,7 +96,7 @@ pub struct Content {
 
 pub use crate::config::SortBy;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     TaskAdd,
 
@@ -139,7 +140,7 @@ pub enum Output {
     },
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TaskAction {
     AddSubTask(DefaultKey),
     Edit(DefaultKey),

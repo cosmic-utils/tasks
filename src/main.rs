@@ -5,14 +5,13 @@ mod features;
 mod i18n;
 mod shared;
 
-use cosmic::cosmic_config::CosmicConfigEntry;
 pub use error::*;
 
-use cosmic::Application;
 use cosmic::{
     app::Settings,
-    cosmic_config::Config,
-    iced::{Limits, Size},
+    cosmic_config::{Config, CosmicConfigEntry},
+    iced::Limits,
+    Application,
 };
 use directories::ProjectDirs;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

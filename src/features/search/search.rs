@@ -7,7 +7,6 @@ use cosmic::{
     },
     theme, widget, Apply, Element,
 };
-
 use uuid::Uuid;
 
 use crate::{
@@ -16,14 +15,14 @@ use crate::{
     shared::{store::Store, widgets::collapsible_section},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct SearchEntry {
     pub task: Task,
     pub list_id: Uuid,
     pub list_name: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum SearchScope {
     #[default]
     CurrentList,
@@ -38,7 +37,7 @@ pub struct Search {
     store: Store,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     QueryChanged(String),
     ToggleScope,

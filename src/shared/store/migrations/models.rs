@@ -1,10 +1,11 @@
+use std::path::PathBuf;
+
 use jiff::{civil::Date, Timestamp};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 use crate::features::tasks::task::{Priority, Recurrence};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Task {
     pub id: String,
     #[serde(default)]
@@ -27,7 +28,7 @@ pub struct Task {
     pub last_modified_date_time: Timestamp,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct List {
     pub id: String,
     #[serde(default)]

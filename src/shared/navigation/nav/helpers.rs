@@ -1,5 +1,4 @@
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::{cmp::Ordering, collections::BTreeMap};
 
 use cosmic::widget::segmented_button::Entity;
 use uuid::Uuid;

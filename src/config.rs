@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 pub const CONFIG_VERSION: u64 = 1;
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, CosmicConfigEntry)]
+#[derive(Clone, CosmicConfigEntry, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[version = 1]
 pub struct AppConfig {
     pub app_theme: AppTheme,
@@ -43,7 +43,7 @@ impl Default for AppConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ListSortBy {
     #[default]
     NameAsc,
@@ -71,7 +71,7 @@ impl From<ListSortBy> for usize {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SortBy {
     NameAsc,
     NameDesc,
@@ -81,7 +81,7 @@ pub enum SortBy {
     Manual,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum AppTheme {
     #[default]
     System,

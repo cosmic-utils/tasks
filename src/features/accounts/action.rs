@@ -1,10 +1,12 @@
-use accounts::models::{Account, DbusProviderInfo};
-use accounts::AccountsClient;
+use accounts::{
+    models::{Account, DbusProviderInfo},
+    AccountsClient,
+};
 use uuid::Uuid;
 
 use crate::shared::providers::sync::SyncReport;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum AccountsAction {
     /// Fired once at startup after attempting to connect to accounts-daemon.
     DaemonConnected(AccountsClient),

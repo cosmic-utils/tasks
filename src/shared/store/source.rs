@@ -5,7 +5,7 @@ use uuid::Uuid;
 /// remote account. `remote_id` is the provider's opaque list/task identifier;
 /// the local `Uuid` primary key is generated once on first pull and never
 /// regenerated.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum TaskSource {
     #[default]
     Local,
