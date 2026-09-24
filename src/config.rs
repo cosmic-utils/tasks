@@ -112,8 +112,8 @@ impl From<AppTheme> for usize {
 impl AppTheme {
     pub fn theme(&self) -> theme::Theme {
         match self {
-            Self::Dark => theme::Theme::dark(),
-            Self::Light => theme::Theme::light(),
+            Self::Dark => theme::system_dark(),
+            Self::Light => theme::system_light(),
             Self::System => theme::system_preference(),
         }
     }
