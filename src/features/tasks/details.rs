@@ -214,8 +214,8 @@ impl Details {
                 .add(
                     widget::column::with_children(vec![
                         widget::text::body(fl!("notes")).into(),
-                        widget::text_editor(&self.text_editor_content)
-                            .class(crate::shared::widgets::style::text_editor())
+                        widget::text_editor::text_editor(&self.text_editor_content)
+                            .style(crate::shared::widgets::style::text_editor)
                             .padding(spacing.space_xxs)
                             .placeholder(fl!("add-notes"))
                             .height(100.0)

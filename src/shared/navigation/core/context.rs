@@ -5,6 +5,7 @@ pub enum ContextPage {
     About,
     TaskDetails,
     Settings,
+    #[allow(unused)]
     Accounts,
 }
 

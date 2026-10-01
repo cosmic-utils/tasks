@@ -47,7 +47,6 @@ pub fn settings(app: &AppModel) -> Element<'_, Message> {
                     .on_toggle(|val| Message::Menu(MenuAction::ToggleHideCompleted(val))),
             ))
             .into(),
-        crate::features::accounts::views::settings_entry(app),
     ]))
     .into()
 }

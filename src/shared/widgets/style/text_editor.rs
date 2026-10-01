@@ -1,8 +1,4 @@
-pub fn text_editor<'a>() -> cosmic::theme::iced::TextEditor<'a> {
-    cosmic::theme::iced::TextEditor::Custom(Box::new(style))
-}
-
-fn style(
+pub fn text_editor(
     theme: &cosmic::Theme,
     status: cosmic::widget::text_editor::Status,
 ) -> cosmic::iced::widget::text_editor::Style {

@@ -8,7 +8,7 @@ use crate::{
 use super::AccountsAction;
 
 /// "Manage accounts" entry point, added to the Settings page.
-pub fn settings_entry(app: &AppModel) -> Element<'_, Message> {
+pub fn _settings_entry(app: &AppModel) -> Element<'_, Message> {
     let subtitle = if !app.accounts_daemon_checked {
         String::new()
     } else if app.accounts.is_none() {
