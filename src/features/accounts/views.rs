@@ -32,21 +32,6 @@ pub fn _settings_entry(app: &AppModel) -> Element<'_, Message> {
         .into()
 }
 
-/// Accounts with the Todo capability enabled in the system Accounts app.
-/// Tasks only ever shows/syncs accounts that pass this filter; an account
-/// with Todo turned off there is invisible here, not just unsynced.
-fn todo_accounts(app: &AppModel) -> Vec<&accounts::models::Account> {
-    app.remote_accounts
-        .iter()
-        .filter(|a| {
-            a.services
-                .get(&accounts::models::Service::Tasks)
-                .copied()
-                .unwrap_or(false)
-        })
-        .collect()
-}
-
 /// Full-page account manager, rendered in the `ContextPage::Accounts` drawer.
 /// Tasks does not create/remove accounts here — that's the system Accounts
 /// app's job; this page only lets the user flip a local on/off switch per
@@ -123,4 +108,19 @@ pub fn page(app: &AppModel) -> Element<'_, Message> {
     ));
 
     widget::scrollable(section).into()
+}
+
+/// Accounts with the Todo capability enabled in the system Accounts app.
+/// Tasks only ever shows/syncs accounts that pass this filter; an account
+/// with Todo turned off there is invisible here, not just unsynced.
+fn todo_accounts(app: &AppModel) -> Vec<&accounts::models::Account> {
+    app.remote_accounts
+        .iter()
+        .filter(|a| {
+            a.services
+                .get(&accounts::models::Service::Tasks)
+                .copied()
+                .unwrap_or(false)
+        })
+        .collect()
 }

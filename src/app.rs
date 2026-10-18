@@ -22,10 +22,7 @@ use crate::{
     fl,
     shared::{
         dialogs::{DialogAction, DialogPage},
-        navigation::{
-            nav::NavMenuAction,
-            ui,
-        },
+        navigation::{nav::NavMenuAction, ui},
     },
 };
 
@@ -83,12 +80,12 @@ impl Application for AppModel {
         Some(dialog.into())
     }
 
-    fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
-        vec![ui::menu::menu_bar(&self)]
-    }
-
     fn header_end(&self) -> Vec<Element<'_, Self::Message>> {
         vec![self.search.header_view().map(Message::Search)]
+    }
+
+    fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
+        vec![ui::menu::menu_bar(&self)]
     }
 
     fn nav_context_menu(&self) -> Option<Vec<widget::menu::Tree<cosmic::Action<Self::Message>>>> {
@@ -272,16 +269,14 @@ impl Application for AppModel {
 
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
-            Message::UpdateConfig(config) => {
-                self.config = config;
-                return cosmic::task::message(Message::Content(content::Message::SetConfig(
-                    self.config.clone(),
-                )));
+            Message::Accounts(action) => {
+                return self.update_accounts(action);
             }
-            Message::Open(url) => {
-                if let Err(err) = open::that_detached(url) {
-                    tracing::error!("{err}")
-                }
+            Message::Application(action) => {
+                return self.update_application(action);
+            }
+            Message::CloseToast(id) => {
+                self.toasts.remove(id);
             }
             Message::Content(message) => {
                 if let content::Message::RestoreTask(_, _, toast_id) = message {
@@ -404,71 +399,8 @@ impl Application for AppModel {
                     }
                 }
             }
-            Message::Trash(msg) => {
-                let output = self.trash.update(msg);
-                self.refresh_trash_nav_icon();
-                match output {
-                    Some(trash::trash::Output::EmptyTrashRequested) => {
-                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                            DialogPage::EmptyTrash,
-                        )));
-                    }
-                    Some(trash::trash::Output::DeleteTaskRequested(task_id, title)) => {
-                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                            DialogPage::DeleteTaskPermanently(task_id, title),
-                        )));
-                    }
-                    Some(trash::trash::Output::RestoreListRequested(list_id)) => {
-                        return cosmic::task::message(Message::Tasks(
-                            crate::shared::navigation::nav::TasksAction::RestoreList(list_id),
-                        ));
-                    }
-                    Some(trash::trash::Output::DeleteListRequested(list_id, title)) => {
-                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                            DialogPage::DeleteListPermanently(list_id, title),
-                        )));
-                    }
-                    Some(trash::trash::Output::RestoreTaskFromListRequested(list_id, task_id)) => {
-                        return cosmic::task::message(Message::Tasks(
-                            crate::shared::navigation::nav::TasksAction::RestoreTaskFromList(
-                                list_id, task_id,
-                            ),
-                        ));
-                    }
-                    Some(trash::trash::Output::DeleteTaskFromListRequested(
-                        list_id,
-                        task_id,
-                        title,
-                    )) => {
-                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                            DialogPage::DeleteTaskFromListPermanently(list_id, task_id, title),
-                        )));
-                    }
-                    None => {}
-                }
-            }
-            Message::CloseToast(id) => {
-                self.toasts.remove(id);
-            }
-            Message::Reminder(msg) => {
-                use crate::features::reminders::reminder::ReminderMessage;
-                match msg {
-                    ReminderMessage::Tick => {
-                        let now = jiff::Timestamp::now();
-                        let window_start = now
-                            .checked_sub(jiff::SignedDuration::from_secs(30))
-                            .unwrap_or(now);
-                        let notified = reminder::check_and_notify(
-                            &self.store,
-                            now,
-                            window_start,
-                            &self.sent_reminders,
-                        );
-                        for key in notified {
-                            self.sent_reminders.insert(key);
-                        }
-                    }
-                }
+            Message::Dialog(action) => {
+                return self.update_dialog(action);
             }
             Message::Favorites(msg) => {
                 if let Some(output) = self.favorites.update(msg) {
@@ -503,6 +435,37 @@ impl Application for AppModel {
                             )));
 
                             return app::Task::batch(tasks);
+                        }
+                    }
+                }
+            }
+            Message::Menu(action) => {
+                return self.update_menu(action);
+            }
+            Message::NavMenu(action) => {
+                return self.update_nav_menu(action);
+            }
+            Message::Open(url) => {
+                if let Err(err) = open::that_detached(url) {
+                    tracing::error!("{err}")
+                }
+            }
+            Message::Reminder(msg) => {
+                use crate::features::reminders::reminder::ReminderMessage;
+                match msg {
+                    ReminderMessage::Tick => {
+                        let now = jiff::Timestamp::now();
+                        let window_start = now
+                            .checked_sub(jiff::SignedDuration::from_secs(30))
+                            .unwrap_or(now);
+                        let notified = reminder::check_and_notify(
+                            &self.store,
+                            now,
+                            window_start,
+                            &self.sent_reminders,
+                        );
+                        for key in notified {
+                            self.sent_reminders.insert(key);
                         }
                     }
                 }
@@ -554,14 +517,51 @@ impl Application for AppModel {
             Message::Tasks(action) => {
                 return self.update_tasks(action);
             }
-            Message::Application(action) => {
-                return self.update_application(action);
+            Message::Trash(msg) => {
+                let output = self.trash.update(msg);
+                self.refresh_trash_nav_icon();
+                match output {
+                    Some(trash::trash::Output::EmptyTrashRequested) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::EmptyTrash,
+                        )));
+                    }
+                    Some(trash::trash::Output::DeleteTaskRequested(task_id, title)) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::DeleteTaskPermanently(task_id, title),
+                        )));
+                    }
+                    Some(trash::trash::Output::RestoreListRequested(list_id)) => {
+                        return cosmic::task::message(Message::Tasks(
+                            crate::shared::navigation::nav::TasksAction::RestoreList(list_id),
+                        ));
+                    }
+                    Some(trash::trash::Output::DeleteListRequested(list_id, title)) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::DeleteListPermanently(list_id, title),
+                        )));
+                    }
+                    Some(trash::trash::Output::RestoreTaskFromListRequested(list_id, task_id)) => {
+                        return cosmic::task::message(Message::Tasks(
+                            crate::shared::navigation::nav::TasksAction::RestoreTaskFromList(
+                                list_id, task_id,
+                            ),
+                        ));
+                    }
+                    Some(trash::trash::Output::DeleteTaskFromListRequested(
+                        list_id,
+                        task_id,
+                        title,
+                    )) => {
+                        return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                            DialogPage::DeleteTaskFromListPermanently(list_id, task_id, title),
+                        )));
+                    }
+                    None => {}
+                }
             }
-            Message::Menu(action) => {
-                return self.update_menu(action);
-            }
-            Message::Dialog(action) => {
-                return self.update_dialog(action);
+            Message::ToggleContextDrawer => {
+                self.core.window.show_context = !self.core.window.show_context;
             }
             Message::ToggleContextPage(page) => {
                 if self.context_page == page {
@@ -571,14 +571,11 @@ impl Application for AppModel {
                     self.core.window.show_context = true;
                 }
             }
-            Message::NavMenu(action) => {
-                return self.update_nav_menu(action);
-            }
-            Message::ToggleContextDrawer => {
-                self.core.window.show_context = !self.core.window.show_context;
-            }
-            Message::Accounts(action) => {
-                return self.update_accounts(action);
+            Message::UpdateConfig(config) => {
+                self.config = config;
+                return cosmic::task::message(Message::Content(content::Message::SetConfig(
+                    self.config.clone(),
+                )));
             }
         }
 

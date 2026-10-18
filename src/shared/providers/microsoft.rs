@@ -157,18 +157,6 @@ impl RemoteTaskProvider for MicrosoftTodoProvider {
         "microsoft"
     }
 
-    async fn list_lists(&self, token: &str) -> ProviderResult<Vec<RemoteList>> {
-        let response = self
-            .client
-            .get(format!("{BASE_URL}/lists"))
-            .bearer_auth(token)
-            .send()
-            .await?;
-        let response = check_status("microsoft", response).await?;
-        let body: ListsResponse = response.json().await?;
-        Ok(body.value.into_iter().map(Into::into).collect())
-    }
-
     async fn create_list(&self, token: &str, name: &str) -> ProviderResult<RemoteList> {
         let response = self
             .client
@@ -180,45 +168,6 @@ impl RemoteTaskProvider for MicrosoftTodoProvider {
         let response = check_status("microsoft", response).await?;
         let body: GraphList = response.json().await?;
         Ok(body.into())
-    }
-
-    async fn update_list(&self, token: &str, remote_id: &str, name: &str) -> ProviderResult<()> {
-        let response = self
-            .client
-            .patch(format!("{BASE_URL}/lists/{remote_id}"))
-            .bearer_auth(token)
-            .json(&serde_json::json!({ "displayName": name }))
-            .send()
-            .await?;
-        check_status("microsoft", response).await?;
-        Ok(())
-    }
-
-    async fn delete_list(&self, token: &str, remote_id: &str) -> ProviderResult<()> {
-        let response = self
-            .client
-            .delete(format!("{BASE_URL}/lists/{remote_id}"))
-            .bearer_auth(token)
-            .send()
-            .await?;
-        check_status("microsoft", response).await?;
-        Ok(())
-    }
-
-    async fn list_tasks(
-        &self,
-        token: &str,
-        list_remote_id: &str,
-    ) -> ProviderResult<Vec<RemoteTask>> {
-        let response = self
-            .client
-            .get(format!("{BASE_URL}/lists/{list_remote_id}/tasks"))
-            .bearer_auth(token)
-            .send()
-            .await?;
-        let response = check_status("microsoft", response).await?;
-        let body: TasksResponse = response.json().await?;
-        Ok(body.value.into_iter().map(Into::into).collect())
     }
 
     async fn create_task(
@@ -239,20 +188,11 @@ impl RemoteTaskProvider for MicrosoftTodoProvider {
         Ok(body.into())
     }
 
-    async fn update_task(
-        &self,
-        token: &str,
-        list_remote_id: &str,
-        remote_id: &str,
-        task: &RemoteTaskDraft,
-    ) -> ProviderResult<()> {
+    async fn delete_list(&self, token: &str, remote_id: &str) -> ProviderResult<()> {
         let response = self
             .client
-            .patch(format!(
-                "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
-            ))
+            .delete(format!("{BASE_URL}/lists/{remote_id}"))
             .bearer_auth(token)
-            .json(&draft_to_json(task))
             .send()
             .await?;
         check_status("microsoft", response).await?;
@@ -271,6 +211,66 @@ impl RemoteTaskProvider for MicrosoftTodoProvider {
                 "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
             ))
             .bearer_auth(token)
+            .send()
+            .await?;
+        check_status("microsoft", response).await?;
+        Ok(())
+    }
+
+    async fn list_lists(&self, token: &str) -> ProviderResult<Vec<RemoteList>> {
+        let response = self
+            .client
+            .get(format!("{BASE_URL}/lists"))
+            .bearer_auth(token)
+            .send()
+            .await?;
+        let response = check_status("microsoft", response).await?;
+        let body: ListsResponse = response.json().await?;
+        Ok(body.value.into_iter().map(Into::into).collect())
+    }
+
+    async fn list_tasks(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+    ) -> ProviderResult<Vec<RemoteTask>> {
+        let response = self
+            .client
+            .get(format!("{BASE_URL}/lists/{list_remote_id}/tasks"))
+            .bearer_auth(token)
+            .send()
+            .await?;
+        let response = check_status("microsoft", response).await?;
+        let body: TasksResponse = response.json().await?;
+        Ok(body.value.into_iter().map(Into::into).collect())
+    }
+
+    async fn update_list(&self, token: &str, remote_id: &str, name: &str) -> ProviderResult<()> {
+        let response = self
+            .client
+            .patch(format!("{BASE_URL}/lists/{remote_id}"))
+            .bearer_auth(token)
+            .json(&serde_json::json!({ "displayName": name }))
+            .send()
+            .await?;
+        check_status("microsoft", response).await?;
+        Ok(())
+    }
+
+    async fn update_task(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+        remote_id: &str,
+        task: &RemoteTaskDraft,
+    ) -> ProviderResult<()> {
+        let response = self
+            .client
+            .patch(format!(
+                "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
+            ))
+            .bearer_auth(token)
+            .json(&draft_to_json(task))
             .send()
             .await?;
         check_status("microsoft", response).await?;

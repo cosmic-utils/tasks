@@ -8,31 +8,31 @@ use crate::app::{ContextPage, Message};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MenuAction {
     About,
-    Settings,
-    WindowClose,
-    WindowNew,
-    NewList,
     DeleteList,
-    RenameList,
     Icon,
-    ToggleHideCompleted(bool),
-    ToggleHideCompletedShortcut,
-    ToggleSearchBar,
-    SortByNameAsc,
-    SortByNameDesc,
+    NewList,
+    RenameList,
+    Settings,
     SortByDateAsc,
     SortByDateDesc,
     SortByManual,
+    SortByNameAsc,
+    SortByNameDesc,
+    ToggleHideCompleted(bool),
+    ToggleHideCompletedShortcut,
+    ToggleSearchBar,
+    WindowClose,
+    WindowNew,
 }
 
 #[derive(Clone, Debug)]
 pub enum ApplicationAction {
+    AppTheme(usize),
     Key(Modifiers, Key),
     Modifiers(Modifiers),
-    AppTheme(usize),
+    ListSortBy(usize),
     ToggleShowFavorites(bool),
     ToggleShowTrash(bool),
-    ListSortBy(usize),
 }
 
 impl Action for MenuAction {

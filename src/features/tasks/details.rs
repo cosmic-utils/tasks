@@ -19,34 +19,34 @@ use crate::{
 };
 
 pub struct Details {
+    pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
+    pub selected_list: Option<Uuid>,
+    pub store: Store,
     pub task: model::Task,
     pub task_key: DefaultKey,
-    pub selected_list: Option<Uuid>,
-    pub priority_model: segmented_button::Model<segmented_button::SingleSelect>,
     pub text_editor_content: widget::text_editor::Content,
-    pub store: Store,
 }
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    SetTask(DefaultKey, model::Task, Uuid),
-    SetTitle(String),
+    ClearReminder,
+    Delete,
     Editor(text_editor::Action),
     Favorite(bool),
-    PriorityActivate(Entity),
-    Delete,
     OpenCalendarDialog,
-    SetDueDate(Date),
     OpenReminderDialog,
+    PriorityActivate(Entity),
+    SetDueDate(Date),
     SetReminder(jiff::Timestamp),
-    ClearReminder,
+    SetTask(DefaultKey, model::Task, Uuid),
+    SetTitle(String),
 }
 
 pub enum Output {
+    DeleteTask(DefaultKey),
     OpenCalendarDialog,
     OpenReminderDialog,
     RefreshTask(model::Task),
-    DeleteTask(DefaultKey),
 }
 
 impl Details {
@@ -81,6 +81,38 @@ impl Details {
 
     pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
+            Message::ClearReminder => {
+                self.task.reminder_date = None;
+            }
+            Message::Delete => {
+                return Some(Output::DeleteTask(self.task_key));
+            }
+            Message::Editor(action) => {
+                self.text_editor_content.perform(action);
+                self.task.notes.clone_from(&self.text_editor_content.text());
+            }
+            Message::Favorite(favorite) => {
+                self.task.favorite = favorite;
+            }
+            Message::OpenCalendarDialog => {
+                return Some(Output::OpenCalendarDialog);
+            }
+            Message::OpenReminderDialog => {
+                return Some(Output::OpenReminderDialog);
+            }
+            Message::PriorityActivate(entity) => {
+                self.priority_model.activate(entity);
+                let priority = self.priority_model.data::<Priority>(entity);
+                if let Some(priority) = priority {
+                    self.task.priority = *priority;
+                }
+            }
+            Message::SetDueDate(date) => {
+                self.task.due_date = Some(date);
+            }
+            Message::SetReminder(ts) => {
+                self.task.reminder_date = Some(ts);
+            }
             Message::SetTask(key, task, list_id) => {
                 self.task_key = key;
                 self.task = task.clone();
@@ -93,40 +125,8 @@ impl Details {
                 self.task = task.clone();
                 self.text_editor_content = widget::text_editor::Content::with_text(&task.notes);
             }
-            Message::Editor(action) => {
-                self.text_editor_content.perform(action);
-                self.task.notes.clone_from(&self.text_editor_content.text());
-            }
             Message::SetTitle(title) => {
                 self.task.title.clone_from(&title);
-            }
-            Message::Favorite(favorite) => {
-                self.task.favorite = favorite;
-            }
-            Message::PriorityActivate(entity) => {
-                self.priority_model.activate(entity);
-                let priority = self.priority_model.data::<Priority>(entity);
-                if let Some(priority) = priority {
-                    self.task.priority = *priority;
-                }
-            }
-            Message::Delete => {
-                return Some(Output::DeleteTask(self.task_key));
-            }
-            Message::OpenCalendarDialog => {
-                return Some(Output::OpenCalendarDialog);
-            }
-            Message::OpenReminderDialog => {
-                return Some(Output::OpenReminderDialog);
-            }
-            Message::SetReminder(ts) => {
-                self.task.reminder_date = Some(ts);
-            }
-            Message::ClearReminder => {
-                self.task.reminder_date = None;
-            }
-            Message::SetDueDate(date) => {
-                self.task.due_date = Some(date);
             }
         }
 

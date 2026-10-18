@@ -29,12 +29,12 @@ pub fn text_editor(
                 selection,
             }
         }
-        cosmic::iced::widget::text_editor::Status::Hovered => {
+        cosmic::iced::widget::text_editor::Status::Focused { .. } => {
             cosmic::iced::widget::text_editor::Style {
                 background: background.into(),
                 border: cosmic::iced::Border {
                     radius: cosmic.corner_radii.radius_s.into(),
-                    width: 2.0,
+                    width: 3.0,
                     color: cosmic::iced::Color::from(cosmic.accent.base),
                 },
                 placeholder,
@@ -42,12 +42,12 @@ pub fn text_editor(
                 selection,
             }
         }
-        cosmic::iced::widget::text_editor::Status::Focused { .. } => {
+        cosmic::iced::widget::text_editor::Status::Hovered => {
             cosmic::iced::widget::text_editor::Style {
                 background: background.into(),
                 border: cosmic::iced::Border {
                     radius: cosmic.corner_radii.radius_s.into(),
-                    width: 3.0,
+                    width: 2.0,
                     color: cosmic::iced::Color::from(cosmic.accent.base),
                 },
                 placeholder,

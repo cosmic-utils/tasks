@@ -14,39 +14,57 @@ use crate::{
 use super::NavMenuAction;
 
 impl AppModel {
+    pub fn update_nav_menu(&mut self, action: NavMenuAction) -> app::Task<Message> {
+        match action {
+            NavMenuAction::Delete(entity) => {
+                return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                    DialogPage::DeleteList(Some(entity), String::new()),
+                )));
+            }
+            NavMenuAction::Export(entity) => {
+                if let Some(list) = self.nav.data::<List>(entity) {
+                    match self.store.tasks(list.id).load_all() {
+                        Ok(data) => {
+                            let exported_markdown = Self::export_list(list, &data);
+                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                                DialogPage::Export(exported_markdown),
+                            )));
+                        }
+                        Err(err) => {
+                            tracing::error!("Error fetching tasks: {err}");
+                        }
+                    }
+                }
+            }
+            NavMenuAction::Rename(entity) => {
+                return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                    DialogPage::RenameList(Some(entity), String::new()),
+                )))
+            }
+            NavMenuAction::SetIcon(entity) => {
+                return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                    DialogPage::SetListIcon(Some(entity), String::new(), String::new()),
+                )))
+            }
+            NavMenuAction::TrashEmptyAll => {
+                if !self.trash.is_empty() {
+                    return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                        DialogPage::EmptyTrash,
+                    )));
+                }
+            }
+            NavMenuAction::TrashRestoreAll => {
+                return cosmic::task::message(Message::Trash(
+                    crate::features::trash::trash::Message::RestoreAll,
+                ));
+            }
+        }
+
+        app::Task::none()
+    }
+
     pub fn update_tasks(&mut self, action: TasksAction) -> app::Task<Message> {
         match action {
-            TasksAction::NavSelect(entity) => {
-                return self.on_nav_select(entity);
-            }
-            TasksAction::FetchLists => match self.store.lists().load_all() {
-                Ok(lists) => {
-                    return self.update(Message::Tasks(TasksAction::PopulateLists(lists)));
-                }
-                Err(err) => {
-                    tracing::error!("Error fetching lists: {err}");
-                }
-            },
-            TasksAction::PopulateLists(lists) => {
-                for list in lists {
-                    self.create_nav_item(&list);
-                }
-                self.reposition_special_items();
-                let entity = self
-                    .config
-                    .last_list_id
-                    .and_then(|id| {
-                        self.nav
-                            .iter()
-                            .find(|e| self.nav.data::<List>(*e).is_some_and(|l| l.id == id))
-                    })
-                    .or_else(|| self.nav.iter().next());
-                let Some(entity) = entity else {
-                    return app::Task::none();
-                };
-                self.nav.activate(entity);
-                return cosmic::task::message(Message::Tasks(TasksAction::NavSelect(entity)));
-            }
             TasksAction::AddList(list) => {
                 self.create_nav_item(&list);
                 self.reposition_special_items();
@@ -96,6 +114,37 @@ impl AppModel {
                     return app::Task::batch(std::mem::take(&mut tasks));
                 }
                 self.nav.remove(self.nav.active());
+            }
+            TasksAction::FetchLists => match self.store.lists().load_all() {
+                Ok(lists) => {
+                    return self.update(Message::Tasks(TasksAction::PopulateLists(lists)));
+                }
+                Err(err) => {
+                    tracing::error!("Error fetching lists: {err}");
+                }
+            },
+            TasksAction::NavSelect(entity) => {
+                return self.on_nav_select(entity);
+            }
+            TasksAction::PopulateLists(lists) => {
+                for list in lists {
+                    self.create_nav_item(&list);
+                }
+                self.reposition_special_items();
+                let entity = self
+                    .config
+                    .last_list_id
+                    .and_then(|id| {
+                        self.nav
+                            .iter()
+                            .find(|e| self.nav.data::<List>(*e).is_some_and(|l| l.id == id))
+                    })
+                    .or_else(|| self.nav.iter().next());
+                let Some(entity) = entity else {
+                    return app::Task::none();
+                };
+                self.nav.activate(entity);
+                return cosmic::task::message(Message::Tasks(TasksAction::NavSelect(entity)));
             }
             TasksAction::RestoreList(list_id) => match self.store.trash().restore_list(list_id) {
                 Ok(list) => {
@@ -207,54 +256,5 @@ impl AppModel {
         }
 
         app::Task::batch(tasks)
-    }
-
-    pub fn update_nav_menu(&mut self, action: NavMenuAction) -> app::Task<Message> {
-        match action {
-            NavMenuAction::Rename(entity) => {
-                return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::RenameList(Some(entity), String::new()),
-                )))
-            }
-            NavMenuAction::SetIcon(entity) => {
-                return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::SetListIcon(Some(entity), String::new(), String::new()),
-                )))
-            }
-            NavMenuAction::Export(entity) => {
-                if let Some(list) = self.nav.data::<List>(entity) {
-                    match self.store.tasks(list.id).load_all() {
-                        Ok(data) => {
-                            let exported_markdown = Self::export_list(list, &data);
-                            return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                                DialogPage::Export(exported_markdown),
-                            )));
-                        }
-                        Err(err) => {
-                            tracing::error!("Error fetching tasks: {err}");
-                        }
-                    }
-                }
-            }
-            NavMenuAction::Delete(entity) => {
-                return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::DeleteList(Some(entity), String::new()),
-                )));
-            }
-            NavMenuAction::TrashEmptyAll => {
-                if !self.trash.is_empty() {
-                    return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                        DialogPage::EmptyTrash,
-                    )));
-                }
-            }
-            NavMenuAction::TrashRestoreAll => {
-                return cosmic::task::message(Message::Trash(
-                    crate::features::trash::trash::Message::RestoreAll,
-                ));
-            }
-        }
-
-        app::Task::none()
     }
 }

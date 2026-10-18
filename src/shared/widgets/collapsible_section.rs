@@ -4,6 +4,10 @@ use cosmic::{
     theme, widget, Element,
 };
 
+pub fn row_item<'a, Message: Clone + 'static>(row: Element<'a, Message>) -> Element<'a, Message> {
+    widget::list_column().list_item_padding(0).add(row).into()
+}
+
 pub fn section<'a, Message: Clone + 'static>(
     header: Element<'a, Message>,
     rows: Vec<Element<'a, Message>>,
@@ -63,8 +67,4 @@ pub fn section_header<'a, Message: Clone + 'static>(
     );
 
     row.into()
-}
-
-pub fn row_item<'a, Message: Clone + 'static>(row: Element<'a, Message>) -> Element<'a, Message> {
-    widget::list_column().list_item_padding(0).add(row).into()
 }

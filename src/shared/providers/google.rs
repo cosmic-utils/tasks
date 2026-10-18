@@ -126,18 +126,6 @@ impl RemoteTaskProvider for GoogleTasksProvider {
         "google"
     }
 
-    async fn list_lists(&self, token: &str) -> ProviderResult<Vec<RemoteList>> {
-        let response = self
-            .client
-            .get(format!("{BASE_URL}/users/@me/lists"))
-            .bearer_auth(token)
-            .send()
-            .await?;
-        let response = check_status("google", response).await?;
-        let body: TaskListsResponse = response.json().await?;
-        Ok(body.items.into_iter().map(Into::into).collect())
-    }
-
     async fn create_list(&self, token: &str, name: &str) -> ProviderResult<RemoteList> {
         let response = self
             .client
@@ -149,46 +137,6 @@ impl RemoteTaskProvider for GoogleTasksProvider {
         let response = check_status("google", response).await?;
         let body: GoogleTaskList = response.json().await?;
         Ok(body.into())
-    }
-
-    async fn update_list(&self, token: &str, remote_id: &str, name: &str) -> ProviderResult<()> {
-        let response = self
-            .client
-            .patch(format!("{BASE_URL}/users/@me/lists/{remote_id}"))
-            .bearer_auth(token)
-            .json(&serde_json::json!({ "title": name }))
-            .send()
-            .await?;
-        check_status("google", response).await?;
-        Ok(())
-    }
-
-    async fn delete_list(&self, token: &str, remote_id: &str) -> ProviderResult<()> {
-        let response = self
-            .client
-            .delete(format!("{BASE_URL}/users/@me/lists/{remote_id}"))
-            .bearer_auth(token)
-            .send()
-            .await?;
-        check_status("google", response).await?;
-        Ok(())
-    }
-
-    async fn list_tasks(
-        &self,
-        token: &str,
-        list_remote_id: &str,
-    ) -> ProviderResult<Vec<RemoteTask>> {
-        let response = self
-            .client
-            .get(format!("{BASE_URL}/lists/{list_remote_id}/tasks"))
-            .query(&[("showCompleted", "true"), ("showHidden", "true")])
-            .bearer_auth(token)
-            .send()
-            .await?;
-        let response = check_status("google", response).await?;
-        let body: TasksResponse = response.json().await?;
-        Ok(body.items.into_iter().map(Into::into).collect())
     }
 
     async fn create_task(
@@ -209,20 +157,11 @@ impl RemoteTaskProvider for GoogleTasksProvider {
         Ok(body.into())
     }
 
-    async fn update_task(
-        &self,
-        token: &str,
-        list_remote_id: &str,
-        remote_id: &str,
-        task: &RemoteTaskDraft,
-    ) -> ProviderResult<()> {
+    async fn delete_list(&self, token: &str, remote_id: &str) -> ProviderResult<()> {
         let response = self
             .client
-            .patch(format!(
-                "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
-            ))
+            .delete(format!("{BASE_URL}/users/@me/lists/{remote_id}"))
             .bearer_auth(token)
-            .json(&draft_to_json(task))
             .send()
             .await?;
         check_status("google", response).await?;
@@ -241,6 +180,67 @@ impl RemoteTaskProvider for GoogleTasksProvider {
                 "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
             ))
             .bearer_auth(token)
+            .send()
+            .await?;
+        check_status("google", response).await?;
+        Ok(())
+    }
+
+    async fn list_lists(&self, token: &str) -> ProviderResult<Vec<RemoteList>> {
+        let response = self
+            .client
+            .get(format!("{BASE_URL}/users/@me/lists"))
+            .bearer_auth(token)
+            .send()
+            .await?;
+        let response = check_status("google", response).await?;
+        let body: TaskListsResponse = response.json().await?;
+        Ok(body.items.into_iter().map(Into::into).collect())
+    }
+
+    async fn list_tasks(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+    ) -> ProviderResult<Vec<RemoteTask>> {
+        let response = self
+            .client
+            .get(format!("{BASE_URL}/lists/{list_remote_id}/tasks"))
+            .query(&[("showCompleted", "true"), ("showHidden", "true")])
+            .bearer_auth(token)
+            .send()
+            .await?;
+        let response = check_status("google", response).await?;
+        let body: TasksResponse = response.json().await?;
+        Ok(body.items.into_iter().map(Into::into).collect())
+    }
+
+    async fn update_list(&self, token: &str, remote_id: &str, name: &str) -> ProviderResult<()> {
+        let response = self
+            .client
+            .patch(format!("{BASE_URL}/users/@me/lists/{remote_id}"))
+            .bearer_auth(token)
+            .json(&serde_json::json!({ "title": name }))
+            .send()
+            .await?;
+        check_status("google", response).await?;
+        Ok(())
+    }
+
+    async fn update_task(
+        &self,
+        token: &str,
+        list_remote_id: &str,
+        remote_id: &str,
+        task: &RemoteTaskDraft,
+    ) -> ProviderResult<()> {
+        let response = self
+            .client
+            .patch(format!(
+                "{BASE_URL}/lists/{list_remote_id}/tasks/{remote_id}"
+            ))
+            .bearer_auth(token)
+            .json(&draft_to_json(task))
             .send()
             .await?;
         check_status("google", response).await?;

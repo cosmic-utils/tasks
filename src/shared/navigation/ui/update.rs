@@ -24,6 +24,22 @@ impl AppModel {
                 }
                 return cosmic::command::set_theme(self.config.app_theme.theme());
             }
+            ApplicationAction::Key(modifiers, key) => {
+                for (key_bind, action) in self.key_binds.clone().into_iter() {
+                    if key_bind.matches(modifiers, &key, None) {
+                        return cosmic::task::message(action.message());
+                    }
+                }
+            }
+            ApplicationAction::ListSortBy(sort_by) => {
+                if let Err(err) = self.config.set_list_sort_by(&self.handler, sort_by.into()) {
+                    tracing::error!("{err}");
+                }
+                self.reposition_special_items();
+            }
+            ApplicationAction::Modifiers(modifiers) => {
+                self.modifiers = modifiers;
+            }
             ApplicationAction::ToggleShowFavorites(show) => {
                 if let Err(err) = self.config.set_show_favorites(&self.handler, show) {
                     tracing::error!("{err}");
@@ -45,12 +61,6 @@ impl AppModel {
                         ));
                     }
                 }
-            }
-            ApplicationAction::ListSortBy(sort_by) => {
-                if let Err(err) = self.config.set_list_sort_by(&self.handler, sort_by.into()) {
-                    tracing::error!("{err}");
-                }
-                self.reposition_special_items();
             }
             ApplicationAction::ToggleShowTrash(show) => {
                 if let Err(err) = self.config.set_show_trash(&self.handler, show) {
@@ -74,16 +84,6 @@ impl AppModel {
                     }
                 }
             }
-            ApplicationAction::Key(modifiers, key) => {
-                for (key_bind, action) in self.key_binds.clone().into_iter() {
-                    if key_bind.matches(modifiers, &key, None) {
-                        return cosmic::task::message(action.message());
-                    }
-                }
-            }
-            ApplicationAction::Modifiers(modifiers) => {
-                self.modifiers = modifiers;
-            }
         }
 
         app::Task::none()
@@ -94,38 +94,9 @@ impl AppModel {
             MenuAction::About => {
                 return cosmic::task::message(Message::ToggleContextPage(ContextPage::About));
             }
-            MenuAction::Settings => {
-                return cosmic::task::message(Message::ToggleContextPage(ContextPage::Settings));
-            }
-            MenuAction::WindowClose => {
-                if let Some(window_id) = self.core.main_window_id() {
-                    return cosmic::iced::window::close(window_id);
-                }
-            }
-            MenuAction::WindowNew => match env::current_exe() {
-                Ok(exe) => match process::Command::new(&exe).spawn() {
-                    Ok(_) => {}
-                    Err(err) => {
-                        tracing::error!("failed to execute {exe:?}: {err}");
-                    }
-                },
-                Err(err) => {
-                    tracing::error!("failed to get current executable path: {err}");
-                }
-            },
-            MenuAction::NewList => {
-                return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::NewList(String::new()),
-                )));
-            }
             MenuAction::DeleteList => {
                 return cosmic::task::message(Message::Dialog(DialogAction::Open(
                     DialogPage::DeleteList(None, String::new()),
-                )));
-            }
-            MenuAction::RenameList => {
-                return cosmic::task::message(Message::Dialog(DialogAction::Open(
-                    DialogPage::RenameList(None, String::new()),
                 )));
             }
             MenuAction::Icon => {
@@ -133,49 +104,18 @@ impl AppModel {
                     DialogPage::SetListIcon(None, String::new(), String::new()),
                 )));
             }
-            MenuAction::ToggleHideCompleted(completed) => {
-                if let Err(err) = self.config.set_hide_completed(&self.handler, completed) {
-                    tracing::error!("{err}")
-                }
-                return cosmic::task::message(Message::Content(content::Message::SetConfig(
-                    self.config.clone(),
+            MenuAction::NewList => {
+                return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                    DialogPage::NewList(String::new()),
                 )));
             }
-            MenuAction::ToggleHideCompletedShortcut => {
-                let completed = !self.config.hide_completed;
-                if let Err(err) = self.config.set_hide_completed(&self.handler, completed) {
-                    tracing::error!("{err}")
-                }
-                return cosmic::task::message(Message::Content(content::Message::SetConfig(
-                    self.config.clone(),
+            MenuAction::RenameList => {
+                return cosmic::task::message(Message::Dialog(DialogAction::Open(
+                    DialogPage::RenameList(None, String::new()),
                 )));
             }
-            MenuAction::ToggleSearchBar => {
-                return cosmic::widget::text_input::focus(cosmic::widget::Id::new(
-                    "global-search-input",
-                ));
-            }
-            MenuAction::SortByNameAsc => {
-                if let Err(err) = self
-                    .config
-                    .set_sort_by(&self.handler, config::SortBy::NameAsc)
-                {
-                    tracing::error!("{err}")
-                }
-                return cosmic::task::message(Message::Content(content::Message::SetSort(
-                    content::SortBy::NameAsc,
-                )));
-            }
-            MenuAction::SortByNameDesc => {
-                if let Err(err) = self
-                    .config
-                    .set_sort_by(&self.handler, config::SortBy::NameDesc)
-                {
-                    tracing::error!("{err}")
-                }
-                return cosmic::task::message(Message::Content(content::Message::SetSort(
-                    content::SortBy::NameDesc,
-                )));
+            MenuAction::Settings => {
+                return cosmic::task::message(Message::ToggleContextPage(ContextPage::Settings));
             }
             MenuAction::SortByDateAsc => {
                 if let Err(err) = self
@@ -210,6 +150,66 @@ impl AppModel {
                     content::SortBy::Manual,
                 )));
             }
+            MenuAction::SortByNameAsc => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::NameAsc)
+                {
+                    tracing::error!("{err}")
+                }
+                return cosmic::task::message(Message::Content(content::Message::SetSort(
+                    content::SortBy::NameAsc,
+                )));
+            }
+            MenuAction::SortByNameDesc => {
+                if let Err(err) = self
+                    .config
+                    .set_sort_by(&self.handler, config::SortBy::NameDesc)
+                {
+                    tracing::error!("{err}")
+                }
+                return cosmic::task::message(Message::Content(content::Message::SetSort(
+                    content::SortBy::NameDesc,
+                )));
+            }
+            MenuAction::ToggleHideCompleted(completed) => {
+                if let Err(err) = self.config.set_hide_completed(&self.handler, completed) {
+                    tracing::error!("{err}")
+                }
+                return cosmic::task::message(Message::Content(content::Message::SetConfig(
+                    self.config.clone(),
+                )));
+            }
+            MenuAction::ToggleHideCompletedShortcut => {
+                let completed = !self.config.hide_completed;
+                if let Err(err) = self.config.set_hide_completed(&self.handler, completed) {
+                    tracing::error!("{err}")
+                }
+                return cosmic::task::message(Message::Content(content::Message::SetConfig(
+                    self.config.clone(),
+                )));
+            }
+            MenuAction::ToggleSearchBar => {
+                return cosmic::widget::text_input::focus(cosmic::widget::Id::new(
+                    "global-search-input",
+                ));
+            }
+            MenuAction::WindowClose => {
+                if let Some(window_id) = self.core.main_window_id() {
+                    return cosmic::iced::window::close(window_id);
+                }
+            }
+            MenuAction::WindowNew => match env::current_exe() {
+                Ok(exe) => match process::Command::new(&exe).spawn() {
+                    Ok(_) => {}
+                    Err(err) => {
+                        tracing::error!("failed to execute {exe:?}: {err}");
+                    }
+                },
+                Err(err) => {
+                    tracing::error!("failed to get current executable path: {err}");
+                }
+            },
         }
 
         app::Task::none()
