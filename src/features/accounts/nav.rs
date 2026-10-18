@@ -42,16 +42,16 @@ pub fn provider_icon(
 
     if let Some(icon_source) = icon_source {
         match icon_source {
-            IconSource::Url(_) => {
-                if let Some(handle) = icon_cache.get(provider_id) {
-                    return widget::icon::icon(handle.clone());
-                }
-            }
             IconSource::Path(path) => {
                 return widget::icon::icon(widget::icon::from_path(path));
             }
             IconSource::ThemeName(name) => {
                 return widget::icon::from_name(name).icon();
+            }
+            IconSource::Url(_) => {
+                if let Some(handle) = icon_cache.get(provider_id) {
+                    return widget::icon::icon(handle.clone());
+                }
             }
         }
     }

@@ -22,22 +22,26 @@ use crate::{
 };
 
 struct PendingDeletion {
-    tasks: Vec<TrashedTask>,
     seconds_remaining: u8,
+    tasks: Vec<TrashedTask>,
 }
 
 pub struct Trash {
-    pub tasks: Vec<TrashedTask>,
     pub lists: Vec<List>,
+    pub tasks: Vec<TrashedTask>,
     pub trashed_lists: Vec<TrashedList>,
     pub trashed_list_tasks: HashMap<Uuid, Vec<Task>>,
-    store: Store,
-    pending_deletion: Option<PendingDeletion>,
     collapsed_sections: HashSet<Uuid>,
+    pending_deletion: Option<PendingDeletion>,
+    store: Store,
 }
 
 #[derive(Clone, Debug)]
 pub enum Message {
+    DeleteList(Uuid),
+    DeleteTask(Uuid),
+    DeleteTaskFromList(Uuid, Uuid),
+    EmptyTrash,
     Load,
     Loaded(
         Vec<TrashedTask>,
@@ -45,30 +49,26 @@ pub enum Message {
         Vec<TrashedList>,
         HashMap<Uuid, Vec<Task>>,
     ),
-    ToggleSection(Uuid),
-    RestoreTask(Uuid),
-    RequestDeleteTask(Uuid),
-    DeleteTask(Uuid),
-    RequestRestoreList(Uuid),
     RequestDeleteList(Uuid),
-    DeleteListConfirmed(Uuid),
-    RequestRestoreTaskFromList(Uuid, Uuid),
+    RequestDeleteTask(Uuid),
     RequestDeleteTaskFromList(Uuid, Uuid),
-    DeleteTaskFromListConfirmed(Uuid, Uuid),
+    RequestEmptyTrash,
+    RequestRestoreList(Uuid),
+    RequestRestoreTaskFromList(Uuid, Uuid),
+    RestoreAll,
+    RestoreTask(Uuid),
     TaskDeletionTick,
     TaskDeletionUndo,
-    EmptyTrash,
-    EmptyTrashConfirmed,
-    RestoreAll,
+    ToggleSection(Uuid),
 }
 
 pub enum Output {
-    EmptyTrashRequested,
-    DeleteTaskRequested(Uuid, String),
-    RestoreListRequested(Uuid),
     DeleteListRequested(Uuid, String),
-    RestoreTaskFromListRequested(Uuid, Uuid),
     DeleteTaskFromListRequested(Uuid, Uuid, String),
+    DeleteTaskRequested(Uuid, String),
+    EmptyTrashRequested,
+    RestoreListRequested(Uuid),
+    RestoreTaskFromListRequested(Uuid, Uuid),
 }
 
 impl Trash {
@@ -90,6 +90,62 @@ impl Trash {
 
     pub fn update(&mut self, message: Message) -> Option<Output> {
         match message {
+            Message::DeleteList(list_id) => {
+                if let Err(e) = self.store.trash().delete_list(list_id) {
+                    tracing::error!("Error permanently deleting list from trash: {e}");
+                }
+                self.trashed_lists.retain(|t| t.list.id != list_id);
+                self.trashed_list_tasks.remove(&list_id);
+            }
+            Message::DeleteTask(task_id) => {
+                if let Some(existing) = self.pending_deletion.take() {
+                    for t in existing.tasks {
+                        if let Err(e) = self.store.trash().delete(t.task.id) {
+                            tracing::error!("Error committing previous permanent deletion: {e}");
+                        }
+                    }
+                }
+
+                if let Some(pos) = self.tasks.iter().position(|t| t.task.id == task_id) {
+                    let trashed = self.tasks.remove(pos);
+                    self.pending_deletion = Some(PendingDeletion {
+                        tasks: vec![trashed],
+                        seconds_remaining: 5,
+                    });
+                }
+            }
+            Message::DeleteTaskFromList(list_id, task_id) => {
+                if let Err(e) = self.store.trash().delete_task_from_list(list_id, task_id) {
+                    tracing::error!("Error permanently deleting task from trashed list: {e}");
+                }
+                if let Some(tasks) = self.trashed_list_tasks.get_mut(&list_id) {
+                    tasks.retain(|t| t.id != task_id);
+                    if tasks.is_empty() {
+                        self.trashed_list_tasks.remove(&list_id);
+                        self.trashed_lists.retain(|t| t.list.id != list_id);
+                    }
+                }
+            }
+            Message::RequestEmptyTrash => {
+                return Some(Output::EmptyTrashRequested);
+            }
+            Message::EmptyTrash => {
+                let mut tasks = std::mem::take(&mut self.tasks);
+                if let Some(pending) = self.pending_deletion.take() {
+                    tasks.extend(pending.tasks);
+                }
+                for t in tasks {
+                    if let Err(e) = self.store.trash().delete(t.task.id) {
+                        tracing::error!("Error emptying trash: {e}");
+                    }
+                }
+                for trashed in std::mem::take(&mut self.trashed_lists) {
+                    if let Err(e) = self.store.trash().delete_list(trashed.list.id) {
+                        tracing::error!("Error emptying trashed list: {e}");
+                    }
+                }
+                self.trashed_list_tasks.clear();
+            }
             Message::Load => {
                 let tasks = self.store.trash().load_all().unwrap_or_else(|e| {
                     tracing::error!("Failed to load trash: {e}");
@@ -133,6 +189,25 @@ impl Trash {
                     self.collapsed_sections.insert(list_id);
                 }
             }
+            Message::RequestRestoreList(list_id) => {
+                return Some(Output::RestoreListRequested(list_id));
+            }
+            Message::RequestDeleteList(list_id) => {
+                if let Some(trashed) = self.trashed_lists.iter().find(|t| t.list.id == list_id) {
+                    return Some(Output::DeleteListRequested(
+                        list_id,
+                        trashed.list.name.clone(),
+                    ));
+                }
+            }
+            Message::RequestDeleteTask(task_id) => {
+                if let Some(trashed) = self.tasks.iter().find(|t| t.task.id == task_id) {
+                    return Some(Output::DeleteTaskRequested(
+                        task_id,
+                        trashed.task.title.clone(),
+                    ));
+                }
+            }
             Message::RestoreTask(task_id) => {
                 if let Some(pos) = self.tasks.iter().position(|t| t.task.id == task_id) {
                     let trashed = self.tasks.remove(pos);
@@ -146,49 +221,6 @@ impl Trash {
                         tracing::error!("Failed to remove task from trash after restore: {e}");
                     }
                 }
-            }
-            Message::RequestDeleteTask(task_id) => {
-                if let Some(trashed) = self.tasks.iter().find(|t| t.task.id == task_id) {
-                    return Some(Output::DeleteTaskRequested(
-                        task_id,
-                        trashed.task.title.clone(),
-                    ));
-                }
-            }
-            Message::DeleteTask(task_id) => {
-                if let Some(existing) = self.pending_deletion.take() {
-                    for t in existing.tasks {
-                        if let Err(e) = self.store.trash().delete(t.task.id) {
-                            tracing::error!("Error committing previous permanent deletion: {e}");
-                        }
-                    }
-                }
-
-                if let Some(pos) = self.tasks.iter().position(|t| t.task.id == task_id) {
-                    let trashed = self.tasks.remove(pos);
-                    self.pending_deletion = Some(PendingDeletion {
-                        tasks: vec![trashed],
-                        seconds_remaining: 5,
-                    });
-                }
-            }
-            Message::RequestRestoreList(list_id) => {
-                return Some(Output::RestoreListRequested(list_id));
-            }
-            Message::RequestDeleteList(list_id) => {
-                if let Some(trashed) = self.trashed_lists.iter().find(|t| t.list.id == list_id) {
-                    return Some(Output::DeleteListRequested(
-                        list_id,
-                        trashed.list.name.clone(),
-                    ));
-                }
-            }
-            Message::DeleteListConfirmed(list_id) => {
-                if let Err(e) = self.store.trash().delete_list(list_id) {
-                    tracing::error!("Error permanently deleting list from trash: {e}");
-                }
-                self.trashed_lists.retain(|t| t.list.id != list_id);
-                self.trashed_list_tasks.remove(&list_id);
             }
             Message::RequestRestoreTaskFromList(list_id, task_id) => {
                 return Some(Output::RestoreTaskFromListRequested(list_id, task_id));
@@ -204,18 +236,6 @@ impl Trash {
                         task_id,
                         task.title.clone(),
                     ));
-                }
-            }
-            Message::DeleteTaskFromListConfirmed(list_id, task_id) => {
-                if let Err(e) = self.store.trash().delete_task_from_list(list_id, task_id) {
-                    tracing::error!("Error permanently deleting task from trashed list: {e}");
-                }
-                if let Some(tasks) = self.trashed_list_tasks.get_mut(&list_id) {
-                    tasks.retain(|t| t.id != task_id);
-                    if tasks.is_empty() {
-                        self.trashed_list_tasks.remove(&list_id);
-                        self.trashed_lists.retain(|t| t.list.id != list_id);
-                    }
                 }
             }
             Message::TaskDeletionTick => {
@@ -240,26 +260,6 @@ impl Trash {
                         self.tasks.insert(0, t);
                     }
                 }
-            }
-            Message::EmptyTrash => {
-                return Some(Output::EmptyTrashRequested);
-            }
-            Message::EmptyTrashConfirmed => {
-                let mut tasks = std::mem::take(&mut self.tasks);
-                if let Some(pending) = self.pending_deletion.take() {
-                    tasks.extend(pending.tasks);
-                }
-                for t in tasks {
-                    if let Err(e) = self.store.trash().delete(t.task.id) {
-                        tracing::error!("Error emptying trash: {e}");
-                    }
-                }
-                for trashed in std::mem::take(&mut self.trashed_lists) {
-                    if let Err(e) = self.store.trash().delete_list(trashed.list.id) {
-                        tracing::error!("Error emptying trashed list: {e}");
-                    }
-                }
-                self.trashed_list_tasks.clear();
             }
             Message::RestoreAll => {
                 self.pending_deletion.take();

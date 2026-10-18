@@ -12,43 +12,52 @@ use super::{DialogAction, DialogPage};
 impl AppModel {
     pub fn update_dialog(&mut self, action: DialogAction) -> app::Task<Message> {
         match action {
-            DialogAction::Open(page) => {
-                match page {
-                    DialogPage::RenameList(entity, _) => {
-                        let data = if let Some(entity) = entity {
-                            self.nav.data::<List>(entity)
-                        } else {
-                            self.nav.active_data::<List>()
-                        };
-                        if let Some(list) = data {
-                            self.dialog_pages
-                                .push_back(DialogPage::RenameList(entity, list.name.clone()));
-                        }
-                    }
-                    DialogPage::DeleteList(entity, _) => {
-                        let data = if let Some(entity) = entity {
-                            self.nav.data::<List>(entity)
-                        } else {
-                            self.nav.active_data::<List>()
-                        };
-                        if let Some(list) = data {
-                            self.dialog_pages
-                                .push_back(DialogPage::DeleteList(entity, list.name.clone()));
-                        }
-                    }
-                    page => self.dialog_pages.push_back(page),
-                }
-                return cosmic::widget::text_input::focus(self.dialog_text_input.clone());
-            }
-            DialogAction::Update(dialog_page) => {
-                self.dialog_pages[0] = dialog_page;
-            }
             DialogAction::Close => {
                 self.dialog_pages.pop_front();
             }
             DialogAction::Complete => {
                 if let Some(dialog_page) = self.dialog_pages.pop_front() {
                     match dialog_page {
+                        DialogPage::Calendar(date) => {
+                            self.details
+                                .update(details::Message::SetDueDate(date.selected));
+                        }
+                        DialogPage::DeleteList(entity, _) => {
+                            return cosmic::task::message(Message::Tasks(TasksAction::DeleteList(
+                                entity,
+                            )));
+                        }
+                        DialogPage::DeleteListPermanently(list_id, _) => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::DeleteList(list_id),
+                            ));
+                        }
+                        DialogPage::DeleteTaskFromListPermanently(list_id, task_id, _) => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::DeleteTaskFromList(
+                                    list_id, task_id,
+                                ),
+                            ));
+                        }
+                        DialogPage::DeleteTaskPermanently(task_id, _) => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::DeleteTask(task_id),
+                            ));
+                        }
+                        DialogPage::EmptyTrash => {
+                            return cosmic::task::message(Message::Trash(
+                                crate::features::trash::trash::Message::EmptyTrash,
+                            ));
+                        }
+                        DialogPage::Export(content) => {
+                            let Ok(mut clipboard) = ClipboardContext::new() else {
+                                tracing::error!("Clipboard is not available");
+                                return app::Task::none();
+                            };
+                            if let Err(error) = clipboard.set_contents(content) {
+                                tracing::error!("Error setting clipboard contents: {error}");
+                            }
+                        }
                         DialogPage::NewList(name) => {
                             let list = List::new(&name);
                             match self.store.lists().save(&list) {
@@ -59,6 +68,32 @@ impl AppModel {
                                 }
                                 Err(err) => {
                                     tracing::error!("Error updating list: {err}");
+                                }
+                            }
+                        }
+                        DialogPage::ReminderDateTime {
+                            calendar,
+                            hour,
+                            minute,
+                        } => {
+                            use jiff::civil::{DateTime, Time};
+                            let date = calendar.selected;
+                            match Time::new(hour as i8, minute as i8, 0, 0) {
+                                Ok(time) => {
+                                    let dt = DateTime::from_parts(date, time);
+                                    match dt.to_zoned(jiff::tz::TimeZone::system()) {
+                                        Ok(zoned) => {
+                                            self.details.update(details::Message::SetReminder(
+                                                zoned.timestamp(),
+                                            ));
+                                        }
+                                        Err(err) => tracing::error!(
+                                            "reminder: failed to build timestamp: {err}"
+                                        ),
+                                    }
+                                }
+                                Err(err) => {
+                                    tracing::error!("reminder: invalid time: {err}")
                                 }
                             }
                         }
@@ -90,11 +125,6 @@ impl AppModel {
                                 }
                             }
                         }
-                        DialogPage::DeleteList(entity, _) => {
-                            return cosmic::task::message(Message::Tasks(TasksAction::DeleteList(
-                                entity,
-                            )));
-                        }
                         DialogPage::SetListIcon(entity, name, _) => {
                             let data = if let Some(entity) = entity {
                                 self.nav.data::<List>(entity)
@@ -124,71 +154,39 @@ impl AppModel {
                                 ));
                             }
                         }
-                        DialogPage::DeleteTaskPermanently(task_id, _) => {
-                            return cosmic::task::message(Message::Trash(
-                                crate::features::trash::trash::Message::DeleteTask(task_id),
-                            ));
-                        }
-                        DialogPage::DeleteTaskFromListPermanently(list_id, task_id, _) => {
-                            return cosmic::task::message(Message::Trash(
-                                crate::features::trash::trash::Message::DeleteTaskFromListConfirmed(
-                                    list_id, task_id,
-                                ),
-                            ));
-                        }
-                        DialogPage::DeleteListPermanently(list_id, _) => {
-                            return cosmic::task::message(Message::Trash(
-                                crate::features::trash::trash::Message::DeleteListConfirmed(
-                                    list_id,
-                                ),
-                            ));
-                        }
-                        DialogPage::EmptyTrash => {
-                            return cosmic::task::message(Message::Trash(
-                                crate::features::trash::trash::Message::EmptyTrashConfirmed,
-                            ));
-                        }
-                        DialogPage::Calendar(date) => {
-                            self.details
-                                .update(details::Message::SetDueDate(date.selected));
-                        }
-                        DialogPage::ReminderDateTime {
-                            calendar,
-                            hour,
-                            minute,
-                        } => {
-                            use jiff::civil::{DateTime, Time};
-                            let date = calendar.selected;
-                            match Time::new(hour as i8, minute as i8, 0, 0) {
-                                Ok(time) => {
-                                    let dt = DateTime::from_parts(date, time);
-                                    match dt.to_zoned(jiff::tz::TimeZone::system()) {
-                                        Ok(zoned) => {
-                                            self.details.update(details::Message::SetReminder(
-                                                zoned.timestamp(),
-                                            ));
-                                        }
-                                        Err(err) => tracing::error!(
-                                            "reminder: failed to build timestamp: {err}"
-                                        ),
-                                    }
-                                }
-                                Err(err) => {
-                                    tracing::error!("reminder: invalid time: {err}")
-                                }
-                            }
-                        }
-                        DialogPage::Export(content) => {
-                            let Ok(mut clipboard) = ClipboardContext::new() else {
-                                tracing::error!("Clipboard is not available");
-                                return app::Task::none();
-                            };
-                            if let Err(error) = clipboard.set_contents(content) {
-                                tracing::error!("Error setting clipboard contents: {error}");
-                            }
-                        }
                     }
                 }
+            }
+            DialogAction::Open(page) => {
+                match page {
+                    DialogPage::DeleteList(entity, _) => {
+                        let data = if let Some(entity) = entity {
+                            self.nav.data::<List>(entity)
+                        } else {
+                            self.nav.active_data::<List>()
+                        };
+                        if let Some(list) = data {
+                            self.dialog_pages
+                                .push_back(DialogPage::DeleteList(entity, list.name.clone()));
+                        }
+                    }
+                    DialogPage::RenameList(entity, _) => {
+                        let data = if let Some(entity) = entity {
+                            self.nav.data::<List>(entity)
+                        } else {
+                            self.nav.active_data::<List>()
+                        };
+                        if let Some(list) = data {
+                            self.dialog_pages
+                                .push_back(DialogPage::RenameList(entity, list.name.clone()));
+                        }
+                    }
+                    page => self.dialog_pages.push_back(page),
+                }
+                return cosmic::widget::text_input::focus(self.dialog_text_input.clone());
+            }
+            DialogAction::Update(dialog_page) => {
+                self.dialog_pages[0] = dialog_page;
             }
             DialogAction::None => (),
         }

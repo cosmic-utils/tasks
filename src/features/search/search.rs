@@ -17,9 +17,9 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct SearchEntry {
-    pub task: Task,
     pub list_id: Uuid,
     pub list_name: String,
+    pub task: Task,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -30,20 +30,20 @@ pub enum SearchScope {
 }
 
 pub struct Search {
+    collapsed_sections: HashSet<Uuid>,
+    entries: Vec<SearchEntry>,
     query: String,
     scope: SearchScope,
-    entries: Vec<SearchEntry>,
-    collapsed_sections: HashSet<Uuid>,
     store: Store,
 }
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    QueryChanged(String),
-    ToggleScope,
     Load,
     Loaded(Vec<SearchEntry>),
     Open(Uuid),
+    QueryChanged(String),
+    ToggleScope,
     ToggleSection(Uuid),
 }
 
@@ -52,6 +52,57 @@ pub enum Output {
 }
 
 impl Search {
+    pub fn has_query(&self) -> bool {
+        !self.query.trim().is_empty()
+    }
+
+    pub fn header_view(&self) -> Element<'_, Message> {
+        let spacing = theme::active().cosmic().spacing;
+
+        let placeholder = if self.is_global() {
+            fl!("search-all-tasks")
+        } else {
+            fl!("search-tasks")
+        };
+
+        let input = widget::search_input(placeholder, &self.query)
+            .id(widget::Id::new("global-search-input"))
+            .on_input(Message::QueryChanged)
+            .on_clear(Message::QueryChanged(String::new()))
+            .width(Length::Fixed(240.0));
+
+        let scope_icon = if self.is_global() {
+            "view-list-symbolic"
+        } else {
+            "web-browser-symbolic"
+        };
+        let scope_tooltip = if self.is_global() {
+            fl!("search-scope-current-list")
+        } else {
+            fl!("search-scope-global")
+        };
+
+        let scope_button = widget::tooltip(
+            widget::button::icon(widget::icon::from_name(scope_icon).size(16))
+                .selected(self.is_global())
+                .padding(spacing.space_xxs)
+                .on_press(Message::ToggleScope),
+            widget::text::body(scope_tooltip),
+            widget::tooltip::Position::Bottom,
+        );
+
+        widget::row::with_capacity(2)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_xxs)
+            .push(input)
+            .push(scope_button)
+            .into()
+    }
+
+    pub fn is_global(&self) -> bool {
+        self.scope == SearchScope::Global
+    }
+
     pub fn new(store: Store) -> Self {
         Self {
             query: String::new(),
@@ -62,16 +113,8 @@ impl Search {
         }
     }
 
-    pub fn has_query(&self) -> bool {
-        !self.query.trim().is_empty()
-    }
-
     pub fn query(&self) -> &str {
         &self.query
-    }
-
-    pub fn is_global(&self) -> bool {
-        self.scope == SearchScope::Global
     }
 
     pub fn update(&mut self, message: Message) -> Option<Output> {
@@ -128,49 +171,6 @@ impl Search {
         None
     }
 
-    pub fn header_view(&self) -> Element<'_, Message> {
-        let spacing = theme::active().cosmic().spacing;
-
-        let placeholder = if self.is_global() {
-            fl!("search-all-tasks")
-        } else {
-            fl!("search-tasks")
-        };
-
-        let input = widget::search_input(placeholder, &self.query)
-            .id(widget::Id::new("global-search-input"))
-            .on_input(Message::QueryChanged)
-            .on_clear(Message::QueryChanged(String::new()))
-            .width(Length::Fixed(240.0));
-
-        let scope_icon = if self.is_global() {
-            "view-list-symbolic"
-        } else {
-            "web-browser-symbolic"
-        };
-        let scope_tooltip = if self.is_global() {
-            fl!("search-scope-current-list")
-        } else {
-            fl!("search-scope-global")
-        };
-
-        let scope_button = widget::tooltip(
-            widget::button::icon(widget::icon::from_name(scope_icon).size(16))
-                .selected(self.is_global())
-                .padding(spacing.space_xxs)
-                .on_press(Message::ToggleScope),
-            widget::text::body(scope_tooltip),
-            widget::tooltip::Position::Bottom,
-        );
-
-        widget::row::with_capacity(2)
-            .align_y(Alignment::Center)
-            .spacing(spacing.space_xxs)
-            .push(input)
-            .push(scope_button)
-            .into()
-    }
-
     pub fn view(&self) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -207,6 +207,26 @@ impl Search {
             .into()
     }
 
+    fn entry_row<'a>(&'a self, entry: &'a SearchEntry) -> Element<'a, Message> {
+        let spacing = theme::active().cosmic().spacing;
+
+        let title = widget::text::body(entry.task.title.as_str()).width(Length::Fill);
+
+        let open_button =
+            widget::button::icon(widget::icon::from_name("go-next-symbolic").size(16))
+                .padding(spacing.space_xxs)
+                .on_press(Message::Open(entry.task.id));
+
+        let row = widget::row::with_capacity(2)
+            .align_y(Alignment::Center)
+            .spacing(spacing.space_s)
+            .padding([spacing.space_xxs, spacing.space_xxs])
+            .push(title)
+            .push(open_button);
+
+        collapsible_section::row_item(row.into())
+    }
+
     fn header_row(&self, count: usize) -> Element<'_, Message> {
         let spacing = theme::active().cosmic().spacing;
 
@@ -220,36 +240,6 @@ impl Search {
             .push(icon)
             .push(title)
             .into()
-    }
-
-    fn list_sections<'a>(&'a self, matches: Vec<&'a SearchEntry>) -> Vec<Element<'a, Message>> {
-        let mut list_ids: Vec<Uuid> = Vec::new();
-        for e in &matches {
-            if !list_ids.contains(&e.list_id) {
-                list_ids.push(e.list_id);
-            }
-        }
-
-        let mut sections: Vec<(String, Element<'_, Message>)> = list_ids
-            .into_iter()
-            .map(|list_id| {
-                let entries: Vec<&SearchEntry> = matches
-                    .iter()
-                    .copied()
-                    .filter(|e| e.list_id == list_id)
-                    .collect();
-                let name = entries
-                    .first()
-                    .map(|e| e.list_name.clone())
-                    .unwrap_or_else(|| fl!("unknown-list"));
-
-                let section = self.list_section(list_id, name.clone(), entries);
-                (name, section)
-            })
-            .collect();
-
-        sections.sort_by(|a, b| a.0.cmp(&b.0));
-        sections.into_iter().map(|(_, section)| section).collect()
     }
 
     fn list_section<'a>(
@@ -280,24 +270,34 @@ impl Search {
         collapsible_section::section(header, rows, collapsed)
     }
 
-    fn entry_row<'a>(&'a self, entry: &'a SearchEntry) -> Element<'a, Message> {
-        let spacing = theme::active().cosmic().spacing;
+    fn list_sections<'a>(&'a self, matches: Vec<&'a SearchEntry>) -> Vec<Element<'a, Message>> {
+        let mut list_ids: Vec<Uuid> = Vec::new();
+        for e in &matches {
+            if !list_ids.contains(&e.list_id) {
+                list_ids.push(e.list_id);
+            }
+        }
 
-        let title = widget::text::body(entry.task.title.as_str()).width(Length::Fill);
+        let mut sections: Vec<(String, Element<'_, Message>)> = list_ids
+            .into_iter()
+            .map(|list_id| {
+                let entries: Vec<&SearchEntry> = matches
+                    .iter()
+                    .copied()
+                    .filter(|e| e.list_id == list_id)
+                    .collect();
+                let name = entries
+                    .first()
+                    .map(|e| e.list_name.clone())
+                    .unwrap_or_else(|| fl!("unknown-list"));
 
-        let open_button =
-            widget::button::icon(widget::icon::from_name("go-next-symbolic").size(16))
-                .padding(spacing.space_xxs)
-                .on_press(Message::Open(entry.task.id));
+                let section = self.list_section(list_id, name.clone(), entries);
+                (name, section)
+            })
+            .collect();
 
-        let row = widget::row::with_capacity(2)
-            .align_y(Alignment::Center)
-            .spacing(spacing.space_s)
-            .padding([spacing.space_xxs, spacing.space_xxs])
-            .push(title)
-            .push(open_button);
-
-        collapsible_section::row_item(row.into())
+        sections.sort_by(|a, b| a.0.cmp(&b.0));
+        sections.into_iter().map(|(_, section)| section).collect()
     }
 
     fn no_results_view(&self) -> Element<'_, Message> {

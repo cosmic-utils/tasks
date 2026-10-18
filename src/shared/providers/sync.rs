@@ -38,31 +38,6 @@ impl SyncReport {
     }
 }
 
-fn provider_for(id: &str) -> Option<Box<dyn RemoteTaskProvider>> {
-    match id {
-        "google" => Some(Box::new(GoogleTasksProvider::default())),
-        "microsoft" => Some(Box::new(MicrosoftTodoProvider::default())),
-        _ => None,
-    }
-}
-
-fn make_source(provider_id: &str, account_id: Uuid, remote_id: String) -> TaskSource {
-    match provider_id {
-        "google" => TaskSource::Google {
-            account_id,
-            remote_id,
-        },
-        _ => TaskSource::Microsoft {
-            account_id,
-            remote_id,
-        },
-    }
-}
-
-fn matches_account(source: &TaskSource, account_id: Uuid) -> bool {
-    source.account_id() == Some(account_id)
-}
-
 /// Moves every list (and its tasks) mirrored from an account that is no
 /// longer "active" — deleted, disabled, or with the Todo capability turned
 /// off in the system Accounts app — into trash. `active_account_ids` should
@@ -158,6 +133,60 @@ pub async fn run_sync(
     }
 
     report
+}
+
+fn apply_remote_to_local(
+    task_store: &crate::shared::store::store::TaskStore<'_>,
+    task_id: Uuid,
+    remote: &super::model::RemoteTask,
+    now: Timestamp,
+) {
+    let mut task = match task_store.get(task_id) {
+        Ok(task) => task,
+        Err(err) => {
+            tracing::error!("Failed to load task for sync: {err}");
+            return;
+        }
+    };
+    task.title = remote.title.clone();
+    task.notes = remote.notes.clone();
+    task.due_date = remote.due_date;
+    task.completion_date = if remote.completed {
+        task.completion_date.or(Some(now))
+    } else {
+        None
+    };
+    task.remote_updated_at = remote.updated_at.or(Some(now));
+    task.last_synced_at = Some(now);
+    task.dirty = false;
+    if let Err(err) = task_store.save_synced(&task) {
+        tracing::error!("Failed to apply remote task update: {err}");
+    }
+}
+
+fn make_source(provider_id: &str, account_id: Uuid, remote_id: String) -> TaskSource {
+    match provider_id {
+        "google" => TaskSource::Google {
+            account_id,
+            remote_id,
+        },
+        _ => TaskSource::Microsoft {
+            account_id,
+            remote_id,
+        },
+    }
+}
+
+fn matches_account(source: &TaskSource, account_id: Uuid) -> bool {
+    source.account_id() == Some(account_id)
+}
+
+fn provider_for(id: &str) -> Option<Box<dyn RemoteTaskProvider>> {
+    match id {
+        "google" => Some(Box::new(GoogleTasksProvider::default())),
+        "microsoft" => Some(Box::new(MicrosoftTodoProvider::default())),
+        _ => None,
+    }
 }
 
 async fn sync_account(
@@ -376,33 +405,4 @@ async fn sync_list_tasks(
     }
 
     Ok(report)
-}
-
-fn apply_remote_to_local(
-    task_store: &crate::shared::store::store::TaskStore<'_>,
-    task_id: Uuid,
-    remote: &super::model::RemoteTask,
-    now: Timestamp,
-) {
-    let mut task = match task_store.get(task_id) {
-        Ok(task) => task,
-        Err(err) => {
-            tracing::error!("Failed to load task for sync: {err}");
-            return;
-        }
-    };
-    task.title = remote.title.clone();
-    task.notes = remote.notes.clone();
-    task.due_date = remote.due_date;
-    task.completion_date = if remote.completed {
-        task.completion_date.or(Some(now))
-    } else {
-        None
-    };
-    task.remote_updated_at = remote.updated_at.or(Some(now));
-    task.last_synced_at = Some(now);
-    task.dirty = false;
-    if let Err(err) = task_store.save_synced(&task) {
-        tracing::error!("Failed to apply remote task update: {err}");
-    }
 }

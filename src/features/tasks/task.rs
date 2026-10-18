@@ -70,22 +70,13 @@ impl Default for Task {
 }
 
 impl Task {
-    pub fn format_timestamp(ts: &jiff::Timestamp) -> String {
-        let tz = jiff::tz::TimeZone::system();
-        ts.to_zoned(tz).strftime("%m-%d-%Y %H:%M").to_string()
-    }
-
-    pub fn creation_date_local(&self) -> String {
-        Self::format_timestamp(&self.creation_date)
-    }
-
     #[allow(dead_code)]
     pub fn completion_date_local(&self) -> Option<String> {
         self.completion_date.as_ref().map(Self::format_timestamp)
     }
 
-    pub fn is_completed(&self) -> bool {
-        self.completion_date.is_some()
+    pub fn creation_date_local(&self) -> String {
+        Self::format_timestamp(&self.creation_date)
     }
 
     pub fn effective_state_id(&self) -> Uuid {
@@ -94,6 +85,15 @@ impl Task {
         } else {
             PENDING_STATE_ID
         })
+    }
+
+    pub fn format_timestamp(ts: &jiff::Timestamp) -> String {
+        let tz = jiff::tz::TimeZone::system();
+        ts.to_zoned(tz).strftime("%m-%d-%Y %H:%M").to_string()
+    }
+
+    pub fn is_completed(&self) -> bool {
+        self.completion_date.is_some()
     }
 
     pub fn new(title: impl ToString) -> Self {
@@ -125,29 +125,30 @@ impl Task {
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub enum Priority {
+    High,
     #[default]
     Low,
     Normal,
-    High,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TrashedTask {
-    pub task: Task,
-    pub original_list_id: uuid::Uuid,
     pub deleted_at: jiff::Timestamp,
+    pub original_list_id: uuid::Uuid,
+    pub task: Task,
 }
 
 impl TrashedTask {
+    pub fn deleted_at_local(&self) -> String {
+        Task::format_timestamp(&self.deleted_at)
+    }
+
     pub fn new(task: Task, original_list_id: uuid::Uuid) -> Self {
         Self {
             task,
             original_list_id,
             deleted_at: jiff::Timestamp::now(),
         }
-    }
-    pub fn deleted_at_local(&self) -> String {
-        Task::format_timestamp(&self.deleted_at)
     }
 }
 

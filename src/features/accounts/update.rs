@@ -10,32 +10,6 @@ use super::AccountsAction;
 impl AppModel {
     pub fn update_accounts(&mut self, action: AccountsAction) -> app::Task<Message> {
         match action {
-            AccountsAction::DaemonConnected(client) => {
-                self.accounts = Some(client.clone());
-                self.accounts_daemon_checked = true;
-                // `AccountsLoaded` (fired once this resolves) triggers the
-                // initial sync itself, so no separate `SyncNow` is needed here.
-                let client_for_providers = client.clone();
-                let tasks: Vec<app::Task<Message>> = vec![
-                    reload_accounts_task(self.accounts.clone()),
-                    cosmic::task::future(async move {
-                        match client_for_providers.list_providers().await {
-                            Ok(providers) => {
-                                Message::Accounts(AccountsAction::ProvidersLoaded(providers))
-                            }
-                            Err(err) => {
-                                tracing::error!("Failed to list providers: {err}");
-                                Message::Accounts(AccountsAction::ProvidersLoaded(Vec::new()))
-                            }
-                        }
-                    }),
-                ];
-                return app::Task::batch(tasks);
-            }
-            AccountsAction::DaemonUnavailable => {
-                self.accounts = None;
-                self.accounts_daemon_checked = true;
-            }
             AccountsAction::AccountsChanged => {
                 return reload_accounts_task(self.accounts.clone());
             }
@@ -89,6 +63,52 @@ impl AppModel {
                 ];
                 return app::Task::batch(tasks);
             }
+            AccountsAction::DaemonConnected(client) => {
+                self.accounts = Some(client.clone());
+                self.accounts_daemon_checked = true;
+                // `AccountsLoaded` (fired once this resolves) triggers the
+                // initial sync itself, so no separate `SyncNow` is needed here.
+                let client_for_providers = client.clone();
+                let tasks: Vec<app::Task<Message>> = vec![
+                    reload_accounts_task(self.accounts.clone()),
+                    cosmic::task::future(async move {
+                        match client_for_providers.list_providers().await {
+                            Ok(providers) => {
+                                Message::Accounts(AccountsAction::ProvidersLoaded(providers))
+                            }
+                            Err(err) => {
+                                tracing::error!("Failed to list providers: {err}");
+                                Message::Accounts(AccountsAction::ProvidersLoaded(Vec::new()))
+                            }
+                        }
+                    }),
+                ];
+                return app::Task::batch(tasks);
+            }
+            AccountsAction::DaemonUnavailable => {
+                self.accounts = None;
+                self.accounts_daemon_checked = true;
+            }
+            AccountsAction::OpenAccountsApp => {
+                if let Err(err) = std::process::Command::new("accounts-ui").spawn() {
+                    tracing::error!("Failed to launch the Accounts app: {err}");
+                    return self
+                        .toasts
+                        .push(cosmic::widget::Toast::new(crate::fl!(
+                            "accounts-app-launch-failed"
+                        )))
+                        .map(cosmic::Action::App);
+                }
+            }
+            AccountsAction::ProviderIconFetched(provider_id, bytes) => {
+                if let Some(bytes) = bytes {
+                    // Build the `Handle` once per fetch so its `Id` stays stable.
+                    let handle = cosmic::widget::icon::from_raster_bytes(bytes);
+                    self.provider_icons.insert(provider_id, handle);
+                    // Re-render nav headers now that the real icon is available.
+                    self.reposition_special_items();
+                }
+            }
             AccountsAction::ProvidersLoaded(providers) => {
                 self.providers = providers;
 
@@ -124,26 +144,6 @@ impl AppModel {
                     return app::Task::batch(fetches);
                 }
             }
-            AccountsAction::ProviderIconFetched(provider_id, bytes) => {
-                if let Some(bytes) = bytes {
-                    // Build the `Handle` once per fetch so its `Id` stays stable.
-                    let handle = cosmic::widget::icon::from_raster_bytes(bytes);
-                    self.provider_icons.insert(provider_id, handle);
-                    // Re-render nav headers now that the real icon is available.
-                    self.reposition_special_items();
-                }
-            }
-            AccountsAction::OpenAccountsApp => {
-                if let Err(err) = std::process::Command::new("accounts-ui").spawn() {
-                    tracing::error!("Failed to launch the Accounts app: {err}");
-                    return self
-                        .toasts
-                        .push(cosmic::widget::Toast::new(crate::fl!(
-                            "accounts-app-launch-failed"
-                        )))
-                        .map(cosmic::Action::App);
-                }
-            }
             AccountsAction::SetLocallyEnabled(id, enabled) => {
                 let mut disabled = self.config.disabled_accounts.clone();
                 if enabled {
@@ -154,19 +154,6 @@ impl AppModel {
                 if let Err(err) = self.config.set_disabled_accounts(&self.handler, disabled) {
                     tracing::error!("Failed to save account sync preference: {err}");
                 }
-            }
-            AccountsAction::SyncNow => {
-                let Some(client) = self.accounts.clone() else {
-                    return app::Task::none();
-                };
-                self.sync_status = Some(crate::shared::providers::sync::SyncStatus::Syncing);
-                let store = self.store.clone();
-                let disabled = self.config.disabled_accounts.clone();
-                return cosmic::task::future(async move {
-                    let report =
-                        crate::shared::providers::sync::run_sync(store, client, &disabled).await;
-                    Message::Accounts(AccountsAction::SyncFinished(report))
-                });
             }
             AccountsAction::SyncFinished(report) => {
                 let needs_reconnect = report
@@ -192,18 +179,23 @@ impl AppModel {
                 }
                 return app::Task::batch(tasks);
             }
+            AccountsAction::SyncNow => {
+                let Some(client) = self.accounts.clone() else {
+                    return app::Task::none();
+                };
+                self.sync_status = Some(crate::shared::providers::sync::SyncStatus::Syncing);
+                let store = self.store.clone();
+                let disabled = self.config.disabled_accounts.clone();
+                return cosmic::task::future(async move {
+                    let report =
+                        crate::shared::providers::sync::run_sync(store, client, &disabled).await;
+                    Message::Accounts(AccountsAction::SyncFinished(report))
+                });
+            }
         }
 
         app::Task::none()
     }
-}
-
-fn todo_active_ids(accounts: &[accounts::models::Account]) -> BTreeSet<uuid::Uuid> {
-    accounts
-        .iter()
-        .filter(|a| a.enabled && a.services.get(&Service::Tasks).copied().unwrap_or(false))
-        .map(|a| a.id)
-        .collect()
 }
 
 fn reload_accounts_task(client: Option<accounts::AccountsClient>) -> app::Task<Message> {
@@ -219,4 +211,12 @@ fn reload_accounts_task(client: Option<accounts::AccountsClient>) -> app::Task<M
             }
         }
     })
+}
+
+fn todo_active_ids(accounts: &[accounts::models::Account]) -> BTreeSet<uuid::Uuid> {
+    accounts
+        .iter()
+        .filter(|a| a.enabled && a.services.get(&Service::Tasks).copied().unwrap_or(false))
+        .map(|a| a.id)
+        .collect()
 }

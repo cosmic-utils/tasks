@@ -132,6 +132,9 @@ impl AppModel {
 
     fn sort_list_entities(&self, entities: &mut [Entity]) {
         match self.config.list_sort_by {
+            ListSortBy::Manual => {
+                entities.sort_by_key(|e| self.nav.data::<List>(*e).map(|l| l.created_at));
+            }
             ListSortBy::NameAsc | ListSortBy::NameDesc => {
                 entities.sort_by_key(|e| {
                     self.nav
@@ -142,9 +145,6 @@ impl AppModel {
                 if self.config.list_sort_by == ListSortBy::NameDesc {
                     entities.reverse();
                 }
-            }
-            ListSortBy::Manual => {
-                entities.sort_by_key(|e| self.nav.data::<List>(*e).map(|l| l.created_at));
             }
         }
     }

@@ -13,12 +13,7 @@ pub const CONFIG_VERSION: u64 = 1;
 #[version = 1]
 pub struct AppConfig {
     pub app_theme: AppTheme,
-    pub hide_completed: bool,
-    pub show_favorites: bool,
-    pub show_trash: bool,
-    pub sort_by: SortBy,
-    pub last_list_id: Option<Uuid>,
-    pub list_sort_by: ListSortBy,
+
     /// Accounts the user has turned off *within Tasks only* (e.g. via the
     /// Accounts page toggle). This is local app state, separate from
     /// whether the account's Todo capability is enabled in the system
@@ -26,29 +21,36 @@ pub struct AppConfig {
     /// this set is synced by default as long as its Todo capability is on.
     #[serde(default)]
     pub disabled_accounts: BTreeSet<Uuid>,
+
+    pub hide_completed: bool,
+    pub last_list_id: Option<Uuid>,
+    pub list_sort_by: ListSortBy,
+    pub show_favorites: bool,
+    pub show_trash: bool,
+    pub sort_by: SortBy,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             app_theme: AppTheme::default(),
+            disabled_accounts: BTreeSet::new(),
             hide_completed: false,
+            last_list_id: None,
+            list_sort_by: ListSortBy::default(),
             show_favorites: true,
             show_trash: true,
             sort_by: SortBy::default(),
-            last_list_id: None,
-            list_sort_by: ListSortBy::default(),
-            disabled_accounts: BTreeSet::new(),
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ListSortBy {
+    Manual,
     #[default]
     NameAsc,
     NameDesc,
-    Manual,
 }
 
 impl From<usize> for ListSortBy {
@@ -64,29 +66,29 @@ impl From<usize> for ListSortBy {
 impl From<ListSortBy> for usize {
     fn from(value: ListSortBy) -> Self {
         match value {
+            ListSortBy::Manual => 2,
             ListSortBy::NameAsc => 0,
             ListSortBy::NameDesc => 1,
-            ListSortBy::Manual => 2,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SortBy {
-    NameAsc,
-    NameDesc,
     #[default]
     DateAsc,
     DateDesc,
     Manual,
+    NameAsc,
+    NameDesc,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub enum AppTheme {
-    #[default]
-    System,
     Dark,
     Light,
+    #[default]
+    System,
 }
 
 impl From<usize> for AppTheme {
@@ -102,9 +104,9 @@ impl From<usize> for AppTheme {
 impl From<AppTheme> for usize {
     fn from(value: AppTheme) -> Self {
         match value {
-            AppTheme::System => 0,
             AppTheme::Dark => 1,
             AppTheme::Light => 2,
+            AppTheme::System => 0,
         }
     }
 }

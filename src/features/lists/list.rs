@@ -6,13 +6,13 @@ use crate::shared::store::source::TaskSource;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct List {
-    pub id: Uuid,
-    pub name: String,
-    pub description: String,
-    pub icon: Option<String>,
-    pub hide_completed: bool,
     #[serde(default = "Timestamp::now")]
     pub created_at: Timestamp,
+    pub description: String,
+    pub hide_completed: bool,
+    pub icon: Option<String>,
+    pub id: Uuid,
+    pub name: String,
     /// Local (default) or mirrored from a remote Google/Microsoft account.
     #[serde(default)]
     pub source: TaskSource,
@@ -21,12 +21,12 @@ pub struct List {
 impl Default for List {
     fn default() -> Self {
         Self {
+            created_at: Timestamp::now(),
+            description: String::default(),
+            hide_completed: false,
+            icon: None,
             id: Uuid::default(),
             name: String::default(),
-            description: String::default(),
-            icon: None,
-            hide_completed: false,
-            created_at: Timestamp::now(),
             source: TaskSource::Local,
         }
     }
@@ -35,12 +35,12 @@ impl Default for List {
 impl List {
     pub fn new(name: impl ToString) -> Self {
         Self {
+            created_at: Timestamp::now(),
+            description: String::new(),
+            hide_completed: false,
+            icon: None,
             id: Uuid::new_v4(),
             name: name.to_string(),
-            description: String::new(),
-            icon: None,
-            hide_completed: false,
-            created_at: Timestamp::now(),
             source: TaskSource::Local,
         }
     }
@@ -48,15 +48,15 @@ impl List {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TrashedList {
-    pub list: List,
     pub deleted_at: Timestamp,
+    pub list: List,
 }
 
 impl TrashedList {
     pub fn new(list: List) -> Self {
         Self {
-            list,
             deleted_at: Timestamp::now(),
+            list,
         }
     }
 

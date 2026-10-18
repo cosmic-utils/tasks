@@ -9,11 +9,11 @@ pub struct RemoteList {
 /// Provider-agnostic representation of a remote task.
 #[derive(Clone, Debug)]
 pub struct RemoteTask {
+    pub completed: bool,
+    pub due_date: Option<jiff::civil::Date>,
+    pub notes: String,
     pub remote_id: String,
     pub title: String,
-    pub notes: String,
-    pub due_date: Option<jiff::civil::Date>,
-    pub completed: bool,
     /// Provider's last-modified timestamp, used for last-write-wins conflict
     /// resolution against the local `Task::remote_updated_at`.
     pub updated_at: Option<jiff::Timestamp>,
@@ -23,19 +23,19 @@ pub struct RemoteTask {
 /// `RemoteTask` since providers ignore `remote_id`/`updated_at` on write.
 #[derive(Clone, Debug)]
 pub struct RemoteTaskDraft {
-    pub title: String,
-    pub notes: String,
-    pub due_date: Option<jiff::civil::Date>,
     pub completed: bool,
+    pub due_date: Option<jiff::civil::Date>,
+    pub notes: String,
+    pub title: String,
 }
 
 impl From<&RemoteTask> for RemoteTaskDraft {
     fn from(task: &RemoteTask) -> Self {
         Self {
-            title: task.title.clone(),
-            notes: task.notes.clone(),
-            due_date: task.due_date,
             completed: task.completed,
+            due_date: task.due_date,
+            notes: task.notes.clone(),
+            title: task.title.clone(),
         }
     }
 }
